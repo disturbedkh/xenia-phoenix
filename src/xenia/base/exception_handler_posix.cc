@@ -23,6 +23,7 @@ namespace xe {
 bool signal_handlers_installed_ = false;
 struct sigaction original_sigill_handler_;
 struct sigaction original_sigsegv_handler_;
+struct sigaction original_sigbus_handler_;
 
 // This can be as large as needed, but isn't often needed.
 // As we will be sometimes firing many exceptions we want to avoid having to
@@ -220,6 +221,24 @@ static void ExceptionHandlerCallback(int signal_number, siginfo_t* signal_info,
 #endif  // XE_ARCH
       return;
     }
+  }
+
+  // Unhandled: restore the original disposition so the kernel re-delivers
+  // the signal to it on instruction retry, otherwise we loop forever.
+  struct sigaction* original_handler = nullptr;
+  switch (signal_number) {
+    case SIGSEGV:
+      original_handler = &original_sigsegv_handler_;
+      break;
+    case SIGBUS:
+      original_handler = &original_sigbus_handler_;
+      break;
+    case SIGILL:
+      original_handler = &original_sigill_handler_;
+      break;
+  }
+  if (original_handler) {
+    sigaction(signal_number, original_handler, nullptr);
   }
 }
 
