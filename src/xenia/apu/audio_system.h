@@ -11,6 +11,7 @@
 #define XENIA_APU_AUDIO_SYSTEM_H_
 
 #include <atomic>
+#include <mutex>
 #include <queue>
 
 #include "xenia/base/mutex.h"
@@ -21,9 +22,6 @@
 #include "xenia/xbox.h"
 
 namespace xe {
-namespace kernel {
-class KernelState;
-}
 namespace apu {
 
 constexpr fourcc_t kAudioSaveSignature = make_fourcc("XAUD");
@@ -53,6 +51,14 @@ class AudioSystem {
   void UnregisterClient(size_t index);
   void SubmitFrame(size_t index, float* samples);
 
+  // Get performance statistics for a client
+  struct ClientPerformance {
+    uint32_t frames_submitted;
+    uint32_t frames_processed;
+    uint32_t frames_dropped;
+  };
+  bool GetClientPerformance(size_t index, ClientPerformance* out_perf);
+
   // Creates an independent, non-registered driver instance.
   virtual AudioDriver* CreateDriver(xe::threading::Semaphore* semaphore,
                                     uint32_t frequency, uint32_t channels,
@@ -79,7 +85,6 @@ class AudioSystem {
 
   Memory* memory_ = nullptr;
   cpu::Processor* processor_ = nullptr;
-  xe::kernel::KernelState* kernel_state_ = nullptr;
   std::unique_ptr<XmaDecoder> xma_decoder_;
   uint32_t queued_frames_;
 
@@ -88,14 +93,18 @@ class AudioSystem {
 
   xe::global_critical_region global_critical_region_;
   static constexpr size_t kMaximumClientCount = 8;
-  struct ClientSlot {
-    AudioDriver* driver = nullptr;
-    uint32_t callback = 0;
-    uint32_t callback_arg = 0;
-    uint32_t wrapped_callback_arg = 0;
-    bool in_use = false;
-  };
-  ClientSlot clients_[kMaximumClientCount];
+  struct {
+    AudioDriver* driver;
+    uint32_t callback;
+    uint32_t callback_arg;
+    uint32_t wrapped_callback_arg;
+    bool in_use;
+    std::atomic<uint32_t> frames_submitted{0};
+    std::atomic<uint32_t> frames_processed{0};
+    std::atomic<uint32_t> frames_dropped{0};
+    // Held by worker during Execute; UnregisterClient waits on it.
+    std::mutex callback_mutex;
+  } clients_[kMaximumClientCount];
 
   int FindFreeClient();
 
