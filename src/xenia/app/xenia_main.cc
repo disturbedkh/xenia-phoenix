@@ -619,7 +619,6 @@ void EmulatorApp::OnDestroy() {
   }
 #endif  // !XE_PLATFORM_ANDROID
 
-  Profiler::Dump();
   // The profiler needs to shut down before the graphics context.
   Profiler::Shutdown();
 
