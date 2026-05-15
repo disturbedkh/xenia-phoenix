@@ -1,0 +1,4 @@
+title_name = "Fixture B (category B heuristic)"
+[[patch]]
+name = "widescreen"
+desc = "Uncap fps and widescreen fov adjustment"

@@ -37,3 +37,14 @@ patch data). **All category D rows need human review** before filing issues.
   root-cause subsystem, and add the issue URL to the patch TOML comment block
   (convention TBD with maintainers).
 - Prefer fixing root cause over growing category D.
+
+## Latest automated run (Tier 0 closeout)
+
+Generated from `tools/tier0/fixtures/patch_debt/` (smoke fixtures; replace with
+`GAME_PATCHES_ROOT` pointing at [`xenia-canary/game-patches`](https://github.com/xenia-canary/game-patches) for real counts):
+
+```powershell
+python tools/tier0/categorize_patches.py --patches-root tools/tier0/fixtures/patch_debt --out docs/patch_debt_dashboard.json
+```
+
+See [`patch_debt_dashboard.json`](patch_debt_dashboard.json) for full JSON (`counts_by_category` must be non-empty for CI smoke).

@@ -14,8 +14,10 @@
 #include "xenia/base/byte_stream.h"
 #include "xenia/base/logging.h"
 #include "xenia/emulator.h"
+#include "xenia/kernel/kernel_flags.h"
 #include "xenia/hid/input_system.h"
 #include "xenia/kernel/user_module.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/kernel/xboxkrnl/xboxkrnl_memory.h"
 #include "xenia/kernel/xboxkrnl/xboxkrnl_module.h"
@@ -75,6 +77,13 @@ KernelState::KernelState(Emulator* emulator)
       kMemoryProtectRead | kMemoryProtectWrite);
 
   xenia_assert(fixed_alloc_worked);
+
+  // Tier 0: when stub-hit JSONL logging is enabled, emit one line at kernel
+  // init so smoke tests can verify the path without loading a guest title.
+  if (!cvars::kernel_stub_hit_log.empty()) {
+    LogKernelStubHit("phoenix", "KernelState::tier0_stub_log_smoke",
+                     "kernel initialized");
+  }
 }
 
 KernelState::~KernelState() {

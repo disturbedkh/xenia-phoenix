@@ -1,0 +1,4 @@
+title_name = "Fixture A (category A heuristic)"
+[[patch]]
+name = "drm_bypass"
+desc = "Removes media id check and anti-tamper for offline play"

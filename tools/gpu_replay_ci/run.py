@@ -68,17 +68,39 @@ def main() -> int:
 
     plat_bin = args.build_dir / "bin" / "Windows"
     if args.backend == "d3d12":
-        exe = plat_bin / "xenia-gpu-d3d12-trace-dump.exe"
+        exe_name = "xenia-gpu-d3d12-trace-dump.exe"
     else:
-        exe = plat_bin / "xenia-gpu-vulkan-trace-dump.exe"
+        exe_name = "xenia-gpu-vulkan-trace-dump.exe"
+
+    exe = plat_bin / exe_name
+    if not exe.is_file():
+        for cfg in ("Debug", "Release", "Checked"):
+            cand = plat_bin / cfg / exe_name
+            if cand.is_file():
+                exe = cand
+                break
 
     if not exe.is_file():
-        print(f"ERROR: missing {exe} — configure with -DXENIA_BUILD_MISC=ON", file=sys.stderr)
+        print(
+            f"ERROR: missing {exe_name} under {plat_bin} (tried Debug/Release/Checked) — "
+            "configure with -DXENIA_BUILD_MISC=ON",
+            file=sys.stderr,
+        )
         return 2
 
     traces = sorted(traces_dir.glob("*.xtr"))
     if not traces:
         print(f"No .xtr files under {traces_dir} — add captures or pass --traces-dir.", file=sys.stderr)
+        golden_root.mkdir(parents=True, exist_ok=True)
+        report_path = golden_root / "last_report.json"
+        empty_report = {
+            "backend": args.backend,
+            "note": "no_traces",
+            "traces_dir": str(traces_dir),
+            "traces": [],
+        }
+        report_path.write_text(json.dumps(empty_report, indent=2), encoding="utf-8")
+        print(f"Wrote {report_path} (empty corpus)")
         return 0
 
     report: dict = {"backend": args.backend, "traces": []}

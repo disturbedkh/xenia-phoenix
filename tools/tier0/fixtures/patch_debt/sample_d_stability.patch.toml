@@ -1,0 +1,4 @@
+title_name = "Fixture D (category D heuristic)"
+[[patch]]
+name = "hang_fix"
+desc = "Fixes hang on black screen; addresses tiled EDRAM flicker and crash on load"

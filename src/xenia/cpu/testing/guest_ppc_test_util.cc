@@ -4,12 +4,15 @@
  ******************************************************************************
  */
 
+#include <algorithm>
+
 #include "xenia/cpu/testing/guest_ppc_test_util.h"
 
 #include "xenia/base/assert.h"
 #include "xenia/base/byte_order.h"
 #include "xenia/base/math.h"
 #include "xenia/base/platform.h"
+#include "xenia/cpu/function.h"
 #include "xenia/cpu/processor.h"
 #include "xenia/cpu/raw_module.h"
 #include "xenia/cpu/thread_state.h"
@@ -42,8 +45,25 @@ TestGuestPpcBlock::TestGuestPpcBlock() {
 }
 
 TestGuestPpcBlock::~TestGuestPpcBlock() {
+  TeardownGuestIfPrepared();
+  if (scratch_stack_address_) {
+    memory_->SystemHeapFree(scratch_stack_address_);
+    scratch_stack_address_ = 0;
+  }
   processor_.reset();
   memory_.reset();
+}
+
+void TestGuestPpcBlock::TeardownGuestIfPrepared() {
+  if (!guest_prepared_) {
+    return;
+  }
+  thread_state_.reset();
+  processor_->RemoveModule("guest_ppc_test");
+  processor_->RemoveFunctionByAddress(prepared_entry_pc_);
+  prepared_guest_instructions_.clear();
+  guest_entry_fn_ = nullptr;
+  guest_prepared_ = false;
 }
 
 void TestGuestPpcBlock::Run(
@@ -52,47 +72,57 @@ void TestGuestPpcBlock::Run(
     const std::function<void(ppc::PPCContext*)>& post_call, uint32_t entry_pc) {
   assert_true(!guest_instructions.empty());
 
-  // Tear down any prior guest module / entry for this PC (supports reuse).
-  processor_->RemoveModule("guest_ppc_test");
-  processor_->RemoveFunctionByAddress(entry_pc);
+  const bool same_guest =
+      guest_prepared_ && entry_pc == prepared_entry_pc_ &&
+      guest_instructions.size() == prepared_guest_instructions_.size() &&
+      std::equal(guest_instructions.begin(), guest_instructions.end(),
+                 prepared_guest_instructions_.begin());
 
-  const uint32_t code_bytes =
-      static_cast<uint32_t>(guest_instructions.size() * sizeof(uint32_t));
-  const uint32_t range_size = xe::round_up(code_bytes, static_cast<uint32_t>(4096));
-  const uint32_t range_end = entry_pc + range_size;
+  if (!same_guest) {
+    TeardownGuestIfPrepared();
 
-  uint8_t* p = memory_->TranslateVirtual(entry_pc);
-  for (size_t i = 0; i < guest_instructions.size(); ++i) {
-    xe::store_and_swap<uint32_t>(p + i * sizeof(uint32_t), guest_instructions[i]);
+    const uint32_t code_bytes =
+        static_cast<uint32_t>(guest_instructions.size() * sizeof(uint32_t));
+    const uint32_t range_size =
+        xe::round_up(code_bytes, static_cast<uint32_t>(4096));
+    const uint32_t range_end = entry_pc + range_size;
+
+    uint8_t* p = memory_->TranslateVirtual(entry_pc);
+    for (size_t i = 0; i < guest_instructions.size(); ++i) {
+      xe::store_and_swap<uint32_t>(p + i * sizeof(uint32_t), guest_instructions[i]);
+    }
+
+    processor_->backend()->CommitExecutableRange(entry_pc, range_end);
+
+    auto raw = std::make_unique<RawModule>(processor_.get());
+    raw->set_name("guest_ppc_test");
+    raw->set_executable(true);
+    raw->SetAddressRange(entry_pc, range_size);
+    processor_->AddModule(std::move(raw));
+
+    guest_entry_fn_ = processor_->ResolveFunction(entry_pc);
+    assert_not_null(guest_entry_fn_);
+
+    prepared_guest_instructions_ = guest_instructions;
+    prepared_entry_pc_ = entry_pc;
+    guest_prepared_ = true;
   }
 
-  processor_->backend()->CommitExecutableRange(entry_pc, range_end);
-
-  auto raw = std::make_unique<RawModule>(processor_.get());
-  raw->set_name("guest_ppc_test");
-  raw->set_executable(true);
-  raw->SetAddressRange(entry_pc, range_size);
-  processor_->AddModule(std::move(raw));
-
-  auto* fn = processor_->ResolveFunction(entry_pc);
-  assert_not_null(fn);
-
-  uint32_t stack_size = 64 * 1024;
-  uint32_t stack_address = memory_->SystemHeapAlloc(stack_size);
-  uint32_t stack_base = stack_address + stack_size;
-  ThreadState thread_state(processor_.get(), 0x100, stack_base);
-  auto* ctx = thread_state.context();
+  if (!scratch_stack_address_) {
+    scratch_stack_address_ = memory_->SystemHeapAlloc(kGuestStackSize);
+  }
+  const uint32_t stack_base = scratch_stack_address_ + kGuestStackSize;
+  if (!thread_state_) {
+    thread_state_ =
+        std::make_unique<ThreadState>(processor_.get(), 0x100, stack_base);
+  }
+  auto* ctx = thread_state_->context();
   ctx->lr = 0xBCBCBCBC;
   processor_->backend()->SetGuestRoundingMode(ctx, 0);
 
   pre_call(ctx);
-  fn->Call(&thread_state, uint32_t(ctx->lr));
+  guest_entry_fn_->Call(thread_state_.get(), uint32_t(ctx->lr));
   post_call(ctx);
-
-  memory_->SystemHeapFree(stack_address);
-
-  processor_->RemoveModule("guest_ppc_test");
-  processor_->RemoveFunctionByAddress(entry_pc);
 }
 
 }  // namespace testing

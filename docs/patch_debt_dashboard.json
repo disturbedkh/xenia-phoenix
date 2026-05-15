@@ -1,0 +1,53 @@
+{
+  "patches_root": "tools\\tier0\\fixtures\\patch_debt",
+  "counts_by_category": {
+    "A": 1,
+    "B": 1,
+    "C": 1,
+    "D": 1
+  },
+  "top_categories": [
+    [
+      "A",
+      1
+    ],
+    [
+      "B",
+      1
+    ],
+    [
+      "C",
+      1
+    ],
+    [
+      "D",
+      1
+    ]
+  ],
+  "rows": [
+    {
+      "file": "sample_a_drm.patch.toml",
+      "title": "Fixture A (category A heuristic)",
+      "patch": "drm_bypass",
+      "category_guess": "A"
+    },
+    {
+      "file": "sample_b_qol.patch.toml",
+      "title": "Fixture B (category B heuristic)",
+      "patch": "widescreen",
+      "category_guess": "B"
+    },
+    {
+      "file": "sample_c_generic.patch.toml",
+      "title": "Fixture C (category C default)",
+      "patch": "misc_tweak",
+      "category_guess": "C"
+    },
+    {
+      "file": "sample_d_stability.patch.toml",
+      "title": "Fixture D (category D heuristic)",
+      "patch": "hang_fix",
+      "category_guess": "D"
+    }
+  ]
+}
