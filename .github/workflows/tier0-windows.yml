@@ -1,0 +1,31 @@
+name: Tier0 Windows (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-cpu-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure (VS 2022 x64)
+        run: |
+          cmake --preset vs -DXENIA_BUILD_TESTS=ON -DXENIA_BUILD_MISC=ON
+
+      - name: Build Release
+        run: cmake --build build --config Release --parallel
+
+      - name: Run CPU tests
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows
+          ./xenia-cpu-tests.exe
+
+      - name: Run vmx128-fuzz (smoke)
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows
+          ./vmx128-fuzz.exe --vmx128_fuzz_iters=500

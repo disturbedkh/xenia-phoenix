@@ -11,6 +11,7 @@
 #include "xenia/base/logging.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/util/shim_utils.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/xboxkrnl/xboxkrnl_private.h"
 #include "xenia/xbox.h"
 
@@ -150,6 +151,8 @@ dword_result_t NtAllocateVirtualMemory_entry(lpdword_t base_addr_ptr,
     allocation_type |= kMemoryAllocationCommit;
   }
   if (alloc_type & X_MEM_RESET) {
+    LogKernelStubHit("xboxkrnl", "NtAllocateVirtualMemory_X_MEM_RESET",
+                     "X_MEM_RESET");
     XELOGE("X_MEM_RESET not implemented");
     assert_always();
   }

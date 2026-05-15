@@ -321,6 +321,11 @@ add_subdirectory(third_party)
 set(CMAKE_FOLDER "src")
 add_subdirectory(src/xenia)
 
+if(XENIA_BUILD_MISC)
+  set(CMAKE_FOLDER "tools")
+  add_subdirectory(tools)
+endif()
+
 set(CMAKE_FOLDER "")
 
 # Set default startup project for Visual Studio

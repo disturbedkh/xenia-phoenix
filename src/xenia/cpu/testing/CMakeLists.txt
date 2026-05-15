@@ -6,3 +6,9 @@ xe_test_suite(xenia-cpu-tests ${CMAKE_CURRENT_SOURCE_DIR}
     $<$<BOOL:${XE_TARGET_X86_64}>:xenia-cpu-backend-x64>
     $<$<BOOL:${XE_TARGET_AARCH64}>:xenia-cpu-backend-a64>
 )
+
+if(TARGET xenia-cpu-tests)
+  target_sources(xenia-cpu-tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/guest_ppc_test_util.cc
+  )
+endif()

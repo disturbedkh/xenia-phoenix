@@ -8,6 +8,9 @@
  */
 
 #include "xenia/kernel/kernel_module.h"
+#include "xenia/kernel/util/stub_trace.h"
+
+#include <string>
 
 #include "xenia/base/logging.h"
 #include "xenia/cpu/raw_module.h"
@@ -137,6 +140,9 @@ uint32_t KernelModule::GetProcAddressByOrdinal(uint16_t ordinal) {
 
 uint32_t KernelModule::GetProcAddressByName(const std::string_view name) {
   // TODO: Does this even work for kernel modules?
+  const std::string name_copy(name);
+  LogKernelStubHit("xboxkrnl", "KernelModule::GetProcAddressByName",
+                   std::string_view(name_copy));
   XELOGE("KernelModule::GetProcAddressByName not implemented");
   return 0;
 }
