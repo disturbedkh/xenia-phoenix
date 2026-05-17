@@ -34,6 +34,7 @@ namespace app {
 class LauncherDashboardDialog;
 class LibrarySettingsDialog;
 class GraphicsSettingsDialog;
+class ConsoleSettingsDialog;
 
 struct RecentTitleEntry {
   std::string title_name;
@@ -110,6 +111,7 @@ class EmulatorWindow {
   void ToggleLibrarySettingsDialog();
   void ScheduleCloseGraphicsSettingsDialog();
   void ScheduleCloseLibrarySettingsDialog();
+  void ToggleConsoleSettingsDialog();
   void SetHotkeysState(bool enabled) { disable_hotkeys_ = !enabled; }
 
   // Called from ImGuiDialog::OnClose when a self-deleting owned dialog ends.
@@ -361,6 +363,7 @@ class EmulatorWindow {
   bool initializing_shader_storage_ = false;
 
   std::unique_ptr<DisplayConfigDialog> display_config_dialog_;
+  std::unique_ptr<ConsoleSettingsDialog> console_settings_dialog_;
 
   // Storing pointers and toggling dialog state is useful for broadcasting
   // messages back to guest.

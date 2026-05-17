@@ -10,4 +10,7 @@ target_include_directories(xenia-apu PRIVATE
 )
 target_link_libraries(xenia-apu PUBLIC libavcodec libavutil libavformat xenia-base xenia-obs
   xenia-phoenix-probe)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(xenia-apu PRIVATE SDL2)
+endif()
 xe_target_defaults(xenia-apu)

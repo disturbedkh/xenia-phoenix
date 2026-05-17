@@ -58,6 +58,12 @@ jobs:
           sudo update-alternatives --install /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-${{ env.LLVM_VERSION }} 200
           sudo update-alternatives --install /usr/bin/llvm-nm    llvm-nm    /usr/bin/llvm-nm-${{ env.LLVM_VERSION }}    200
 
+      - name: Download submodules
+        run: |
+          EXCLUDE="DirectXShaderCompiler"
+          SUBMODULES=$(grep 'path = ' .gitmodules | sed 's/^[[:space:]]*path = //' | tr -d '\r' | grep -vE "$EXCLUDE")
+          git submodule update --init --depth=1 $SUBMODULES
+
       - name: Install Vulkan SDK
         run: |
           if [ '${{ steps.cache-vulkan-sdk-linux-arm64.outputs.cache-hit }}' != 'true' ]; then
@@ -66,24 +72,27 @@ jobs:
             tar -xf vulkan-sdk.tar.xz -C ~/vulkan-sdk
           fi
 
-          VULKAN_SDK_VERSION=$(ls ~/vulkan-sdk)
-          VULKAN_ARCH=aarch64
-          if [ -d "$HOME/vulkan-sdk/$VULKAN_SDK_VERSION/$VULKAN_ARCH" ]; then
-            echo "VULKAN_SDK=$HOME/vulkan-sdk/$VULKAN_SDK_VERSION/$VULKAN_ARCH" >> $GITHUB_ENV
-            echo "$HOME/vulkan-sdk/$VULKAN_SDK_VERSION/$VULKAN_ARCH/bin" >> $GITHUB_PATH
+          VULKAN_SDK_ROOT=$(find ~/vulkan-sdk -maxdepth 3 -type d -name aarch64 2>/dev/null | head -n1)
+          if [ -n "$VULKAN_SDK_ROOT" ] && [ -d "$VULKAN_SDK_ROOT/bin" ]; then
+            echo "VULKAN_SDK=$VULKAN_SDK_ROOT" >> $GITHUB_ENV
+            echo "$VULKAN_SDK_ROOT/bin" >> $GITHUB_PATH
           else
-            echo "Warning: LunarG SDK has no $VULKAN_ARCH tree; using system libvulkan-dev + spirv-tools"
+            echo "Warning: LunarG SDK has no aarch64 tree; building spirv-opt from SPIRV-Tools submodule"
+            cmake -S third_party/SPIRV-Tools -B build-spirv-tools \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DSPIRV_SKIP_TESTS=ON \
+              -DSPIRV_SKIP_EXECUTABLES=OFF
+            cmake --build build-spirv-tools --target spirv-opt -j"$(nproc)"
+            SPIRV_OPT=$(find build-spirv-tools -name spirv-opt -type f -perm -111 | head -n1)
+            mkdir -p ~/local-vulkan-sdk/bin
+            cp "$SPIRV_OPT" ~/local-vulkan-sdk/bin/
+            echo "VULKAN_SDK=$HOME/local-vulkan-sdk" >> $GITHUB_ENV
+            echo "$HOME/local-vulkan-sdk/bin" >> $GITHUB_PATH
           fi
 
           for tool in glslangValidator spirv-opt spirv-dis; do
             which "$tool" && "$tool" --version 2>/dev/null || echo "Warning: $tool not found"
           done
-
-      - name: Download submodules
-        run: |
-          EXCLUDE="DirectXShaderCompiler"
-          SUBMODULES=$(grep 'path = ' .gitmodules | sed 's/^[[:space:]]*path = //' | tr -d '\r' | grep -vE "$EXCLUDE")
-          git submodule update --init --depth=1 $SUBMODULES
 
       - name: Doctor
         env:
