@@ -36,10 +36,17 @@ message(STATUS "Target architecture: XE_TARGET_AARCH64=${XE_TARGET_AARCH64} XE_T
 # Options
 option(XENIA_BUILD_TESTS "Build test suites" OFF)
 option(XENIA_BUILD_MISC "Build misc subprojects (trace viewers, shader compiler, vfs-dump, demos)" OFF)
+option(XENIA_ENABLE_ITRACE "Enable JIT per-instruction tracing to the log (slow)" OFF)
+option(XENIA_ENABLE_DTRACE "Enable JIT per-operation data tracing to the log (very slow)" OFF)
+option(XENIA_ENABLE_FTRACE "Enable JIT per-function-call tracing to the log" OFF)
 
 # Toggle profiler
 add_compile_definitions(XE_OPTION_PROFILING=0)
 add_compile_definitions(XE_OPTION_PROFILING_UI=0)
+
+# XENIA_ENABLE_ITRACE / XENIA_ENABLE_DTRACE / XENIA_ENABLE_FTRACE are consumed
+# per-file in the x64 and a64 backend CMakeLists (only the *_tracers.cc TUs read
+# them), so toggling them doesn't trigger a full rebuild.
 
 if(XENIA_BUILD_TESTS)
   enable_testing()

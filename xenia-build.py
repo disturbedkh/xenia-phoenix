@@ -720,7 +720,9 @@ def get_build_dir(target_arch=None):
 
 
 def run_cmake_configure(build_type="Release", cc=None, build_tests=False,
-                        extra_args=None, target_arch=None):
+                        extra_args=None, target_arch=None,
+                        enable_itrace=False, enable_dtrace=False,
+                        enable_ftrace=False):
     """Runs cmake configure on the project.
 
     Args:
@@ -810,6 +812,9 @@ def run_cmake_configure(build_type="Release", cc=None, build_tests=False,
             return 1
     if build_tests:
         args += ["-DXENIA_BUILD_TESTS=ON"]
+    args += [f"-DXENIA_ENABLE_ITRACE={'ON' if enable_itrace else 'OFF'}"]
+    args += [f"-DXENIA_ENABLE_DTRACE={'ON' if enable_dtrace else 'OFF'}"]
+    args += [f"-DXENIA_ENABLE_FTRACE={'ON' if enable_ftrace else 'OFF'}"]
     if extra_args:
         args += extra_args
 
@@ -1276,6 +1281,21 @@ class BaseBuildCommand(Command):
             default=[], metavar="KEY=VALUE",
             help="Pass a CMake define (e.g. --cmake-define CMAKE_CXX_FLAGS=/DUSE_BCRYPT_RSA).")
         self.parser.add_argument(
+            "--enable-itrace", dest="enable_itrace", action="store_true",
+            default=False,
+            help="Enables JIT per-instruction tracing to the log (sets "
+                 "-DXENIA_ENABLE_ITRACE=ON). Very slow; for debugging only.")
+        self.parser.add_argument(
+            "--enable-dtrace", dest="enable_dtrace", action="store_true",
+            default=False,
+            help="Enables JIT per-operation data tracing to the log (sets "
+                 "-DXENIA_ENABLE_DTRACE=ON). Very slow; for debugging only.")
+        self.parser.add_argument(
+            "--enable-ftrace", dest="enable_ftrace", action="store_true",
+            default=False,
+            help="Enables JIT per-function-call tracing to the log (sets "
+                 "-DXENIA_ENABLE_FTRACE=ON). For debugging only.")
+        self.parser.add_argument(
             "--target-arch", type=normalize_target_arch, default=None,
             help="Target architecture (arm64/aarch64, x64/amd64/x86_64/x86).")
 
@@ -1289,7 +1309,10 @@ class BaseBuildCommand(Command):
             ret = run_cmake_configure(build_type=config, cc=args["cc"],
                                       build_tests=args["build_tests"],
                                       target_arch=args["target_arch"],
-                                      extra_args=extra_args)
+                                      extra_args=extra_args,
+                                      enable_itrace=args["enable_itrace"],
+                                      enable_dtrace=args["enable_dtrace"],
+                                      enable_ftrace=args["enable_ftrace"])
             if ret:
                 return ret
             print("")
