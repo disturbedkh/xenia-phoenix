@@ -104,6 +104,21 @@ X_STATUS GraphicsSystem::Setup(cpu::Processor* processor,
   scaled_aspect_x_ = 16;
   scaled_aspect_y_ = 9;
 
+  auto custom_res_x = cvars::internal_display_resolution_x;
+  auto custom_res_y = cvars::internal_display_resolution_y;
+  if (!custom_res_x || custom_res_x > 1920 || !custom_res_y ||
+      custom_res_y > 1080) {
+    OVERRIDE_PERSIST_uint32(internal_display_resolution_x,
+                            internal_display_resolution_entries[8].first);
+    OVERRIDE_PERSIST_uint32(internal_display_resolution_y,
+                            internal_display_resolution_entries[8].second);
+    config::SaveConfig();
+    xe::FatalError(fmt::format(
+        "Invalid custom resolution specified: {}x{}\n"
+        "Width must be between 1-1920.\nHeight must be between 1-1080.",
+        custom_res_x, custom_res_y));
+  }
+
   if (with_presentation && provider_) {
     // Safe if either the UI thread call or the presenter creation fails.
     if (app_context_) {
