@@ -546,11 +546,10 @@ struct ExportRegistrerHelper {
     struct X {
       static void Trampoline(PPCContext* ppc_context) {
         if (TAGS & xe::cpu::ExportTag::kStub) {
-          const char* module_name = MODULE == KernelModuleId::xboxkrnl
-                                        ? "xboxkrnl"
-                                        : (MODULE == KernelModuleId::xam
-                                               ? "xam"
-                                               : "xbdm");
+          const char* module_name =
+              MODULE == KernelModuleId::xboxkrnl
+                  ? "xboxkrnl"
+                  : (MODULE == KernelModuleId::xam ? "xam" : "xbdm");
           LogKernelStubHitGuest(ppc_context, module_name, export_entry->name);
         }
         Param::Init init = {
@@ -585,11 +584,10 @@ struct ExportRegistrerHelper {
     struct Y {
       static void Trampoline(PPCContext* ppc_context) {
         if (TAGS & xe::cpu::ExportTag::kStub) {
-          const char* module_name = MODULE == KernelModuleId::xboxkrnl
-                                        ? "xboxkrnl"
-                                        : (MODULE == KernelModuleId::xam
-                                               ? "xam"
-                                               : "xbdm");
+          const char* module_name =
+              MODULE == KernelModuleId::xboxkrnl
+                  ? "xboxkrnl"
+                  : (MODULE == KernelModuleId::xam ? "xam" : "xbdm");
           LogKernelStubHitGuest(ppc_context, module_name, export_entry->name);
         }
         Param::Init init = {
@@ -629,11 +627,10 @@ using xe::cpu::ExportTag;
                    xe::kernel::shim::KernelModuleId::module_name,          \
                    ordinals::name>(&name##_entry))>>;                      \
   const auto EXPORT_##module_name##_##name = RegisterExport_##module_name( \
-      _register_##module_name##_##name ::RegisterExport<                   \
-          &name##_entry, tags | (static_cast<xe::cpu::ExportTag::type>(    \
-                                     xe::cpu::ExportCategory::category)    \
-                                 << xe::cpu::ExportTag::CategoryShift)>(   \
-          #name));
+      _register_##module_name##_##name ::RegisterExport < &name##_entry,   \
+      tags | (static_cast<xe::cpu::ExportTag::type>(                       \
+                  xe::cpu::ExportCategory::category)                       \
+              << xe::cpu::ExportTag::CategoryShift) > (#name));
 
 #define DECLARE_EMPTY_REGISTER_EXPORTS(module_name, group_name) \
   void xe::kernel::module_name::Register##group_name##Exports(  \
