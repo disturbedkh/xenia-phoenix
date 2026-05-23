@@ -637,6 +637,18 @@ void EmulatorWindow::DisplayConfigDialog::OnDraw(ImGuiIO& io) {
     }
   }
 
+  if (ImGui::TreeNodeEx("GPU trace capture", ImGuiTreeNodeFlags_Framed)) {
+    ImGui::TextUnformatted(
+        "Writes one frame via trace_gpu_prefix (default scratch/gpu/). "
+        "Retail corpus: tests/gpu_traces/CORPUS.md.");
+    if (ImGui::Button("Capture frame trace")) {
+      emulator_window_.GpuTraceFrame();
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("(F4 / GPU Trace Frame menu)");
+    ImGui::TreePop();
+  }
+
   ImGui::End();
 
   if (!dialog_open) {
