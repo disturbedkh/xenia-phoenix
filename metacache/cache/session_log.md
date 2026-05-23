@@ -1,7 +1,7 @@
 ---
-last_verified: 2026-05-16
-verified_by: session-bf2-triage
-workspace_root_note: Meta root moved to G:\Dev\The Xenia Project (2026-05-23). Historical paths below may reference the old location.
+last_verified: 2026-05-23
+verified_by: session-linux-arm64-ci
+workspace_root_note: Meta root at G:\The Xenia Project (2026-05-23).
 ---
 
 # Session log
@@ -11,6 +11,13 @@ Append-only log of what we decided and built across sessions. Newest at top.
 **Linux (Phase 2):** each **plan** session sets scope/exit criteria; each **build** session lands code or a verified Docker/CI outcome. See [20_tier_roadmap.md](../plan/20_tier_roadmap.md) § Phase 2.
 
 ---
+
+## 2026-05-23 — Linux x86 + aarch64 + Windows ARM64 CI green (plan exit)
+
+- **Orchestrator [26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305)** (`c19c4fdfe`): Linux x86-64 Release/Debug/Checked + **Linux (ARM64)** + **Windows (ARM64)** all green (~14–22 min).
+- **Fixes:** B28–B35 (`obs_event`, LTO pin, SDL2, LSAN smoke, `glslang-tools`, `-Wno-absolute-value`); B36 Windows ARM64 Vulkan cache `continue-on-error` + SDK tree validation (false regression was interrupted cache restore, not compile).
+- **Out of scope (still red on same run):** macOS Vulkan install, Android NDK build, Tier0 differential submodule clone — unchanged from plan.
+- **Roadmap:** Phase 4.4b first green claimed; Phase 2.2–2.4 CI reconfirmed on same run. See [20_tier_roadmap.md](../plan/20_tier_roadmap.md), [arm64_compat_roadmap.md](../plan/arm64_compat_roadmap.md).
 
 ## 2026-05-23 — Canary catch-up + Edge Class-A harvest
 

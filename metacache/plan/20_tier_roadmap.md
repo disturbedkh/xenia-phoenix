@@ -154,7 +154,7 @@ Inventory: [linux_compat_gap_analysis.md](linux_compat_gap_analysis.md). Machine
 |-----------|------|--------|
 | **2.0** | Gap analysis | [x] |
 | **2.1** | AI brain + INDEX aligned with `xenia-phoenix-src` | [x] |
-| **2.2** | Release build green (Docker + CI) | [x] 2026-05-16 |
+| **2.2** | Release build green (Docker + CI) | [x] 2026-05-16; CI reconfirmed 2026-05-23 ([run 26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305) — x86 Release/Debug/Checked) |
 | **2.3** | Build matrix (Debug/Checked), `.gitattributes`, CI `doctor`, optional [Dockerfile](../../xenia-phoenix-src/tools/docker/Dockerfile) | [x] |
 | **2.4** | Automated verify: [linux-verify.sh](../../xenia-phoenix-src/tools/docker/linux-verify.sh), cpu-tests, AppImage smoke | [x] |
 | **2.5** | Runtime sign-off — [linux_runtime_checklist.md](../../xenia-phoenix-src/docs/linux_runtime_checklist.md) (GTK, Vulkan, audio, HID) | [ ] manual |
@@ -188,7 +188,7 @@ Inventory: [linux_compat_gap_analysis.md](linux_compat_gap_analysis.md). Machine
 | **4.2** | `xenia-cpu-tests` + vmx128-fuzz on WoA | [ ] |
 | **4.3** | Runtime smoke + [60_smoke_titles.md](60_smoke_titles.md) WoA column | [ ] manual |
 | **4.4a** | macOS Apple Silicon (Cocoa + MoltenVK + CI) | [x] landed; CI smoke pending |
-| **4.4b** | Linux aarch64 CI (`ubuntu-24.04-arm`) | [x] workflow parity 2026-05-23; first green CI pending |
+| **4.4b** | Linux aarch64 CI (`ubuntu-24.04-arm`) | [x] first green CI 2026-05-23 ([run 26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305)) |
 
 ---
 
@@ -201,6 +201,7 @@ Inventory: [linux_compat_gap_analysis.md](linux_compat_gap_analysis.md). Machine
 [PARALLEL] Phase 2.x / tier0-differential  PR CI differential gates
 [PARALLEL] Phase 3 Android                 Build 3.x green; device QA manual
 [PARALLEL] Phase 4.2–4.3                   cpu-tests + WoA smoke (manual)
-[PARALLEL] Phase 4.4a macOS / 4.4b Linux arm64 CI
+[DONE] Phase 4.4b Linux aarch64 CI (2026-05-23)
+[PARALLEL] Phase 4.4a macOS CI smoke
 [LATER]  Tier A capture-card ground truth
 ```

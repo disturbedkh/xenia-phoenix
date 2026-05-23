@@ -17,7 +17,7 @@ Machine state: [arm64_status.md](../../xenia-phoenix-src/docs/arm64_status.md). 
 - [x] [arm64_windows_build.md](../../xenia-phoenix-src/docs/arm64_windows_build.md)
 - [x] [build-win_arm64.yml](../../xenia-phoenix-src/.github/workflows/build-win_arm64.yml) + Orchestrator job
 - [x] [arm64-verify.ps1](../../xenia-phoenix-src/tools/tier0/arm64-verify.ps1)
-- [x] First green CI run on `windows-2025` (2026-05-23, run 26335584966)
+- [x] First green CI run on `windows-2025` (2026-05-23, [run 26335584966](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26335584966); reconfirmed [26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305) after B36 cache hardening)
 
 ## Phase 4.2 — CPU validation
 
@@ -43,7 +43,7 @@ Machine state: [arm64_status.md](../../xenia-phoenix-src/docs/arm64_status.md). 
 ## Phase 4.4b — Linux aarch64
 
 - [x] [build-linux_arm64.yml](../../xenia-phoenix-src/.github/workflows/build-linux_arm64.yml) on `ubuntu-24.04-arm` — LLVM 20 pinning + Vulkan SDK + doctor (2026-05-23)
-- [ ] First green Linux ARM64 CI run
+- [x] First green Linux ARM64 CI run — [Orchestrator 26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305) (B28–B35; `glslang-tools`, `-Wno-absolute-value`)
 - [ ] Runtime parity (Phase 2.5+ on x86_64 Linux first)
 
 Do not block 4.1–4.3 on 4.4.
