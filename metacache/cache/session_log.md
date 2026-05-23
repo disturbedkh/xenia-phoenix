@@ -12,10 +12,21 @@ Append-only log of what we decided and built across sessions. Newest at top.
 
 ---
 
+## 2026-05-23 — Canary catch-up + Edge Class-A harvest
+
+- **Pulls:** All six workspace repos fetched/pulled to latest (2026-05-23). `Xenia-Phoenix` metacache fetch-only (ahead 1).
+- **Canary sync:** 12 upstream cherry-picks `dc4db67`→`09dbe2c` on `sync/canary-2026-05-21`; merged to `canary_experimental`. Manual XConfig merge kept Phoenix launcher + `kernel_stub_hit_log`. Follow-ups: `c386deb44` (display-resolution cvars), `bc8e455ac` (Vulkan link fix).
+- **Edge Class-A:** Landed EPQ-21–24 (`e6ef86b9`, `d80e6e44`, `fcc4a22`, `fb589f58` + fixes). Deferred EPQ-27–29, 30–38 — see [edge_port_queue.md](../plan/edge_port_queue.md).
+- **Gates:** Release `xenia-app` green; `xenia-cpu-tests` 800/250 green. vmx128 5k sample: sparse low-iter mismatches (pre-existing).
+- **WIP:** Launcher icon-cache stash restored (7 files, 167 insertions) — uncommitted.
+- **Docs:** [canary_resync_queue.md](../plan/canary_resync_queue.md), [master_review.md](../plan/master_review.md), [xenios_reference_notes.md](../plan/xenios_reference_notes.md).
+
 ## 2026-05-23 — Linux x86 + aarch64 CI fix (B28/B29)
 
 - **B28:** `obs_event.cc` — hoist `fmt::format` to `std::string` before `ev.detail` assignment; fixes `-Wdangling-assignment-gsl` under clang-20 (Linux x86 Release/Debug/Checked).
 - **B29:** `build-linux_arm64.yml` — mirror `Linux_x86.yml` toolchain pinning (`apt.llvm.org`, `update-alternatives` for lld/llvm-ar), Vulkan SDK cache, doctor, smoke via `script -qefc`, cpu-tests via `xenia-build.py test --target`.
+- **B30:** `xenia-apu/CMakeLists.txt` — link `SDL2` on Linux for `audio_media_player.cc` XMP SDL path (EDGE-PORT-A-2).
+- **B31:** ARM64 CI — build `spirv-opt` from `SPIRV-Tools` submodule when LunarG tarball lacks aarch64 tree.
 - **Docs:** `linux_build_blockers.md` B28/B29; `arm64_status.md` Linux aarch64 CI section; gap analysis + roadmap bumped.
 
 ## 2026-05-23 — Lint + Windows ARM64 CI green

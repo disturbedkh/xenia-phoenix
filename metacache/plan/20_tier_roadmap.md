@@ -1,6 +1,6 @@
 # Tier roadmap
 
-The plan, ordered. Phoenix is currently at the Tier 0 -> Tier 1 boundary.
+The plan, ordered. Phoenix is currently at **Tier 1-Gameplay** (Windows). **Canary sync:** upstream `09dbe2c` landed 2026-05-23 ([canary_resync_queue.md](canary_resync_queue.md)); Phoenix HEAD `bc8e455ac`.
 
 ## Tier 0 — PC-only differential CI (DONE in canary fork)
 

@@ -2,7 +2,7 @@
 
 **Purpose:** Harvest low-risk fixes from [Xenia-Edge](../../Xenia-Edge/) into `xenia-phoenix-src` without disturbing Phoenix Tier 1-PC wins (vmx128, U-GPU instrumentation, `apu_trace`, stub logging, upload continue).
 
-**Audit method:** File hash compare + targeted `git diff --no-index` on differing files (2026-05-17). Edge HEAD `6101f13`; Phoenix HEAD `92869d77`. Fence-post commit `707052a2f` from compat #9 is not in local Edge clone.
+**Audit method:** Commit log scan + cherry-pick trial on `sync/edge-port-a-2026-05-23` (2026-05-23). Edge HEAD `6e02a106`; Phoenix HEAD `bc8e455ac`. Prior audit: 2026-05-17 @ Edge `6101f13`.
 
 **Scope:** `src/xenia/{apu,gpu,kernel,hid,base,cpu/ppc}` — excludes `cpu/backend/x64`, `cpu/backend/a64`, build/CI.
 
@@ -40,12 +40,39 @@
 | EPQ-19 | `cpu/ppc/ppc_emit_altivec.cc` | VMX emit | Phoenix 1M fuzz closed | **C** | skip | Do not perturb JIT |
 | EPQ-20 | `kernel/xboxkrnl/xboxkrnl_video.cc` | Video / EDRAM | Overlaps Vd* BF2 work | **B** | queue | Boot video if regress on Phoenix |
 
+## Queue (2026-05-23 re-audit — commits since fork)
+
+| ID | Edge commit | Edge change | Phoenix delta | Class | Decision | Notes |
+|----|-------------|-------------|---------------|-------|----------|-------|
+| EPQ-21 | `e6ef86b9` / `5c82c5c` | Remove duplicate `Profiler::Dump()` | Missing 1 line | **A** | **ported** 2026-05-23 | `xenia_main.cc` |
+| EPQ-22 | `d80e6e44` / `b0a1ea5` | `ClientSlot` default-init (no memset over mutex) | Partial — no EPQ-07 perf counters | **A** | **ported** 2026-05-23 | macOS/Linux audio robustness |
+| EPQ-23 | `fcc4a22` / `59630a6` | NtFree/Protect heap null-check + devkit logging | Phoenix had heap deref without null | **A** | **ported** 2026-05-23 | `xboxkrnl_memory.cc` |
+| EPQ-24 | `fb589f58` / `7a41c97` | GPU trace-writer guest addresses; drop `LoadShader` guest arg | Landed + `bc8e455ac` Vulkan PBE fix | **A** | **ported** 2026-05-23 | Tier 0 replay / trace capture |
+| EPQ-25 | `cebbdb6` | `XeCryptHmacShaInit/Update/Final` | Already present | **A** | skip (empty pick) | |
+| EPQ-26 | `6181160` | XEX swap prefix fix | Already present via canary sync | **A** | skip (empty pick) | |
+| EPQ-27 | `3811fbf` | Posix relaunch dangling `argv` | Phoenix lacks posix relaunch block | **B** | queue | Land with Linux return-to-UI work |
+| EPQ-28 | `250fb40` | `AsioErrorToWSAError` in `xsocket.cc` | Different xsocket architecture | **B** | queue | Networked-title smoke prerequisite |
+| EPQ-29 | `0a82080` | Bake `gamecontrollerdb.txt` into exe | Missing `embed_bundle.py` infra | **B** | queue | Needs build-system port |
+| EPQ-30 | `b975095` + `c2f7fc4` | JIT ITrace/DTrace/FTrace + x64 codegen fix | Pairs with Phoenix `xe::obs` | **B** | queue | Long-term observability |
+| EPQ-31 | `ba490f79` | `NetDll_WSAEventSelect` via asio | Not in Phoenix | **B** | queue | Online smoke |
+| EPQ-32 | `45d770a7` + `5d4a90b3` + `1f4bb500` | HID keyboard merge + XInput removal + SDL JoystickType | Multi-commit unit | **B** | queue | WoA / desktop QA |
+| EPQ-33 | `882cd7e9` | Game library storage separate from dash GPD | Overlaps launcher icon-cache WIP | **B** | queue | Human review vs stashed WIP |
+| EPQ-34 | `4b1b62f7` | Startup profile creation + game import flow | UX feature | **B** | queue | Design review |
+| EPQ-35 | `71dcd500` + `a1de6bd4` + `6e9c4973` | Volume / back-button / per-game FPS limit UI | Coherent trio | **B** | queue | UX bundle |
+| EPQ-36 | `96effa1e` | ImGui GPU trace button | Pairs with tier0 replay | **B** | queue | Developer UX |
+| EPQ-37 | `b575c684` | XMA RexGlue / AC6_recomp derivation | Partially covered by canary `09dbe2c` | **D** | triage | Compare after smoke XMA JSONL |
+| EPQ-38 | Metal + MoltenVK + macOS CI (~20 commits) | Full macOS Vulkan/Metal stack | EPQ-09 defer | **B** | defer | Phase 4.4a |
+
 ## Landed (class A)
 
 | Tag | Commit / note | Files |
 |-----|---------------|-------|
 | EDGE-PORT-A-1 | 2026-05-17 | `audio_media_player.cc` destructor worker stop |
 | EDGE-PORT-A-2 | 2026-05-17 | `audio_media_player.cc` Linux SDL XMP driver |
+| EDGE-PORT-A-3 | 2026-05-23 | `xenia_main.cc` duplicate Profiler::Dump removal |
+| EDGE-PORT-A-4 | 2026-05-23 | `audio_system.{cc,h}` ClientSlot default-init |
+| EDGE-PORT-A-5 | 2026-05-23 | `xboxkrnl_memory.cc` NtFree/Protect null-check |
+| EDGE-PORT-A-6 | 2026-05-23 | GPU trace-writer guest addresses (`command_processor`, D3D12/Vulkan/null) |
 
 ## Next B items (after smoke §2)
 
@@ -57,4 +84,6 @@
 
 - [bf2_gpu_roadmap.md](bf2_gpu_roadmap.md) § Parked
 - [30_debt_ledger.md](30_debt_ledger.md)
-- [workspace/00_monorepo_pointers.md](../workspace/00_monorepo_pointers.md)
+- [canary_resync_queue.md](canary_resync_queue.md)
+- [master_review.md](master_review.md)
+- [xenios_reference_notes.md](xenios_reference_notes.md)
