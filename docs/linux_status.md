@@ -1,10 +1,10 @@
 # Linux port status (Phase 2)
 
-Last updated: **2026-05-16**. Roadmap: [metacache/plan/20_tier_roadmap.md](../../metacache/plan/20_tier_roadmap.md) § Phase 2.
+Last updated: **2026-05-23**. Roadmap: [metacache/plan/20_tier_roadmap.md](../../metacache/plan/20_tier_roadmap.md) § Phase 2.
 
 ## Phase 2.2–2.4 — Automated (done)
 
-- [x] Release build (Ubuntu 24.04, clang-20)
+- [x] Release build (Ubuntu 24.04, clang-20) — CI green [run 26339810511](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26339810511) (2026-05-23)
 - [x] `xenia-build.py doctor` in CI and Docker
 - [x] `linux-verify.sh`: smoke, launcher, `xenia-cpu-tests` (Release)
 - [x] Debug / Checked in CI (smoke)

@@ -223,6 +223,10 @@ else()
         $<$<COMPILE_LANGUAGE:CXX>:-Wno-nontrivial-memcall>
       )
     endif()
+    if(XE_TARGET_AARCH64)
+      # tomlplusplus uses abs(log10(double)); aarch64 clang-20 promotes -Wabsolute-value under -Werror
+      add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-absolute-value>)
+    endif()
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21)
       add_compile_options(
         $<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>
