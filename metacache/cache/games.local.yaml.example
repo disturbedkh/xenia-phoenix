@@ -1,0 +1,9 @@
+# Copy to games.local.yaml (gitignored). User-owned game paths only.
+#
+# games:
+#   "4d5307d1":
+#     path: "D:\\Xbox 360\\Project Gotham Racing 3\\default.xex"
+#   "454107db":
+#     path: "D:\\Xbox 360\\Battlefield Bad Company 2\\default.xex"
+
+games: {}

@@ -1,0 +1,6 @@
+﻿{
+    "trace":  "454107DB_7687.xtr",
+    "session_note":  "Optional A/B with PHOENIX_BF2_GFX_WORKAROUND=1 (masks U-GPU-001, halo risk)",
+    "env":  "PHOENIX_BF2_GFX_WORKAROUND=1",
+    "counters":  "Fill after optional user GfxWorkaround session"
+}

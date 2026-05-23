@@ -1,0 +1,15 @@
+﻿{
+    "trace":  "454107DB_7687.xtr",
+    "session_note":  "Frozen before U-GPU-001 fix (in-game poll at ground repro)",
+    "readback_resolve":  "none",
+    "host_depth_transfer_mismatch_count":  263,
+    "ownership_change_count":  1450,
+    "edram_transfer_count":  1450,
+    "host_depth_store_count":  131,
+    "upload_range_error_count":  5,
+    "post_fix_acceptance":  {
+                                "host_depth_transfer_mismatch_count":  0,
+                                "requires_visual_flicker_gone":  true,
+                                "no_boot_workaround_cvars":  true
+                            }
+}

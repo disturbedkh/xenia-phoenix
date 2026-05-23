@@ -1,0 +1,32 @@
+# Copy to xenia-phoenix-src/telemetry/smoke_roster_local.toml (gitignored).
+# Do not commit real paths to public forks.
+
+[xenia]
+exe = "build/bin/Windows/Release/xenia_canary.exe"
+duration_sec = 300
+hid = "xinput"
+
+[[title]]
+id = "4D5307D1"
+name = "Project Gotham Racing 3"
+game_path = "D:/games/PGR3/default.xex"
+
+[[title]]
+id = "4D5307EA"
+name = "Forza Motorsport 2"
+game_path = "D:/games/Forza2/default.xex"
+
+[[title]]
+id = "4D5309B1"
+name = "Halo CE Anniversary"
+game_path = "D:/games/HaloCEA/default.xex"
+
+[[title]]
+id = "58410955"
+name = "Banjo-Tooie"
+game_path = "D:/games/BanjoTooie/default.xex"
+
+[[title]]
+id = "4D53082D"
+name = "Gears of War 2"
+game_path = "D:/games/Gears2/default.xex"

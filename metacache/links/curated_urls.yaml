@@ -1,0 +1,16 @@
+# Curated URLs for agents (subset of re/70_references.md)
+version: 1
+architecture:
+  - url: https://free60.org/System-Software/
+    topic: Xbox 360 system software overview
+  - url: https://free60.org/System-Software/CPU/
+    topic: Xenon CPU
+  - url: https://free60.org/System-Software/GPU/
+    topic: Xenos GPU
+  - url: https://free60.org/System-Software/Formats/STFS/
+    topic: STFS packages
+repos:
+  - url: https://github.com/xenia-canary/xenia-canary
+    topic: Xenia Canary upstream
+  - url: https://github.com/xenia-canary/xenia-canary/wiki
+    topic: Canary wiki (options, patches)

@@ -1,0 +1,129 @@
+version: 1
+default_agent: orchestrator
+canonical_src: xenia-phoenix-src
+agents:
+  - id: orchestrator
+    status: active
+    priority: 0
+    entry:
+      - plan/00_mission.md
+      - plan/20_tier_roadmap.md
+      - plan/50_open_questions.md
+    metrics: []
+  - id: cursor_probe
+    status: active
+    priority: 1
+    entry:
+      - dev/55_cursor_live_probe.md
+      - workspace/03_cursor_mcp_setup.md
+      - schemas/mcp_tools.md
+    metrics:
+      - mcp_session_active
+      - triage_exit_code
+  - id: gameplay_smoke
+    status: active
+    priority: 2
+    entry:
+      - plan/61_tier1_gameplay_gate.md
+      - plan/62_gameplay_execution.md
+      - plan/60_smoke_titles.md
+    metrics:
+      - smoke_roster_filled
+      - stub_jsonl_empty
+      - retail_xtr
+  - id: patch_debt
+    status: active
+    priority: 2
+    entry:
+      - plan/30_debt_ledger.md
+      - xenia-phoenix-src/docs/patch_debt_dashboard.md
+    metrics:
+      - patch_cd_count
+  - id: cpu_vmx128
+    status: maintenance
+    priority: 3
+    entry:
+      - cache/vmx128_runs.md
+      - re/10_vmx128.md
+      - re/10_xenon_cpu.md
+    metrics:
+      - vmx128_divergences
+  - id: gpu_edram
+    status: maintenance
+    priority: 4
+    entry:
+      - re/20_xenos_gpu.md
+      - plan/60_smoke_titles.md
+    metrics:
+      - gpu_hash_drift
+  - id: kernel_xam
+    status: active
+    priority: 5
+    entry:
+      - re/40_kernel_xam.md
+      - plan/60_smoke_titles.md
+      - schemas/stub_hit_jsonl.md
+    metrics:
+      - stub_hit_count
+  - id: audio_xma2
+    status: active
+    priority: 6
+    entry:
+      - re/30_xma2_audio.md
+      - plan/60_smoke_titles.md
+    metrics:
+      - xma_divergence_log
+      - pcm_hash_stable
+  - id: ci_infra
+    status: active
+    priority: 7
+    entry:
+      - meta/03_metrics.md
+      - dev/40_pr_runbook.md
+      - dev/10_build_commands.md
+    metrics:
+      - ci_green
+  - id: port_linux
+    status: planned
+    priority: 10
+    entry:
+      - plan/linux_compat_gap_analysis.md
+      - dev/linux_compat_runbook.md
+    metrics: []
+  - id: port_android
+    status: planned
+    priority: 11
+    entry:
+      - plan/android_compat_gap_analysis.md
+      - plan/android_compat_roadmap.md
+      - dev/android_compat_runbook.md
+    metrics: []
+  - id: port_arm64
+    status: planned
+    priority: 12
+    entry:
+      - plan/arm64_compat_gap_analysis.md
+      - plan/arm64_compat_roadmap.md
+      - dev/arm64_compat_runbook.md
+    metrics: []
+  - id: port_macos
+    status: planned
+    priority: 13
+    entry:
+      - plan/macos_compat_gap_analysis.md
+      - dev/macos_compat_runbook.md
+    metrics: []
+  - id: vfs_content
+    status: maintenance
+    priority: 14
+    entry:
+      - re/50_stfs_xcontent.md
+    metrics: []
+  - id: re_curator
+    status: active
+    priority: 15
+    entry:
+      - re/60_re_tools.md
+      - re/70_references.md
+      - meta/01_handoff.md
+    metrics: []
