@@ -2720,10 +2720,9 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type,
 
   // Track for device-lost diagnostics.
   ++submission_in_progress_.draw_count;
-  submission_in_progress_.last_vs_hash =
-      vertex_shader->shader().ucode_data_hash();
+  submission_in_progress_.last_vs_hash = vertex_shader->ucode_data_hash();
   submission_in_progress_.last_ps_hash =
-      pixel_shader ? pixel_shader->shader().ucode_data_hash() : 0;
+      pixel_shader ? pixel_shader->ucode_data_hash() : 0;
   submission_in_progress_.last_render_pass_key =
       render_target_cache_->last_update_render_pass_key().key;
 
