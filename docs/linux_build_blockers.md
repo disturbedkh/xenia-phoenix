@@ -38,6 +38,7 @@ Tracked work for [issue #549](https://github.com/xenia-canary/xenia-canary/issue
 | B30 | compile | `xenia-apu` + Linux XMP | `SDL.h` not found compiling `audio_media_player.cc` | Link `SDL2` on Linux in `apu/CMakeLists.txt` (EDGE-PORT-A-2) | 2.2 |
 | B31 | configure | ARM64 CI + doctor | System `spirv-opt` lacks `--canonicalize-ids`; LunarG tarball has no aarch64 tree | `doctor` step `continue-on-error: true`; build uses compile_shader_spirv fallback (B02) | 4.4b |
 | B32 | verify | Checked smoke + LSAN | `--help` smoke exits 1 on LeakSanitizer GTK/SDL leaks | `LSAN_OPTIONS=detect_leaks=0` in CI smoke step | 2.3 |
+| B34 | configure | ARM64 shader compile | `glslangValidator` missing (no LunarG aarch64 SDK) | Install `glslang-tools` apt package in `build-linux_arm64.yml` | 4.4b |
 
 ## Platform source inventory (`*_win.cc` → Linux peer)
 
