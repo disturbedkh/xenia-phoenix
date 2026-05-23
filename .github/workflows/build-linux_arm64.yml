@@ -78,11 +78,16 @@ jobs:
             echo "$VULKAN_SDK_ROOT/bin" >> $GITHUB_PATH
           else
             echo "Warning: LunarG SDK has no aarch64 tree; building spirv-opt from SPIRV-Tools submodule"
-            git -C third_party/SPIRV-Tools submodule update --init --depth=1 external/spirv-headers
+            mkdir -p third_party/SPIRV-Tools/external
+            if [ ! -d third_party/SPIRV-Tools/external/spirv-headers/include ]; then
+              git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers.git \
+                third_party/SPIRV-Tools/external/spirv-headers
+            fi
             cmake -S third_party/SPIRV-Tools -B build-spirv-tools \
               -DCMAKE_BUILD_TYPE=Release \
               -DSPIRV_SKIP_TESTS=ON \
-              -DSPIRV_SKIP_EXECUTABLES=OFF
+              -DSPIRV_SKIP_EXECUTABLES=OFF \
+              -DSPIRV-Headers_SOURCE_DIR="$PWD/third_party/SPIRV-Tools/external/spirv-headers"
             cmake --build build-spirv-tools --target spirv-opt -j"$(nproc)"
             SPIRV_OPT=$(find build-spirv-tools -name spirv-opt -type f -perm -111 | head -n1)
             mkdir -p ~/local-vulkan-sdk/bin
