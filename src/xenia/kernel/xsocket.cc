@@ -23,6 +23,7 @@
 #include <WinSock2.h>
 // clang-format on
 #else
+#include <cerrno>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -57,6 +58,100 @@ const std::map<uint32_t, uint32_t> supported_levels = {{0xFFFF, SOL_SOCKET},
 // Translate ioctl commands to native
 const std::map<uint32_t, uint32_t> supported_controls = {
     {0x8004667E, FIONBIO}, {0x4004667F, FIONREAD}};
+
+namespace {
+
+// Winsock FD_* network event flags (WSAEventSelect).
+constexpr uint32_t kFD_READ = 1;
+constexpr uint32_t kFD_WRITE = 2;
+constexpr uint32_t kFD_OOB = 4;
+constexpr uint32_t kFD_ACCEPT = 8;
+constexpr uint32_t kFD_CONNECT = 16;
+constexpr uint32_t kFD_CLOSE = 32;
+
+#if !XE_PLATFORM_WIN32
+uint32_t PosixErrnoToWSAError(int err) {
+  switch (err) {
+    case EINTR:
+      return 10004;  // WSAEINTR
+    case EACCES:
+      return 10013;  // WSAEACCES
+    case EFAULT:
+      return 10014;  // WSAEFAULT
+    case EINVAL:
+      return 10022;  // WSAEINVAL
+    case EMFILE:
+      return 10024;  // WSAEMFILE
+    case EWOULDBLOCK:
+#ifdef EAGAIN
+    case EAGAIN:
+#endif
+      return 10035;  // WSAEWOULDBLOCK
+    case EINPROGRESS:
+      return 10036;  // WSAEINPROGRESS
+    case EALREADY:
+      return 10037;  // WSAEALREADY
+    case ENOTSOCK:
+      return 10038;  // WSAENOTSOCK
+    case EDESTADDRREQ:
+      return 10039;  // WSAEDESTADDRREQ
+    case EMSGSIZE:
+      return 10040;  // WSAEMSGSIZE
+    case EPROTOTYPE:
+      return 10041;  // WSAEPROTOTYPE
+    case ENOPROTOOPT:
+      return 10042;  // WSAENOPROTOOPT
+    case EPROTONOSUPPORT:
+      return 10043;  // WSAEPROTONOSUPPORT
+    case EOPNOTSUPP:
+      return 10045;  // WSAEOPNOTSUPP
+    case EAFNOSUPPORT:
+      return 10047;  // WSAEAFNOSUPPORT
+    case EADDRINUSE:
+      return 10048;  // WSAEADDRINUSE
+    case EADDRNOTAVAIL:
+      return 10049;  // WSAEADDRNOTAVAIL
+    case ENETDOWN:
+      return 10050;  // WSAENETDOWN
+    case ENETUNREACH:
+      return 10051;  // WSAENETUNREACH
+    case ENETRESET:
+      return 10052;  // WSAENETRESET
+    case ECONNABORTED:
+      return 10053;  // WSAECONNABORTED
+    case ECONNRESET:
+      return 10054;  // WSAECONNRESET
+    case ENOBUFS:
+      return 10055;  // WSAENOBUFS
+    case EISCONN:
+      return 10056;  // WSAEISCONN
+    case ENOTCONN:
+      return 10057;  // WSAENOTCONN
+    case ESHUTDOWN:
+      return 10058;  // WSAESHUTDOWN
+    case ETIMEDOUT:
+      return 10060;  // WSAETIMEDOUT
+    case ECONNREFUSED:
+      return 10061;  // WSAECONNREFUSED
+    case EHOSTUNREACH:
+      return 10065;  // WSAEHOSTUNREACH
+    default:
+      return static_cast<uint32_t>(err);
+  }
+}
+#endif
+
+}  // namespace
+
+void XSocket::MaybeSignalSelectedEvent(uint32_t fd_flags) {
+  std::lock_guard<std::mutex> lock(select_mutex_);
+  if (!selected_event_ || selected_event_flags_ == 0) {
+    return;
+  }
+  if ((fd_flags & selected_event_flags_) != 0) {
+    selected_event_->Set(0, false);
+  }
+}
 
 XSocket::XSocket(KernelState* kernel_state)
     : XObject(kernel_state, kObjectType) {}
@@ -189,9 +284,25 @@ X_STATUS XSocket::IOControl(uint32_t cmd, uint8_t* arg_ptr) {
 X_STATUS XSocket::Connect(N_XSOCKADDR* name, int name_len) {
   int ret = connect(native_handle_, (sockaddr*)name, name_len);
   if (ret < 0) {
+#if !XE_PLATFORM_WIN32
+    const int err = errno;
+    if (err != EINPROGRESS && err != EWOULDBLOCK
+#ifdef EAGAIN
+        && err != EAGAIN
+#endif
+    ) {
+      return X_STATUS_UNSUCCESSFUL;
+    }
+#else
+    const int err = WSAGetLastError();
+    if (err != WSAEWOULDBLOCK && err != WSAEINPROGRESS) {
+      return X_STATUS_UNSUCCESSFUL;
+    }
+#endif
     return X_STATUS_UNSUCCESSFUL;
   }
 
+  MaybeSignalSelectedEvent(kFD_CONNECT);
   return X_STATUS_SUCCESS;
 }
 
@@ -249,13 +360,21 @@ object_ref<XSocket> XSocket::Accept(N_XSOCKADDR* name, int* name_len) {
   socket->type_ = type_;
   socket->proto_ = proto_;
 
+  MaybeSignalSelectedEvent(kFD_ACCEPT);
   return socket;
 }
 
 int XSocket::Shutdown(int how) { return shutdown(native_handle_, how); }
 
 int XSocket::Recv(uint8_t* buf, uint32_t buf_len, uint32_t flags) {
-  return recv(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags);
+  int ret =
+      recv(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags);
+  if (ret > 0) {
+    MaybeSignalSelectedEvent(kFD_READ);
+  } else if (ret == 0) {
+    MaybeSignalSelectedEvent(kFD_CLOSE);
+  }
+  return ret;
 }
 
 int XSocket::RecvFrom(uint8_t* buf, uint32_t buf_len, uint32_t flags,
@@ -298,12 +417,22 @@ int XSocket::RecvFrom(uint8_t* buf, uint32_t buf_len, uint32_t flags,
     *from_len = nfromlen;
   }
 
+  if (ret > 0) {
+    MaybeSignalSelectedEvent(kFD_READ);
+  } else if (ret == 0) {
+    MaybeSignalSelectedEvent(kFD_CLOSE);
+  }
+
   return ret;
 }
 
 int XSocket::Send(const uint8_t* buf, uint32_t buf_len, uint32_t flags) {
-  return send(native_handle_, reinterpret_cast<const char*>(buf), buf_len,
-              flags);
+  int ret = send(native_handle_, reinterpret_cast<const char*>(buf), buf_len,
+                 flags);
+  if (ret > 0) {
+    MaybeSignalSelectedEvent(kFD_WRITE);
+  }
+  return ret;
 }
 
 int XSocket::SendTo(uint8_t* buf, uint32_t buf_len, uint32_t flags,
@@ -326,8 +455,12 @@ int XSocket::SendTo(uint8_t* buf, uint32_t buf_len, uint32_t flags,
     nto.sin_port = to->sin_port;
   }
 
-  return sendto(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags,
-                to ? (sockaddr*)&nto : nullptr, to_len);
+  int ret = sendto(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags,
+                   to ? (sockaddr*)&nto : nullptr, to_len);
+  if (ret > 0) {
+    MaybeSignalSelectedEvent(kFD_WRITE);
+  }
+  return ret;
 }
 
 // Winsock FD_* flags split into asio wait_read / wait_write groups.
@@ -352,9 +485,8 @@ int XSocket::WSAEventSelect(object_ref<XEvent> event, uint32_t flags) {
   }
 #endif
 
-  // Phoenix still uses native BSD sockets (not Edge's asio socket objects).
-  // Event association is stored; async_wait wiring lands with full asio socket
-  // migration (Phase 2.5 network smoke validation).
+  // Phoenix uses native BSD sockets; events are signaled poll-on-op from I/O
+  // paths (async_wait deferred until asio socket migration, Phase 2.5).
   return 0;
 }
 
@@ -387,12 +519,11 @@ X_STATUS XSocket::GetSockName(uint8_t* buf, int* buf_len) {
 }
 
 uint32_t XSocket::GetLastWSAError() const {
-  // Todo(Gliniak): Provide error mapping table
-  // Xbox error codes might not match with what we receive from OS
 #ifdef XE_PLATFORM_WIN32
   return WSAGetLastError();
+#else
+  return PosixErrnoToWSAError(errno);
 #endif
-  return errno;
 }
 
 }  // namespace kernel

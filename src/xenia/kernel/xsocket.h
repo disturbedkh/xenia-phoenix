@@ -172,6 +172,9 @@ class XSocket : public XObject {
   std::mutex select_mutex_;
   object_ref<XEvent> selected_event_;
   uint32_t selected_event_flags_ = 0;
+
+  // Poll-on-op: signal selected_event_ when fd_flags intersect requested flags.
+  void MaybeSignalSelectedEvent(uint32_t fd_flags);
 };
 
 }  // namespace kernel
