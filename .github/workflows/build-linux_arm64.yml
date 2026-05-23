@@ -78,6 +78,7 @@ jobs:
             echo "$VULKAN_SDK_ROOT/bin" >> $GITHUB_PATH
           else
             echo "Warning: LunarG SDK has no aarch64 tree; building spirv-opt from SPIRV-Tools submodule"
+            git -C third_party/SPIRV-Tools submodule update --init --depth=1 external/spirv-headers
             cmake -S third_party/SPIRV-Tools -B build-spirv-tools \
               -DCMAKE_BUILD_TYPE=Release \
               -DSPIRV_SKIP_TESTS=ON \

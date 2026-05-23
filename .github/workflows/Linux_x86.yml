@@ -122,6 +122,8 @@ jobs:
         if: inputs.run_smoke_test
         env:
           GDK_BACKEND: x11
+          # Checked builds use LeakSanitizer; --help still reports GTK/SDL init leaks.
+          LSAN_OPTIONS: detect_leaks=0
         run: |
           binary="build/bin/Linux/${{ inputs.config }}/xenia_canary"
           if [ ! -f "$binary" ]; then
