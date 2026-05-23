@@ -282,8 +282,9 @@ void FlushAggregatorSummaries() {
     ev.domain = "Host";
     ev.channel = key.channel;
     ev.code = key.code;
-    ev.detail =
+    std::string detail =
         fmt::format("summary count={} last={}", st.count, st.last_detail);
+    ev.detail = detail;
     WriteEventLine(ev, ev.detail);
   }
   g_events_sink.Flush();

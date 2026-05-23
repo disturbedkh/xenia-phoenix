@@ -33,6 +33,8 @@ Tracked work for [issue #549](https://github.com/xenia-canary/xenia-canary/issue
 | B25 | verify | `--help` without TTY | Smoke hangs in Docker/xvfb (`SDL_ShowSimpleMessageBox`) | `script -qefc '… --help' /dev/null` in `linux-verify.sh` + CI | 2.4 |
 | B26 | verify | `xenia-cpu-tests` target missing | `ninja: unknown target` when `XENIA_BUILD_TESTS` off | Drop `--no_premake`; re-run cmake with `--build-tests` | 2.4 |
 | B27 | verify | `test -- xenia-cpu-tests` | Runs default trio; `Unable to find xenia-base-tests` | Use `--target xenia-cpu-tests` (args after `--` go to Catch2) | 2.4 |
+| B28 | compile | `obs_event.cc` | `-Wdangling-assignment-gsl`: `fmt::format` temp assigned to `std::string_view` | Hoist format result to `std::string` local before assigning `ev.detail` | 2.2 |
+| B29 | configure | ARM64 CI workflow | LTO link: gold plugin LLVM 17 vs clang-20 bitcode | Pin `lld`/`ld.lld`/`llvm-ar`/`llvm-ranlib`/`llvm-nm` via `update-alternatives` + `apt.llvm.org` | 4.4b |
 
 ## Platform source inventory (`*_win.cc` → Linux peer)
 

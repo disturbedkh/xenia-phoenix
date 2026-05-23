@@ -2,13 +2,31 @@ name: Linux (ARM64)
 
 on:
   workflow_call:
+    inputs:
+      config:
+        description: 'Build configuration (Release, Debug, or Checked)'
+        required: false
+        default: 'Release'
+        type: string
+      run_smoke_test:
+        description: 'Run xenia_canary --help under xvfb after build'
+        required: false
+        default: true
+        type: boolean
+      run_cpu_tests:
+        description: 'Build and run xenia-cpu-tests (Release only recommended)'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-24.04-arm
 
     env:
       LLVM_VERSION: 20
+      UBUNTU_BASE: noble
 
     steps:
       - name: Checkout repository
@@ -16,34 +34,98 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install dependencies
+      - name: Cache Vulkan SDK
+        id: cache-vulkan-sdk-linux-arm64
+        uses: actions/cache@v5
+        with:
+          path: ~/vulkan-sdk
+          key: ${{ runner.os }}-aarch64-vulkan-sdk-latest
+
+      - name: Setup build environment
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            build-essential ninja-build cmake pkg-config git python3 \
-            libgtk-3-dev libsdl2-dev libvulkan-dev libx11-xcb-dev \
-            libasound2-dev libfontconfig1-dev liblz4-dev \
-            clang-20 lld-20 llvm-20 spirv-tools xvfb
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 200
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-20 200
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          sudo apt-add-repository "deb http://apt.llvm.org/${{ env.UBUNTU_BASE }}/ llvm-toolchain-${{ env.UBUNTU_BASE }}-${{ env.LLVM_VERSION }} main"
+          sudo apt-get -y update
+          sudo apt-get -y install mesa-vulkan-drivers libgtk-3-dev libsdl2-dev libvulkan-dev libx11-xcb-dev libasound2-dev libfontconfig1-dev liblz4-dev clang-${{ env.LLVM_VERSION }} lld-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }} ninja-build cmake spirv-tools xvfb libsdl2-2.0-0 libasound2t64 python3 pkg-config git
+
+          # Pin LLVM tools to the correct version so system ar/ranlib/lld
+          # don't use the older LLVM 17 gold plugin with clang-20 LTO bitcode
+          sudo update-alternatives --install /usr/bin/clang      clang      /usr/bin/clang-${{ env.LLVM_VERSION }}      200
+          sudo update-alternatives --install /usr/bin/clang++    clang++    /usr/bin/clang++-${{ env.LLVM_VERSION }}    200
+          sudo update-alternatives --install /usr/bin/lld        lld        /usr/bin/lld-${{ env.LLVM_VERSION }}        200
+          sudo update-alternatives --install /usr/bin/ld.lld     ld.lld     /usr/bin/ld.lld-${{ env.LLVM_VERSION }}     200
+          sudo update-alternatives --install /usr/bin/llvm-ar    llvm-ar    /usr/bin/llvm-ar-${{ env.LLVM_VERSION }}    200
+          sudo update-alternatives --install /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-${{ env.LLVM_VERSION }} 200
+          sudo update-alternatives --install /usr/bin/llvm-nm    llvm-nm    /usr/bin/llvm-nm-${{ env.LLVM_VERSION }}    200
+
+      - name: Install Vulkan SDK
+        run: |
+          if [ '${{ steps.cache-vulkan-sdk-linux-arm64.outputs.cache-hit }}' != 'true' ]; then
+            wget -qO vulkan-sdk.tar.xz https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.xz
+            mkdir -p ~/vulkan-sdk
+            tar -xf vulkan-sdk.tar.xz -C ~/vulkan-sdk
+          fi
+
+          VULKAN_SDK_VERSION=$(ls ~/vulkan-sdk)
+          VULKAN_ARCH=aarch64
+          if [ -d "$HOME/vulkan-sdk/$VULKAN_SDK_VERSION/$VULKAN_ARCH" ]; then
+            echo "VULKAN_SDK=$HOME/vulkan-sdk/$VULKAN_SDK_VERSION/$VULKAN_ARCH" >> $GITHUB_ENV
+            echo "$HOME/vulkan-sdk/$VULKAN_SDK_VERSION/$VULKAN_ARCH/bin" >> $GITHUB_PATH
+          else
+            echo "Warning: LunarG SDK has no $VULKAN_ARCH tree; using system libvulkan-dev + spirv-tools"
+          fi
+
+          for tool in glslangValidator spirv-opt spirv-dis; do
+            which "$tool" && "$tool" --version 2>/dev/null || echo "Warning: $tool not found"
+          done
 
       - name: Download submodules
-        run: git submodule update --init --depth=1
-
-      - name: Build Release
         run: |
-          export CC=clang CXX=clang++
-          ./xenia-build.py setup
-          ./xenia-build.py build --config=release --target=xenia-app --build-tests
+          EXCLUDE="DirectXShaderCompiler"
+          SUBMODULES=$(grep 'path = ' .gitmodules | sed 's/^[[:space:]]*path = //' | tr -d '\r' | grep -vE "$EXCLUDE")
+          git submodule update --init --depth=1 $SUBMODULES
 
-      - name: Smoke
-        run: |
-          BIN=build/bin/Linux/Release/xenia_canary
-          test -f "$BIN"
-          chmod +x "$BIN"
-          xvfb-run -a "$BIN" --help
+      - name: Doctor
+        env:
+          CC: clang-${{ env.LLVM_VERSION }}
+          CXX: clang++-${{ env.LLVM_VERSION }}
+        run: python3 xenia-build.py doctor
 
-      - name: CPU tests
+      - name: Build Xenia
+        env:
+          CC: clang-${{ env.LLVM_VERSION }}
+          CXX: clang++-${{ env.LLVM_VERSION }}
+        run: python3 xenia-build.py build --config=${{ inputs.config }} --target=xenia-app --build-tests
+
+      - name: Smoke test (help)
+        if: inputs.run_smoke_test
+        env:
+          GDK_BACKEND: x11
         run: |
-          cd build/bin/Linux/Release
-          ./xenia-cpu-tests
+          binary="build/bin/Linux/${{ inputs.config }}/xenia_canary"
+          if [ ! -f "$binary" ]; then
+            echo "::error::Binary not found at $binary"
+            exit 1
+          fi
+          chmod +x "$binary"
+          xvfb-run -a script -qefc "$binary --help" /dev/null
+
+      - name: Build and run xenia-cpu-tests
+        if: inputs.run_cpu_tests && inputs.config == 'Release'
+        env:
+          CC: clang-${{ env.LLVM_VERSION }}
+          CXX: clang++-${{ env.LLVM_VERSION }}
+        run: |
+          python3 xenia-build.py build --config=${{ inputs.config }} --build-tests --target xenia-cpu-tests
+          python3 xenia-build.py test --no_build --config=${{ inputs.config }} --target xenia-cpu-tests
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-arm64-build-log-${{ inputs.config }}
+          path: |
+            linux_build_*.log
+            build/**/*.log
+          if-no-files-found: ignore
+          retention-days: 7
