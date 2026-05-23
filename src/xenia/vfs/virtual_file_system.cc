@@ -14,8 +14,8 @@
 #include "devices/host_path_entry.h"
 #include "xenia/base/literals.h"
 #include "xenia/base/logging.h"
-#include "xenia/debug/phoenix_probe.h"
 #include "xenia/base/string.h"
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/kernel/xfile.h"
 
 namespace xe {

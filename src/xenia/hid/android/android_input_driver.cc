@@ -28,13 +28,14 @@ AndroidInputDriver::~AndroidInputDriver() = default;
 
 X_STATUS AndroidInputDriver::Setup() { return X_STATUS_SUCCESS; }
 
-X_RESULT AndroidInputDriver::GetCapabilities(uint32_t user_index, uint32_t flags,
+X_RESULT AndroidInputDriver::GetCapabilities(uint32_t user_index,
+                                             uint32_t flags,
                                              X_INPUT_CAPABILITIES* out_caps) {
   if (user_index != 0 || !out_caps) {
     return X_ERROR_DEVICE_NOT_CONNECTED;
   }
   std::memset(out_caps, 0, sizeof(*out_caps));
-  out_caps->type = 0x01;  // XINPUT_DEVTYPE_GAMEPAD
+  out_caps->type = 0x01;      // XINPUT_DEVTYPE_GAMEPAD
   out_caps->sub_type = 0x01;  // XINPUT_DEVSUBTYPE_GAMEPAD
   out_caps->flags = 0;
   out_caps->gamepad.buttons = 0xFFFF;
@@ -48,7 +49,7 @@ X_RESULT AndroidInputDriver::GetCapabilities(uint32_t user_index, uint32_t flags
 }
 
 X_RESULT AndroidInputDriver::GetState(uint32_t user_index,
-                                    X_INPUT_STATE* out_state) {
+                                      X_INPUT_STATE* out_state) {
   if (user_index != 0 || !out_state) {
     return X_ERROR_DEVICE_NOT_CONNECTED;
   }

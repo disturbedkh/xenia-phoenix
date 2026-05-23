@@ -131,8 +131,8 @@ dword_result_t XMAInitializeContext_entry(
           "XMAInitializeContext: Invalid input buffer 0 virtual address {:08X}",
           input_buffer_0_guest_ptr);
       xe::apu::LogXmaDivergence(0, "XMAInitializeContext",
-                       "invalid input buffer 0 virtual address",
-                       kernel_state()->title_id());
+                                "invalid input buffer 0 virtual address",
+                                kernel_state()->title_id());
       return X_E_FALSE;
     }
   }
@@ -147,8 +147,8 @@ dword_result_t XMAInitializeContext_entry(
           "XMAInitializeContext: Invalid input buffer 1 virtual address {:08X}",
           input_buffer_1_guest_ptr);
       xe::apu::LogXmaDivergence(0, "XMAInitializeContext",
-                       "invalid input buffer 1 virtual address",
-                       kernel_state()->title_id());
+                                "invalid input buffer 1 virtual address",
+                                kernel_state()->title_id());
       return X_E_FALSE;
     }
   }
@@ -161,8 +161,8 @@ dword_result_t XMAInitializeContext_entry(
     XELOGE("XMAInitializeContext: Invalid output buffer virtual address {:08X}",
            output_buffer_guest_ptr);
     xe::apu::LogXmaDivergence(0, "XMAInitializeContext",
-                     "invalid output buffer virtual address",
-                     kernel_state()->title_id());
+                              "invalid output buffer virtual address",
+                              kernel_state()->title_id());
     return X_E_FALSE;
   }
 
@@ -244,8 +244,8 @@ dword_result_t XMASetInputBuffer0_entry(lpvoid_t context_ptr, lpvoid_t buffer,
     XELOGE("XMASetInputBuffer0: Invalid buffer virtual address {:08X}",
            buffer.guest_address());
     xe::apu::LogXmaDivergence(0, "XMASetInputBuffer0",
-                     "invalid buffer virtual address",
-                     kernel_state()->title_id());
+                              "invalid buffer virtual address",
+                              kernel_state()->title_id());
     return X_E_FALSE;
   }
 
@@ -288,8 +288,8 @@ dword_result_t XMASetInputBuffer1_entry(lpvoid_t context_ptr, lpvoid_t buffer,
     XELOGE("XMASetInputBuffer1: Invalid buffer virtual address {:08X}",
            buffer.guest_address());
     xe::apu::LogXmaDivergence(0, "XMASetInputBuffer1",
-                     "invalid buffer virtual address",
-                     kernel_state()->title_id());
+                              "invalid buffer virtual address",
+                              kernel_state()->title_id());
     return X_E_FALSE;
   }
 

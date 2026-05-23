@@ -81,9 +81,11 @@ std::unique_ptr<VulkanInstance> VulkanInstance::Create(
   if (const char* sdk = std::getenv("VULKAN_SDK")) {
     vulkan_loader_path = std::string(sdk) + "/lib/libvulkan.dylib";
   }
-  vulkan_instance->loader_ = dlopen(vulkan_loader_path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  vulkan_instance->loader_ =
+      dlopen(vulkan_loader_path.c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!vulkan_instance->loader_) {
-    vulkan_instance->loader_ = dlopen("libMoltenVK.dylib", RTLD_NOW | RTLD_LOCAL);
+    vulkan_instance->loader_ =
+        dlopen("libMoltenVK.dylib", RTLD_NOW | RTLD_LOCAL);
   }
   if (!vulkan_instance->loader_) {
     XELOGE("Failed to load Vulkan loader on macOS (set VULKAN_SDK)");

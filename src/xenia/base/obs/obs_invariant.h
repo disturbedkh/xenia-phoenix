@@ -12,13 +12,12 @@
 #include "xenia/base/obs/obs.h"
 #include "xenia/base/obs/obs_channel.h"
 
-#define OBS_INVARIANT(code, channel_id, cond, ...)                          \
-  do {                                                                       \
-    if (cond) {                                                              \
-      xe::obs::InvariantLazy(                                                \
-          code, channel_id, true,                                            \
-          [&]() { return fmt::format(__VA_ARGS__); });                       \
-    }                                                                        \
+#define OBS_INVARIANT(code, channel_id, cond, ...)                        \
+  do {                                                                    \
+    if (cond) {                                                           \
+      xe::obs::InvariantLazy(code, channel_id, true,                      \
+                             [&]() { return fmt::format(__VA_ARGS__); }); \
+    }                                                                     \
   } while (0)
 
 namespace xe {

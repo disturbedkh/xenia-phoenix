@@ -16,8 +16,8 @@
 
 #include "xenia/base/assert.h"
 #include "xenia/base/logging.h"
-#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/math.h"
+#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/profiling.h"
 #include "xenia/gpu/d3d12/d3d12_command_processor.h"
 #include "xenia/gpu/d3d12/d3d12_shared_memory.h"

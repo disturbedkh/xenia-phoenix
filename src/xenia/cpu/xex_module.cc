@@ -1371,20 +1371,18 @@ void XexInfoCache::Init(XexModule* xexmod) {
   infocache_path.append(xexmod->image_sha_str_);
 
   // #region agent log
-  xe::agent_debug::Log("xex_module.cc:XexInfoCache::Init", "before mkdir",
-                       "H3", "pre-fix",
-                       R"({{"infocache_path":"{}"}})",
+  xe::agent_debug::Log("xex_module.cc:XexInfoCache::Init", "before mkdir", "H3",
+                       "pre-fix", R"({{"infocache_path":"{}"}})",
                        xe::path_to_utf8(infocache_path));
   // #endregion
   try {
     std::filesystem::create_directories(infocache_path);
   } catch (const std::filesystem::filesystem_error& ex) {
     // #region agent log
-    xe::agent_debug::Log("xex_module.cc:XexInfoCache::Init",
-                         "filesystem_error", "H3", "pre-fix",
-                         R"({{"path":"{}","code":{},"what":"{}"}})",
-                         xe::path_to_utf8(infocache_path), ex.code().value(),
-                         ex.what());
+    xe::agent_debug::Log(
+        "xex_module.cc:XexInfoCache::Init", "filesystem_error", "H3", "pre-fix",
+        R"({{"path":"{}","code":{},"what":"{}"}})",
+        xe::path_to_utf8(infocache_path), ex.code().value(), ex.what());
     // #endregion
     throw;
   }

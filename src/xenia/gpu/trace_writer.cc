@@ -77,8 +77,7 @@ void TraceWriter::Close() {
 
     if (!trace_path_.empty()) {
       obs::WriteTraceObsSidecar(trace_path_, obs_seq_begin_,
-                                obs::CurrentEventSeq(),
-                                obs::CurrentFrame());
+                                obs::CurrentEventSeq(), obs::CurrentFrame());
       trace_path_.clear();
       obs_seq_begin_ = 0;
     }

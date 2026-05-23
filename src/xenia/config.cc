@@ -12,7 +12,6 @@
 #include <fstream>
 
 #include "third_party/fmt/include/fmt/format.h"
-#include "xenia/emulator.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/filesystem.h"
@@ -20,6 +19,7 @@
 #include "xenia/base/string.h"
 #include "xenia/base/string_buffer.h"
 #include "xenia/base/system.h"
+#include "xenia/emulator.h"
 
 toml::parse_result ParseFile(const std::filesystem::path& filename) {
   return toml::parse_file(xe::path_to_utf8(filename));

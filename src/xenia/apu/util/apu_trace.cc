@@ -14,13 +14,13 @@
 #include <mutex>
 #include <vector>
 
+#include "third_party/crypto/sha256.h"
 #include "xenia/apu/apu_flags.h"
+#include "xenia/base/filesystem.h"
 #include "xenia/base/obs/obs.h"
 #include "xenia/base/obs/obs_invariant.h"
-#include "xenia/debug/phoenix_probe.h"
-#include "xenia/base/filesystem.h"
 #include "xenia/base/string_util.h"
-#include "third_party/crypto/sha256.h"
+#include "xenia/debug/phoenix_probe.h"
 
 namespace xe {
 namespace apu {
@@ -55,8 +55,7 @@ uint32_t GetTelemetryTitleId() {
 }
 
 void LogXmaDivergence(uint32_t context_id, std::string_view site,
-                      std::string_view detail, uint32_t title_id,
-                      uint32_t lr) {
+                      std::string_view detail, uint32_t title_id, uint32_t lr) {
   const auto& path = cvars::apu_xma_divergence_log;
   if (path.empty()) {
     return;

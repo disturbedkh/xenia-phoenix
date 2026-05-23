@@ -26,8 +26,9 @@ std::unique_ptr<Socket> Socket::Connect(std::string hostname, uint16_t port) {
 std::unique_ptr<SocketServer> SocketServer::Create(
     uint16_t port,
     std::function<void(std::unique_ptr<Socket> client)> accept_callback) {
-  XELOGW("xe::SocketServer::Create is not implemented on this platform (port {})",
-         port);
+  XELOGW(
+      "xe::SocketServer::Create is not implemented on this platform (port {})",
+      port);
   (void)accept_callback;
   return nullptr;
 }

@@ -50,29 +50,29 @@ bool ShouldLogChannel(ChannelId id, LogLevel level);
 }  // namespace obs
 }  // namespace xe
 
-#define XELOGGPU_PIPELINE(fmt, ...)                                         \
+#define XELOGGPU_PIPELINE(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kGpuPipeline, Debug, fmt, ##__VA_ARGS__)
-#define XELOGGPU_EDRAM(fmt, ...)                                            \
+#define XELOGGPU_EDRAM(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kGpuEdram, Debug, fmt, ##__VA_ARGS__)
-#define XELOGKERNEL_STUB(fmt, ...)                                          \
+#define XELOGKERNEL_STUB(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kKernelStub, Info, fmt, ##__VA_ARGS__)
-#define XELOGKERNEL_EXPORT(fmt, ...)                                        \
+#define XELOGKERNEL_EXPORT(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kKernelExport, Debug, fmt, ##__VA_ARGS__)
-#define XELOGAPU_XMA(fmt, ...)                                              \
+#define XELOGAPU_XMA(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kApuXma, Info, fmt, ##__VA_ARGS__)
-#define XELOGHID(fmt, ...)                                                  \
+#define XELOGHID(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kHidDevice, Info, fmt, ##__VA_ARGS__)
-#define XELOG_GUEST(fmt, ...)                                               \
+#define XELOG_GUEST(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kGuestPrint, Info, fmt, ##__VA_ARGS__)
-#define XELOG_LIFECYCLE(fmt, ...)                                           \
+#define XELOG_LIFECYCLE(fmt, ...) \
   XE_LOG_CHAN(xe::obs::ChannelId::kBaseLifecycle, Info, fmt, ##__VA_ARGS__)
 
-#define XE_LOG_CHAN(channel_id, level, fmt, ...)                          \
-  do {                                                                    \
-    if (xe::obs::ShouldLogChannel(channel_id, xe::LogLevel::level)) {     \
-      const auto& _xe_obs_ch = xe::obs::ChannelMetaFor(channel_id);       \
-      xe::logging::AppendLogLineFormat(                                   \
-          _xe_obs_ch.log_src_mask, xe::LogLevel::level,                  \
-          _xe_obs_ch.prefix_char, fmt, ##__VA_ARGS__);                    \
-    }                                                                     \
+#define XE_LOG_CHAN(channel_id, level, fmt, ...)                      \
+  do {                                                                \
+    if (xe::obs::ShouldLogChannel(channel_id, xe::LogLevel::level)) { \
+      const auto& _xe_obs_ch = xe::obs::ChannelMetaFor(channel_id);   \
+      xe::logging::AppendLogLineFormat(                               \
+          _xe_obs_ch.log_src_mask, xe::LogLevel::level,               \
+          _xe_obs_ch.prefix_char, fmt, ##__VA_ARGS__);                \
+    }                                                                 \
   } while (0)

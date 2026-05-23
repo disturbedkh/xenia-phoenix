@@ -9,9 +9,9 @@
 
 #include "xenia/kernel/xboxkrnl/xboxkrnl_xconfig.h"
 #include "xenia/base/logging.h"
-#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/util/shim_utils.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/xboxkrnl/xboxkrnl_private.h"
 #include "xenia/xbox.h"
 
@@ -340,8 +340,8 @@ dword_result_t ExSetXConfigSetting_entry(word_t category, word_t setting,
   if (category == XCONFIG_USER_CATEGORY && buffer_ptr && buffer_size >= 4) {
     switch (setting) {
       case XCONFIG_USER_VIDEO_FLAGS:
-        cvars::widescreen =
-            (xe::load_and_swap<uint32_t>(buffer_ptr) & X_VIDEO_FLAGS::Widescreen) != 0;
+        cvars::widescreen = (xe::load_and_swap<uint32_t>(buffer_ptr) &
+                             X_VIDEO_FLAGS::Widescreen) != 0;
         break;
       case XCONFIG_USER_AUDIO_FLAGS:
         cvars::audio_flag = xe::load_and_swap<uint32_t>(buffer_ptr);

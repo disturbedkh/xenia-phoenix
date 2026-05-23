@@ -13,14 +13,14 @@
 #include <cstdio>
 #include <cstring>
 
-#include "xenia/base/obs/obs.h"
-#include "xenia/base/obs/obs_invariant.h"
 #include "third_party/fmt/include/fmt/format.h"
-#include "xenia/debug/phoenix_probe.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/math.h"
+#include "xenia/base/obs/obs.h"
+#include "xenia/base/obs/obs_invariant.h"
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/gpu/draw_util.h"
 #include "xenia/gpu/register_file.h"
 #include "xenia/gpu/registers.h"
@@ -1636,9 +1636,8 @@ void RenderTargetCache::ChangeOwnership(
         // Only perform the copying when actually changing the latest owner, not
         // just the latest host depth owner - the transfer source is expected to
         // be different than the destination.
-        const bool depth_self_resync =
-            host_depth_encoding_different && dest.is_depth &&
-            transfer_source == dest;
+        const bool depth_self_resync = host_depth_encoding_different &&
+                                       dest.is_depth && transfer_source == dest;
         if (!transfer_source.IsEmpty() &&
             (transfer_source != dest || depth_self_resync)) {
           uint32_t transfer_end_tiles =
@@ -1666,10 +1665,11 @@ void RenderTargetCache::ChangeOwnership(
                             "no_host_sidecar_for_depth_transfer");
             }
             if (transfer_host_depth_source == transfer_source) {
-              // Same render target key for color/depth and host float32 sidecar.
-              // When host depth uses a different encoding, keep the key so D3D12
-              // can use kColorAndHostDepthToDepth / kDepthAndHostDepthToDepth
-              // (host_depth_source_is_copy) instead of dropping host precision.
+              // Same render target key for color/depth and host float32
+              // sidecar. When host depth uses a different encoding, keep the
+              // key so D3D12 can use kColorAndHostDepthToDepth /
+              // kDepthAndHostDepthToDepth (host_depth_source_is_copy) instead
+              // of dropping host precision.
               if (!host_depth_encoding_different) {
                 transfer_host_depth_source = RenderTargetKey();
               }
@@ -1721,13 +1721,13 @@ void RenderTargetCache::ChangeOwnership(
                           : nullptr);
                   {
                     char detail[96];
-                    std::snprintf(
-                        detail, sizeof(detail), "tiles=%u-%u depth=%d host=%d",
-                        it->first, transfer_end_tiles, dest.is_depth ? 1 : 0,
-                        transfer_host_depth_source_rt_it !=
-                                render_targets_.end()
-                            ? 1
-                            : 0);
+                    std::snprintf(detail, sizeof(detail),
+                                  "tiles=%u-%u depth=%d host=%d", it->first,
+                                  transfer_end_tiles, dest.is_depth ? 1 : 0,
+                                  transfer_host_depth_source_rt_it !=
+                                          render_targets_.end()
+                                      ? 1
+                                      : 0);
                     debug::PhoenixProbeNotifyOwnershipChange(detail);
                     debug::PhoenixProbeNotifyEdramTransfer(detail);
                   }

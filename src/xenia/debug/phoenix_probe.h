@@ -46,7 +46,7 @@ void PhoenixProbeShutdown();
 
 void PhoenixProbeSetTitleId(uint32_t title_id);
 void PhoenixProbeNotifyStubHit(std::string_view module,
-                              std::string_view export_name);
+                               std::string_view export_name);
 void PhoenixProbeNotifyPcmHash(std::string_view sha256_hex);
 void PhoenixProbeNotifyXmaDivergence();
 void PhoenixProbeNotifyUploadRangeError();

@@ -12,8 +12,8 @@
 
 #include <atomic>
 #include <cstdint>
-#include <filesystem>
 #include <ctime>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -56,8 +56,7 @@ class GameLibrary {
   void RemoveWatchedDirectory(const std::filesystem::path& path);
 
   void ImportRecentTitles(
-      const std::vector<std::pair<std::string, std::filesystem::path>>&
-          recent);
+      const std::vector<std::pair<std::string, std::filesystem::path>>& recent);
 
   void StartScan();
   void CancelScan();

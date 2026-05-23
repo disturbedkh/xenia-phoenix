@@ -2772,8 +2772,7 @@ void PipelineCache::EnsurePipelineShadersTranslated(
 
 ID3D12PipelineState* PipelineCache::EnsureD3D12PipelineReady(void* handle) {
   Pipeline* pipeline = reinterpret_cast<Pipeline*>(handle);
-  ID3D12PipelineState* state =
-      pipeline->state.load(std::memory_order_acquire);
+  ID3D12PipelineState* state = pipeline->state.load(std::memory_order_acquire);
   if (state) {
     return state;
   }
@@ -2805,8 +2804,8 @@ ID3D12PipelineState* PipelineCache::EnsureD3D12PipelineReady(void* handle) {
 
   ID3D12PipelineState* expected = nullptr;
   if (pipeline->state.compare_exchange_strong(expected, state,
-                                             std::memory_order_release,
-                                             std::memory_order_acquire)) {
+                                              std::memory_order_release,
+                                              std::memory_order_acquire)) {
     return state;
   }
 

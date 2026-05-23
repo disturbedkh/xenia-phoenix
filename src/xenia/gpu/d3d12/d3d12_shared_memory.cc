@@ -11,9 +11,9 @@
 
 #include <cstring>
 
+#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
-#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/math.h"
 #include "xenia/base/obs/obs_invariant.h"
@@ -347,11 +347,13 @@ bool D3D12SharedMemory::UploadRanges(
 
       if (start_access == xe::memory::PageAccess::kNoAccess ||
           end_access == xe::memory::PageAccess::kNoAccess) {
-        XELOGW("Invalid upload range for GPU: {:08X} length {:08X} "
-               "(continuing upload; guest pages may map lazily)",
-               upload_range_start, upload_range_length);
+        XELOGW(
+            "Invalid upload range for GPU: {:08X} length {:08X} "
+            "(continuing upload; guest pages may map lazily)",
+            upload_range_start, upload_range_length);
         debug::PhoenixProbeNotifyUploadRangeError();
-        obs::Invariant("GpuUploadRangeError", obs::ChannelId::kGpuPipeline, true,
+        obs::Invariant("GpuUploadRangeError", obs::ChannelId::kGpuPipeline,
+                       true,
                        fmt::format("{:08X}+{:08X}", upload_range_start,
                                    upload_range_length));
         // Do not abort the whole batch — early QueryRangeAccess can be stale

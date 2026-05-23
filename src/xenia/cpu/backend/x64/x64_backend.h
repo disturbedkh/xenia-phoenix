@@ -13,8 +13,8 @@
 #include <memory>
 
 #include "xenia/base/bit_map.h"
-#include "xenia/base/vec128.h"
 #include "xenia/base/cvar.h"
+#include "xenia/base/vec128.h"
 #include "xenia/cpu/backend/backend.h"
 
 #if XE_PLATFORM_WIN32 == 1

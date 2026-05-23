@@ -110,8 +110,7 @@ void WriteEventLine(const Event& event, std::string_view detail) {
       "\"kind\":\"{}\",\"severity\":\"{}\",\"code\":\"{}\",\"detail\":\"{}\"",
       NextEventSeq(), NowMs(), SessionIdStorage(), title_field,
       JsonEscape(event.domain), JsonEscape(event.channel), KindName(event.kind),
-      SeverityName(event.severity), JsonEscape(event.code),
-      JsonEscape(detail));
+      SeverityName(event.severity), JsonEscape(event.code), JsonEscape(detail));
 
   if (frame) {
     line += fmt::format(",\"frame\":{}", frame);
@@ -214,8 +213,8 @@ void EmitGuestPrint(std::string_view text, uint32_t guest_lr) {
   EmitEvent(ev);
 
   if (guest_lr) {
-    g_guest_sink.WriteLine(
-        fmt::format("[lr={}] {}\n", string_util::to_hex_string(guest_lr), text));
+    g_guest_sink.WriteLine(fmt::format(
+        "[lr={}] {}\n", string_util::to_hex_string(guest_lr), text));
   } else {
     g_guest_sink.WriteLine(fmt::format("{}\n", text));
   }
@@ -237,7 +236,8 @@ void BridgeProbeEvent(std::string_view probe_kind, std::string_view detail) {
     ev.domain = "Gpu";
     ev.channel = "Gpu.Edram";
     ev.severity = EventSeverity::kWarn;
-  } else if (probe_kind == "ownership_change" || probe_kind == "edram_transfer") {
+  } else if (probe_kind == "ownership_change" ||
+             probe_kind == "edram_transfer") {
     ev.domain = "Gpu";
     ev.channel = "Gpu.Edram";
   } else if (probe_kind == "xma_divergence") {
@@ -282,7 +282,8 @@ void FlushAggregatorSummaries() {
     ev.domain = "Host";
     ev.channel = key.channel;
     ev.code = key.code;
-    ev.detail = fmt::format("summary count={} last={}", st.count, st.last_detail);
+    ev.detail =
+        fmt::format("summary count={} last={}", st.count, st.last_detail);
     WriteEventLine(ev, ev.detail);
   }
   g_events_sink.Flush();

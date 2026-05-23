@@ -10,10 +10,10 @@
 #include "xenia/gpu/command_processor.h"
 
 #include "third_party/fmt/include/fmt/format.h"
-#include "xenia/base/obs/obs_pm4_bridge.h"
 #include "xenia/base/byte_stream.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/obs/obs_pm4_bridge.h"
 #include "xenia/base/profiling.h"
 #include "xenia/gpu/gpu_flags.h"
 #include "xenia/gpu/graphics_system.h"

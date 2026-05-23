@@ -24,9 +24,9 @@ void LogKernelStubHit(std::string_view module, std::string_view export_name,
                       std::string_view detail = {}, uint32_t title_id = 0,
                       uint32_t lr = 0);
 
-// When called from a guest export, records title_id and lr from PPCContext when set.
-void LogKernelStubHitGuest(cpu::ppc::PPCContext* ctx,
-                           std::string_view module,
+// When called from a guest export, records title_id and lr from PPCContext when
+// set.
+void LogKernelStubHitGuest(cpu::ppc::PPCContext* ctx, std::string_view module,
                            std::string_view export_name,
                            std::string_view detail = {});
 

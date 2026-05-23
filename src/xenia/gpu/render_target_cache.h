@@ -558,7 +558,7 @@ class RenderTargetCache {
       uint32_t& group_count_x_out, uint32_t& group_count_y_out) const;
 
   void NotifyGuestDepthEdramTilesTouched(uint32_t start_tiles,
-                                        uint32_t length_tiles);
+                                         uint32_t length_tiles);
 
   // Returns mappings between ranges within the specified tile rectangle (not
   // render target texture rectangle - textures may have any pitch they need)

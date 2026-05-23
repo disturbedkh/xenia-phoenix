@@ -93,9 +93,8 @@ static Value* Unpack5655To8888(PPCHIRBuilder& f, Value* e32) {
   Value* r = f.And(f.Shr(e32, int8_t(10)), f.LoadConstantInt32(0x1F));
   Value* g = f.And(f.Shr(e32, int8_t(5)), f.LoadConstantInt32(0x1F));
   Value* b = f.And(e32, f.LoadConstantInt32(0x1F));
-  return f.Or(
-      f.Shl(alpha, int8_t(24)),
-      f.Or(f.Shl(r, int8_t(16)), f.Or(f.Shl(g, int8_t(8)), b)));
+  return f.Or(f.Shl(alpha, int8_t(24)),
+              f.Or(f.Shl(r, int8_t(16)), f.Or(f.Shl(g, int8_t(8)), b)));
 }
 
 static Value* VupkPxHalfToWord(PPCHIRBuilder& f, Value* vb, uint8_t half_idx) {
@@ -105,7 +104,8 @@ static Value* VupkPxHalfToWord(PPCHIRBuilder& f, Value* vb, uint8_t half_idx) {
   return Unpack5655To8888(f, raw);
 }
 
-// Per 32-bit word: merge high/low halfwords from VA/VB (matches instr_vmrghh.s).
+// Per 32-bit word: merge high/low halfwords from VA/VB (matches
+// instr_vmrghh.s).
 static Value* MergeHalfwordsPerWord(PPCHIRBuilder& f, Value* va, Value* vb,
                                     bool high_half) {
   Value* acc = f.LoadZeroVec128();
@@ -1083,7 +1083,8 @@ int InstrEmit_vmrghb(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vmrghh(PPCHIRBuilder& f, const InstrData& i) {
-  Value* v = MergeHalfwordsPerWord(f, f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), true);
+  Value* v =
+      MergeHalfwordsPerWord(f, f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), true);
   f.StoreVR(i.VX.VD, v);
   return 0;
 }
@@ -1119,7 +1120,8 @@ int InstrEmit_vmrglb(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vmrglh(PPCHIRBuilder& f, const InstrData& i) {
-  Value* v = MergeHalfwordsPerWord(f, f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), false);
+  Value* v =
+      MergeHalfwordsPerWord(f, f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), false);
   f.StoreVR(i.VX.VD, v);
   return 0;
 }
@@ -1148,8 +1150,7 @@ int InstrEmit_vmsummbm(PPCHIRBuilder& f, const InstrData& i) {
   Value* vc = f.LoadVR(i.VXA.VC);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 4; ++j) {
       const uint8_t be = uint8_t(4 * W + j);
       Value* ab = f.Extract(va, be, INT8_TYPE);
@@ -1172,8 +1173,7 @@ int InstrEmit_vmsumshm(PPCHIRBuilder& f, const InstrData& i) {
   Value* vc = f.LoadVR(i.VXA.VC);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 2; ++j) {
       const uint8_t h = uint8_t(2 * W + j);
       Value* ah = f.Extract(va, h, INT16_TYPE);
@@ -1194,8 +1194,7 @@ int InstrEmit_vmsumshs(PPCHIRBuilder& f, const InstrData& i) {
   Value* vc = f.LoadVR(i.VXA.VC);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 2; ++j) {
       const uint8_t h = uint8_t(2 * W + j);
       Value* ah = f.Extract(va, h, INT16_TYPE);
@@ -1216,8 +1215,7 @@ int InstrEmit_vmsumubm(PPCHIRBuilder& f, const InstrData& i) {
   Value* vc = f.LoadVR(i.VXA.VC);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 4; ++j) {
       const uint8_t be = uint8_t(4 * W + j);
       Value* ab = f.Extract(va, be, INT8_TYPE);
@@ -1241,8 +1239,7 @@ int InstrEmit_vmsumuhm(PPCHIRBuilder& f, const InstrData& i) {
   Value* vc = f.LoadVR(i.VXA.VC);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 2; ++j) {
       const uint8_t h = uint8_t(2 * W + j);
       Value* ah = f.Extract(va, h, INT16_TYPE);
@@ -1266,8 +1263,7 @@ int InstrEmit_vmsumuhs(PPCHIRBuilder& f, const InstrData& i) {
   Value* vc = f.LoadVR(i.VXA.VC);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 2; ++j) {
       const uint8_t h = uint8_t(2 * W + j);
       Value* ah = f.Extract(va, h, INT16_TYPE);
@@ -1344,10 +1340,8 @@ int InstrEmit_vmuleub(PPCHIRBuilder& f, const InstrData& i) {
     const uint8_t bi = uint8_t(2 * H);
     Value* ab = f.Extract(va, bi, INT8_TYPE);
     Value* bb = f.Extract(vb, bi, INT8_TYPE);
-    Value* au =
-        f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
-    Value* bu =
-        f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* au = f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* bu = f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF));
     Value* pr = f.Mul(au, bu);
     acc = f.Insert(acc, uint64_t(H), f.Truncate(pr, INT16_TYPE));
   }
@@ -1414,10 +1408,8 @@ int InstrEmit_vmuloub(PPCHIRBuilder& f, const InstrData& i) {
     const uint8_t bi = uint8_t(2 * H + 1);
     Value* ab = f.Extract(va, bi, INT8_TYPE);
     Value* bb = f.Extract(vb, bi, INT8_TYPE);
-    Value* au =
-        f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
-    Value* bu =
-        f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* au = f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* bu = f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF));
     Value* pr = f.Mul(au, bu);
     acc = f.Insert(acc, uint64_t(H), f.Truncate(pr, INT16_TYPE));
   }
@@ -2096,8 +2088,7 @@ int InstrEmit_vsumsws(PPCHIRBuilder& f, const InstrData& i) {
   Value* va = f.LoadVR(i.VX.VA);
   Value* vb = f.LoadVR(i.VX.VB);
   const uint8_t upper = 3;
-  Value* sum =
-      f.SignExtend(f.Extract(vb, upper, INT32_TYPE), INT64_TYPE);
+  Value* sum = f.SignExtend(f.Extract(vb, upper, INT32_TYPE), INT64_TYPE);
   for (uint32_t E = 0; E < 4; ++E) {
     sum = f.Add(sum, f.SignExtend(f.Extract(va, E, INT32_TYPE), INT64_TYPE));
   }
@@ -2114,8 +2105,7 @@ int InstrEmit_vsum2sws(PPCHIRBuilder& f, const InstrData& i) {
   const uint32_t upper = 1;
   for (uint32_t grp = 0; grp < 2; ++grp) {
     const uint8_t bw = uint8_t(upper + grp * 2);
-    Value* sum =
-        f.SignExtend(f.Extract(vb, bw, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.SignExtend(f.Extract(vb, bw, INT32_TYPE), INT64_TYPE);
     Value* aw = f.Extract(va, grp * 2, INT32_TYPE);
     sum = f.Add(sum, SignExtendWordHalf(f, aw, true));
     sum = f.Add(sum, SignExtendWordHalf(f, aw, false));
@@ -2130,8 +2120,7 @@ int InstrEmit_vsum4sbs(PPCHIRBuilder& f, const InstrData& i) {
   Value* vb = f.LoadVR(i.VX.VB);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.SignExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.SignExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 4; ++j) {
       const uint8_t be = uint8_t(4 * W + j);
       Value* ab = f.Extract(va, be, INT8_TYPE);
@@ -2148,8 +2137,7 @@ int InstrEmit_vsum4shs(PPCHIRBuilder& f, const InstrData& i) {
   Value* vb = f.LoadVR(i.VX.VB);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.SignExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.SignExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
     Value* aw = f.Extract(va, W, INT32_TYPE);
     sum = f.Add(sum, SignExtendWordHalf(f, aw, true));
     sum = f.Add(sum, SignExtendWordHalf(f, aw, false));
@@ -2164,8 +2152,7 @@ int InstrEmit_vsum4ubs(PPCHIRBuilder& f, const InstrData& i) {
   Value* vb = f.LoadVR(i.VX.VB);
   Value* acc = f.LoadZeroVec128();
   for (uint32_t W = 0; W < 4; ++W) {
-    Value* sum =
-        f.ZeroExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
+    Value* sum = f.ZeroExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
     for (uint32_t j = 0; j < 4; ++j) {
       const uint8_t be = uint8_t(4 * W + j);
       Value* ab = f.Extract(va, be, INT8_TYPE);
@@ -2390,8 +2377,8 @@ int InstrEmit_vupkhpx(PPCHIRBuilder& f, const InstrData& i) {
   Value* acc = f.LoadZeroVec128();
   for (uint32_t wi = 0; wi < 4; ++wi) {
     Value* word = f.Extract(vb, wi, INT32_TYPE);
-    Value* px =
-        f.And(f.Shr(word, f.LoadConstantInt32(16)), f.LoadConstantInt32(0xFFFF));
+    Value* px = f.And(f.Shr(word, f.LoadConstantInt32(16)),
+                      f.LoadConstantInt32(0xFFFF));
     acc = f.Insert(acc, wi, Unpack5655To8888(f, px));
   }
   f.StoreVR(i.VX.VD, acc);

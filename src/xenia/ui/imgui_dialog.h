@@ -39,7 +39,8 @@ class ImGuiDialog {
   // Called by the owner (e.g. EmulatorWindow) to begin self-close.
   void RequestClose() { Close(); }
 
-  // When true, the owner destroys via unique_ptr; ImGuiDialog never delete this.
+  // When true, the owner destroys via unique_ptr; ImGuiDialog never delete
+  // this.
   bool IsLifetimeManagedByOwner() const { return lifetime_managed_by_owner_; }
 
  protected:

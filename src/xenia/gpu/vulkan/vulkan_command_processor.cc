@@ -16,9 +16,10 @@
 #include "xenia/base/assert.h"
 #include "xenia/base/byte_order.h"
 #include "xenia/base/logging.h"
-#include "xenia/debug/phoenix_probe.h"
 #include "xenia/base/math.h"
+#include "xenia/base/obs/obs_pm4_bridge.h"
 #include "xenia/base/profiling.h"
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/emulator.h"
 #include "xenia/gpu/draw_util.h"
 #include "xenia/gpu/gpu_flags.h"
@@ -35,7 +36,6 @@
 #include "xenia/kernel/user_module.h"
 #include "xenia/ui/vulkan/vulkan_presenter.h"
 #include "xenia/ui/vulkan/vulkan_util.h"
-#include "xenia/base/obs/obs_pm4_bridge.h"
 
 DECLARE_bool(clear_memory_page_state);
 

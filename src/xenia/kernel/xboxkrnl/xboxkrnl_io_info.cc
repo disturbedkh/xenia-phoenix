@@ -8,11 +8,11 @@
  */
 
 #include "xenia/base/logging.h"
-#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/info/file.h"
 #include "xenia/kernel/info/volume.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/util/shim_utils.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/xboxkrnl/xboxkrnl_private.h"
 #include "xenia/kernel/xfile.h"
 #include "xenia/vfs/device.h"

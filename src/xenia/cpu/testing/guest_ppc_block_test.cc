@@ -8,9 +8,9 @@
 
 #include <cmath>
 
+#include "third_party/catch/include/catch.hpp"
 #include "xenia/base/vec128.h"
 #include "xenia/cpu/ppc/ppc_instr.h"
-#include "third_party/catch/include/catch.hpp"
 
 using namespace xe;
 using namespace xe::cpu::testing;
@@ -74,8 +74,8 @@ TEST_CASE("GUEST_PPC_vaddubm_smoke", "[guest_ppc][vmx128]") {
   block.Run(
       ins,
       [](PPCContext* ctx) {
-        ctx->v[3] = vec128b(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-                            15);
+        ctx->v[3] =
+            vec128b(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
         ctx->v[4] =
             vec128b(100, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
       },
@@ -106,10 +106,14 @@ TEST_CASE("GUEST_PPC_vaddubm_wrap", "[guest_ppc][vmx128]") {
 // Minimized vmx128-fuzz / permute regression (Tier 1.1).
 TEST_CASE("GUEST_PPC_vmx128_vmrghh_instr1", "[guest_ppc][vmx128][div-01]") {
   TestGuestPpcBlock block;
-  const std::vector<uint32_t> ins = {EncodeVxAltivec(5, 3, 4, 0x4c), kPpcInsnBlr};
-  const vec128_t va = vec128i(0x00010203u, 0x04050607u, 0x08090A0Bu, 0x0C0D0E0Fu);
-  const vec128_t vb = vec128i(0x10111213u, 0x14151617u, 0x18191A1Bu, 0x1C1D1E1Fu);
-  // Per-word high-halfword merge (matches MergeHalfwordsPerWord / vmx128-fuzz ref).
+  const std::vector<uint32_t> ins = {EncodeVxAltivec(5, 3, 4, 0x4c),
+                                     kPpcInsnBlr};
+  const vec128_t va =
+      vec128i(0x00010203u, 0x04050607u, 0x08090A0Bu, 0x0C0D0E0Fu);
+  const vec128_t vb =
+      vec128i(0x10111213u, 0x14151617u, 0x18191A1Bu, 0x1C1D1E1Fu);
+  // Per-word high-halfword merge (matches MergeHalfwordsPerWord / vmx128-fuzz
+  // ref).
   const vec128_t expect =
       vec128i(0x00011011u, 0x04051415u, 0x08091819u, 0x0C0D1C1Du);
   block.Run(
@@ -157,38 +161,36 @@ TEST_CASE("GUEST_PPC_vmx128_vnmsubfp_tuple", "[guest_ppc][vmx128][fma]") {
         ctx->v[4] = vb;
         ctx->v[6] = vc;
       },
-      [&](PPCContext* ctx) {
-        REQUIRE(ctx->v[5].u32[0] == expect.u32[0]);
-      });
+      [&](PPCContext* ctx) { REQUIRE(ctx->v[5].u32[0] == expect.u32[0]); });
 }
 
 TEST_CASE("GUEST_PPC_vrsqrtefp_instr1", "[guest_ppc][vmx128]") {
   TestGuestPpcBlock block;
-  const std::vector<uint32_t> ins = {
-      PatchVxInsn(0x1000014au, 5, 0, 4), kPpcInsnBlr};
+  const std::vector<uint32_t> ins = {PatchVxInsn(0x1000014au, 5, 0, 4),
+                                     kPpcInsnBlr};
   const vec128_t vb = vec128f(1.0f, 4.0f, 16.0f, 100.0f);
   // JIT output for vb under VMX128 vrsqrtefp (matches vmx128-fuzz oracle).
-  const vec128_t expect =
-      VecLoHi(0x3EFFF4003F7FF400ull, 0x3DCCCA003E7FF400ull);
+  const vec128_t expect = VecLoHi(0x3EFFF4003F7FF400ull, 0x3DCCCA003E7FF400ull);
   block.Run(
-      ins,
-      [&](PPCContext* ctx) { ctx->v[4] = vb; },
+      ins, [&](PPCContext* ctx) { ctx->v[4] = vb; },
       [&](PPCContext* ctx) { REQUIRE(ctx->v[5] == expect); });
 }
 
 // vmx128-fuzz pins (seed 3735928559 @ 50k) — JIT outputs frozen as expect.
 TEST_CASE("GUEST_PPC_vaddfp_pin", "[guest_ppc][vmx128][pin]") {
   TestGuestPpcBlock block;
-  const std::vector<uint32_t> ins = {
-      PatchVxInsn(0x1000000au, 5, 3, 4), kPpcInsnBlr};
+  const std::vector<uint32_t> ins = {PatchVxInsn(0x1000000au, 5, 3, 4),
+                                     kPpcInsnBlr};
   const vec128_t va = VecLoHi(0x7FF23679ull, 0x7FBAC4AD80000000ull);
   const vec128_t vb = VecLoHi(0x6C46BFFF800000ull, 0x7FF82B1CFF800000ull);
   const vec128_t expect = VecLoHi(0x7FF23679ull, 0x7FFAC4ADFF800000ull);
-  block.Run(ins, [&](PPCContext* ctx) {
-            ctx->v[3] = va;
-            ctx->v[4] = vb;
-          },
-          [&](PPCContext* ctx) { REQUIRE(ctx->v[5] == expect); });
+  block.Run(
+      ins,
+      [&](PPCContext* ctx) {
+        ctx->v[3] = va;
+        ctx->v[4] = vb;
+      },
+      [&](PPCContext* ctx) { REQUIRE(ctx->v[5] == expect); });
 }
 
 TEST_CASE("GUEST_PPC_vmx128_fma_tuple", "[guest_ppc][vmx128][fma]") {

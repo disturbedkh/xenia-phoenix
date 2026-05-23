@@ -17,13 +17,13 @@
 #include "third_party/fmt/include/fmt/format.h"
 #include "third_party/imgui/imgui.h"
 #include "third_party/stb/stb_image.h"
+#include "version.h"
 #include "xenia/app/emulator_window.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/string.h"
 #include "xenia/emulator.h"
 #include "xenia/ui/immediate_drawer.h"
 #include "xenia/ui/phoenix_icons.h"
-#include "version.h"
 
 namespace xe {
 namespace app {
@@ -74,25 +74,25 @@ LauncherDashboardDialog::FilteredEntries() const {
     out.push_back(&e);
   }
 
-  std::sort(out.begin(), out.end(),
-            [this](const library::LibraryEntry* a,
-                   const library::LibraryEntry* b) {
-              switch (sort_mode_) {
-                case 1:
-                  return a->last_played > b->last_played;
-                case 2:
-                  return a->title_name < b->title_name;
-                default:
-                  return a->title_name < b->title_name;
-              }
-            });
+  std::sort(
+      out.begin(), out.end(),
+      [this](const library::LibraryEntry* a, const library::LibraryEntry* b) {
+        switch (sort_mode_) {
+          case 1:
+            return a->last_played > b->last_played;
+          case 2:
+            return a->title_name < b->title_name;
+          default:
+            return a->title_name < b->title_name;
+        }
+      });
   return out;
 }
 
 ui::ImmediateTexture* LauncherDashboardDialog::GetCoverTexture(
     const library::LibraryEntry& entry) {
-  std::string key =
-      entry.title_id_hex.empty() ? xe::path_to_utf8(entry.path) : entry.title_id_hex;
+  std::string key = entry.title_id_hex.empty() ? xe::path_to_utf8(entry.path)
+                                               : entry.title_id_hex;
   auto it = cover_textures_.find(key);
   if (it != cover_textures_.end()) {
     return it->second.get();
@@ -112,8 +112,8 @@ ui::ImmediateTexture* LauncherDashboardDialog::GetCoverTexture(
   if (!pixels) {
     return nullptr;
   }
-  auto tex = immediate->CreateTexture(
-      w, h, ui::ImmediateTextureFilter::kLinear, true, pixels);
+  auto tex = immediate->CreateTexture(w, h, ui::ImmediateTextureFilter::kLinear,
+                                      true, pixels);
   stbi_image_free(pixels);
   if (!tex) {
     return nullptr;
@@ -159,8 +159,9 @@ void LauncherDashboardDialog::DrawGrid() {
   }
 
   float panel_w = ImGui::GetContentRegionAvail().x;
-  int columns =
-      std::max(1, static_cast<int>(panel_w / (kTileWidth + ImGui::GetStyle().ItemSpacing.x)));
+  int columns = std::max(
+      1, static_cast<int>(panel_w /
+                          (kTileWidth + ImGui::GetStyle().ItemSpacing.x)));
 
   if (ImGui::BeginTable("tiles", columns)) {
     int index = 0;
@@ -172,10 +173,9 @@ void LauncherDashboardDialog::DrawGrid() {
       bool launch = false;
       bool from_button = false;
       if (tex) {
-        from_button = ImGui::ImageButton(
-            entry->title_id_hex.c_str(),
-            reinterpret_cast<ImTextureID>(tex),
-            ImVec2(kCoverSize, kCoverSize));
+        from_button = ImGui::ImageButton(entry->title_id_hex.c_str(),
+                                         reinterpret_cast<ImTextureID>(tex),
+                                         ImVec2(kCoverSize, kCoverSize));
         launch = from_button;
       } else {
         from_button = ImGui::Button("No cover", ImVec2(kCoverSize, kCoverSize));
@@ -224,13 +224,12 @@ void LauncherDashboardDialog::DrawGrid() {
 
 void LauncherDashboardDialog::DrawStatusBar() {
   auto progress = game_library_.ScanProgress();
-  std::string status = fmt::format(
-      "{} titles", game_library_.entries().size());
+  std::string status = fmt::format("{} titles", game_library_.entries().size());
   if (game_library_.IsScanning()) {
     status += fmt::format(" | Scanning... {} games", progress.games_found);
   }
-  status += fmt::format(" | {}@{} on {}", XE_BUILD_BRANCH, XE_BUILD_COMMIT_SHORT,
-                        XE_BUILD_DATE);
+  status += fmt::format(" | {}@{} on {}", XE_BUILD_BRANCH,
+                        XE_BUILD_COMMIT_SHORT, XE_BUILD_DATE);
   ImGui::Separator();
   ImGui::TextUnformatted(status.c_str());
 }
@@ -257,8 +256,8 @@ void LauncherDashboardDialog::OnDraw(ImGuiIO& io) {
   ImGui::TextUnformatted("Xenia Phoenix");
   ImGui::SameLine(ImGui::GetWindowWidth() - 280);
   ImGui::SetNextItemWidth(220);
-  ImGui::InputTextWithHint("##search", PHX_ICON_SEARCH "  Search...", search_buffer_,
-                           sizeof(search_buffer_));
+  ImGui::InputTextWithHint("##search", PHX_ICON_SEARCH "  Search...",
+                           search_buffer_, sizeof(search_buffer_));
   ImGui::SameLine();
   ImGui::SetNextItemWidth(100);
   const char* sorts[] = {"Name", "Recent"};

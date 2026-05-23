@@ -10,8 +10,8 @@
 #include <algorithm>
 
 #include "xenia/base/logging.h"
-#include "xenia/base/string_util.h"
 #include "xenia/base/platform.h"
+#include "xenia/base/string_util.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/kernel/util/stub_trace.h"
@@ -1044,8 +1044,9 @@ dword_result_t XeKeysGetKey_entry(word_t key, lpvoid_t key_buffer,
     std::span<const uint8_t> key_needed = key_vault.at(key);
     std::memcpy(key_buffer, key_needed.data(), *key_length);
   } else {
-    LogKernelStubHit("xboxkrnl", "XeKeysGetKey",
-                     xe::string_util::to_hex_string(static_cast<uint32_t>(key)));
+    LogKernelStubHit(
+        "xboxkrnl", "XeKeysGetKey",
+        xe::string_util::to_hex_string(static_cast<uint32_t>(key)));
     XELOGW("Key 0x{:04X} not implemented", static_cast<uint16_t>(key));
   }
 

@@ -129,8 +129,8 @@ void GameLibrary::Load() {
       }
     }
   } catch (const std::exception& ex) {
-    XELOGE("GameLibrary: failed to parse {}: {}", xe::path_to_utf8(library_path_),
-           ex.what());
+    XELOGE("GameLibrary: failed to parse {}: {}",
+           xe::path_to_utf8(library_path_), ex.what());
   }
 }
 
@@ -161,9 +161,9 @@ void GameLibrary::Save() {
     entry.insert("last_played", static_cast<int64_t>(e.last_played));
     entry.insert("play_seconds", static_cast<int64_t>(e.play_seconds));
     entry.insert("media_type", e.media_type);
-    games.insert(e.title_id_hex.empty() ? xe::path_to_utf8(e.path)
-                                          : e.title_id_hex,
-                 entry);
+    games.insert(
+        e.title_id_hex.empty() ? xe::path_to_utf8(e.path) : e.title_id_hex,
+        entry);
   }
   root.insert("games", games);
 
@@ -197,10 +197,9 @@ void GameLibrary::RemoveWatchedDirectory(const std::filesystem::path& path) {
   if (ec) {
     canonical = path;
   }
-  watched_directories_.erase(
-      std::remove(watched_directories_.begin(), watched_directories_.end(),
-                  canonical),
-      watched_directories_.end());
+  watched_directories_.erase(std::remove(watched_directories_.begin(),
+                                         watched_directories_.end(), canonical),
+                             watched_directories_.end());
   Save();
 }
 

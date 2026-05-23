@@ -79,7 +79,7 @@ const char* ScaleLabel(int scale) {
 }  // namespace
 
 GraphicsSettingsDialog::GraphicsSettingsDialog(ui::ImGuiDrawer* imgui_drawer,
-                                                 EmulatorWindow& emulator_window)
+                                               EmulatorWindow& emulator_window)
     : ui::ImGuiDialog(imgui_drawer), emulator_window_(emulator_window) {
   SetLifetimeManagedByOwner(true);
   window_title_ = fmt::format("Graphics###{}", GetWindowId());
@@ -99,8 +99,8 @@ void GraphicsSettingsDialog::DrawPerGameStar(const char* section,
   const std::string save_for_game_label =
       fmt::format("Save for game##{}", cvar_name);
   if (ImGui::SmallButton(save_for_game_label.c_str())) {
-    config::SaveGameConfigSetting(emulator_window_.emulator(), section, cvar_name,
-                                  value);
+    config::SaveGameConfigSetting(emulator_window_.emulator(), section,
+                                  cvar_name, value);
   }
 }
 
@@ -124,8 +124,10 @@ void GraphicsSettingsDialog::DrawResolutionSection() {
         if (ImGui::Selectable(ScaleLabel(s), resolution_scale_ == s)) {
           resolution_scale_ = s;
           scale_x_ = scale_y_ = s;
-          OverrideConfigCvar("draw_resolution_scale_x", static_cast<int32_t>(s));
-          OverrideConfigCvar("draw_resolution_scale_y", static_cast<int32_t>(s));
+          OverrideConfigCvar("draw_resolution_scale_x",
+                             static_cast<int32_t>(s));
+          OverrideConfigCvar("draw_resolution_scale_y",
+                             static_cast<int32_t>(s));
           config::SaveConfig();
         }
       }
@@ -159,8 +161,9 @@ void GraphicsSettingsDialog::DrawResolutionSection() {
     ImGui::TextColored(ImVec4(1.f, 0.6f, 0.2f, 1.f), "%s",
                        limits.clamp_reason.c_str());
   }
-  ImGui::TextColored(ImVec4(1.f, 0.8f, 0.3f, 1.f),
-                     "Restart the emulator or reload GPU to apply scale changes.");
+  ImGui::TextColored(
+      ImVec4(1.f, 0.8f, 0.3f, 1.f),
+      "Restart the emulator or reload GPU to apply scale changes.");
 
   DrawPerGameStar("GPU", "draw_resolution_scale_x",
                   std::to_string(cvars::draw_resolution_scale_x));

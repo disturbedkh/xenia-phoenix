@@ -1,6 +1,7 @@
 /**
  ******************************************************************************
- * Writes `{trace}.obs.json` with obs event seq range for phoenixctl trace explain.
+ * Writes `{trace}.obs.json` with obs event seq range for phoenixctl trace
+ *explain.
  ******************************************************************************
  */
 

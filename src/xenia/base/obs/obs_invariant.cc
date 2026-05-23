@@ -74,7 +74,8 @@ void InvariantImpl(std::string_view code, ChannelId channel, bool violated,
     return;
   }
 
-  const bool emit_event = preset == Preset::kForensic || preset == Preset::kDevelop ||
+  const bool emit_event = preset == Preset::kForensic ||
+                          preset == Preset::kDevelop ||
                           preset == Preset::kHomebrew;
   if (!emit_event) {
     return;
@@ -107,11 +108,10 @@ void ConfigureInvariantPreset(Preset preset) { g_inv_preset = preset; }
 
 void ResetInvariantFrameBudget() {
   g_inv_budget_per_frame = 8;
-  const uint64_t sec =
-      static_cast<uint64_t>(
-          std::chrono::duration_cast<std::chrono::seconds>(
-              std::chrono::steady_clock::now().time_since_epoch())
-              .count());
+  const uint64_t sec = static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count());
   if (sec != g_inv_budget_second) {
     g_inv_budget_second = sec;
     g_inv_budget_per_second = 32;

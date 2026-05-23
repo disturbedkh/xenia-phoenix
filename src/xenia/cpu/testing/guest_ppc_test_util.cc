@@ -67,7 +67,8 @@ float TestGuestPpcBlock::ReferenceVrsqrtefpScalar(float x) const {
   }
   EnsureReferenceThreadState();
   auto* ctx = thread_state_->context();
-  processor_->backend()->SetGuestRoundingMode(ctx, static_cast<int>(ctx->fpscr.bits.rn));
+  processor_->backend()->SetGuestRoundingMode(
+      ctx, static_cast<int>(ctx->fpscr.bits.rn));
   using Fn = float (*)(void*, float);
   return reinterpret_cast<Fn>(x64->vrsqrtefp_scalar_invoke_helper_)(ctx, x);
 #else
@@ -77,7 +78,8 @@ float TestGuestPpcBlock::ReferenceVrsqrtefpScalar(float x) const {
 }
 
 vec128_t TestGuestPpcBlock::ReferenceVrsqrtefpVector(const vec128_t& vb) const {
-  if (vb.u32[0] == vb.u32[1] && vb.u32[0] == vb.u32[2] && vb.u32[0] == vb.u32[3]) {
+  if (vb.u32[0] == vb.u32[1] && vb.u32[0] == vb.u32[2] &&
+      vb.u32[0] == vb.u32[3]) {
     const float s = ReferenceVrsqrtefpScalar(vb.f32[0]);
     return vec128f(s, s, s, s);
   }
@@ -141,7 +143,8 @@ void TestGuestPpcBlock::Run(
 
     uint8_t* p = memory_->TranslateVirtual(entry_pc);
     for (size_t i = 0; i < guest_instructions.size(); ++i) {
-      xe::store_and_swap<uint32_t>(p + i * sizeof(uint32_t), guest_instructions[i]);
+      xe::store_and_swap<uint32_t>(p + i * sizeof(uint32_t),
+                                   guest_instructions[i]);
     }
 
     processor_->backend()->CommitExecutableRange(entry_pc, range_end);

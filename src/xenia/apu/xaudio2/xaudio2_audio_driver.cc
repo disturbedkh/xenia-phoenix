@@ -10,8 +10,8 @@
 #include "xenia/apu/xaudio2/xaudio2_audio_driver.h"
 
 #include "xenia/apu/apu_flags.h"
-#include "xenia/apu/util/apu_trace.h"
 #include "xenia/apu/conversion.h"
+#include "xenia/apu/util/apu_trace.h"
 #include "xenia/apu/xaudio2/xaudio2_api.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/clock.h"

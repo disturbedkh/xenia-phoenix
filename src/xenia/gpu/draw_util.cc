@@ -11,9 +11,9 @@
 
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
-#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/math.h"
 #include "xenia/base/memory.h"
+#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/gpu/gpu_flags.h"
 #include "xenia/gpu/registers.h"
 #include "xenia/gpu/texture_address.h"

@@ -11,8 +11,8 @@
 #include "xenia/kernel/xthread.h"
 
 #include "xenia/base/logging.h"
-#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/emulator.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/xbox.h"
 
 #include "xenia/apu/audio_media_player.h"

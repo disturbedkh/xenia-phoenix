@@ -58,8 +58,8 @@ DECLARE_XBOXKRNL_EXPORT2(XAudioGetVoiceCategoryVolumeChangeMask, kAudio,
 dword_result_t XAudioGetVoiceCategoryVolume_entry(dword_t category,
                                                   lpfloat_t out_ptr) {
   const uint32_t index = static_cast<uint32_t>(category);
-  *out_ptr = index < kVoiceCategoryCount ? voice_category_volumes_[index]
-                                         : 1.0f;
+  *out_ptr =
+      index < kVoiceCategoryCount ? voice_category_volumes_[index] : 1.0f;
   return X_ERROR_SUCCESS;
 }
 DECLARE_XBOXKRNL_EXPORT2(XAudioGetVoiceCategoryVolume, kAudio, kImplemented,

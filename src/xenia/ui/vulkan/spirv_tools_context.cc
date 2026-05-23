@@ -30,12 +30,13 @@ bool SpirvToolsContext::Initialize(unsigned int spirv_version) {
 #if XE_PLATFORM_LINUX
   if (vulkan_sdk_env) {
     std::filesystem::path vulkan_sdk_path(vulkan_sdk_env);
-    library_ = dlopen((vulkan_sdk_path / "lib/libSPIRV-Tools-shared.so").c_str(),
-                      RTLD_NOW | RTLD_LOCAL);
+    library_ =
+        dlopen((vulkan_sdk_path / "lib/libSPIRV-Tools-shared.so").c_str(),
+               RTLD_NOW | RTLD_LOCAL);
     if (!library_) {
-      library_ = dlopen(
-          (vulkan_sdk_path / "bin/libSPIRV-Tools-shared.so").c_str(),
-          RTLD_NOW | RTLD_LOCAL);
+      library_ =
+          dlopen((vulkan_sdk_path / "bin/libSPIRV-Tools-shared.so").c_str(),
+                 RTLD_NOW | RTLD_LOCAL);
     }
   }
   if (!library_) {

@@ -10,8 +10,8 @@
 #include "xenia/apu/apu_flags.h"
 
 DEFINE_bool(mute, false, "Mutes all audio output.", "APU")
-DEFINE_path(apu_xma_divergence_log, "",
-            "Append XMA decoder divergence records (JSONL).", "APU");
+    DEFINE_path(apu_xma_divergence_log, "",
+                "Append XMA decoder divergence records (JSONL).", "APU");
 DEFINE_path(apu_pcm_hash_log, "",
             "Append rolling PCM mix SHA256 windows for smoke titles (JSONL).",
             "APU");

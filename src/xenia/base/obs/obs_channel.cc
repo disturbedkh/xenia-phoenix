@@ -88,7 +88,8 @@ ChannelGroup ChannelBudgetGroup(ChannelId id) {
 
 LogLevel ChannelLevel(ChannelId id) {
   const size_t idx = static_cast<size_t>(id);
-  if (idx < static_cast<size_t>(ChannelId::kCount) && g_channel_levels_set[idx]) {
+  if (idx < static_cast<size_t>(ChannelId::kCount) &&
+      g_channel_levels_set[idx]) {
     return g_channel_levels[idx];
   }
   return ChannelMetaFor(id).default_level;
@@ -121,9 +122,9 @@ void ApplyChannelOverridesFromCvars() {
   size_t pos = 0;
   while (pos < spec.size()) {
     size_t comma = spec.find(',', pos);
-    const std::string_view pair(spec.data() + pos,
-                                comma == std::string::npos ? spec.size() - pos
-                                                           : comma - pos);
+    const std::string_view pair(spec.data() + pos, comma == std::string::npos
+                                                       ? spec.size() - pos
+                                                       : comma - pos);
     const size_t eq = pair.find('=');
     if (eq != std::string_view::npos) {
       const std::string_view ch_name(pair.data(), eq);

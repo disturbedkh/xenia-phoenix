@@ -8,10 +8,10 @@
 
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
-#include "xenia/base/string_util.h"
 #include "xenia/base/obs/obs_channel.h"
 #include "xenia/base/obs/obs_internal.h"
 #include "xenia/base/obs/obs_invariant.h"
+#include "xenia/base/string_util.h"
 
 DEFINE_string(log_preset, "play",
               "Observability preset: play|support|homebrew|develop|forensic",

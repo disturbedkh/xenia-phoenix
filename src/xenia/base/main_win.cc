@@ -87,8 +87,9 @@ bool IsLaunchOptionToken(std::string_view arg) {
   return arg.size() >= 2 && arg[0] == '-';
 }
 
-// Start-Process / some shells split paths at spaces (e.g. D:\Xbox 360\game.iso).
-// Merge the leading positional run and --target values before cxxopts parsing.
+// Start-Process / some shells split paths at spaces (e.g. D:\Xbox
+// 360\game.iso). Merge the leading positional run and --target values before
+// cxxopts parsing.
 void CoalesceSplitPathArgv(int& argc, char**& argv) {
   if (argc <= 1) {
     return;

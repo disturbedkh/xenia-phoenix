@@ -26,7 +26,8 @@
 #include "xenia/base/string_util.h"
 
 DEFINE_string(log_channel_overrides, "",
-              "Per-channel levels: Gpu.Edram=debug,Kernel.Stub=info", "Logging");
+              "Per-channel levels: Gpu.Edram=debug,Kernel.Stub=info",
+              "Logging");
 
 DECLARE_bool(obs_write_summary_on_shutdown);
 
@@ -80,7 +81,9 @@ Preset CurrentPresetStorage() { return g_preset; }
 uint32_t CurrentFrameStorage() { return g_frame_id; }
 uint64_t NextEventSeq() { return g_event_seq.fetch_add(1) + 1; }
 
-uint64_t CurrentEventSeq() { return g_event_seq.load(std::memory_order_relaxed); }
+uint64_t CurrentEventSeq() {
+  return g_event_seq.load(std::memory_order_relaxed);
+}
 
 uint32_t CurrentFrame() { return CurrentFrameStorage(); }
 
@@ -111,8 +114,8 @@ std::string CvarRuntimeString(const char* name) {
   if (auto* cv = dynamic_cast<cvar::ConfigVar<std::string>*>(it->second)) {
     return *cv->current_value();
   }
-  if (auto* cv = dynamic_cast<cvar::ConfigVar<std::filesystem::path>*>(
-          it->second)) {
+  if (auto* cv =
+          dynamic_cast<cvar::ConfigVar<std::filesystem::path>*>(it->second)) {
     return path_to_utf8(*cv->current_value());
   }
   return it->second->config_value();
@@ -170,11 +173,10 @@ void AppendConfigDump(std::string& out) {
   }
   out.append(fmt::format("log_level = {}\n", CvarRuntimeString("log_level")));
   out.append(fmt::format("log_mask = {}\n", CvarRuntimeString("log_mask")));
+  out.append(fmt::format("log_disable_mask = {}\n",
+                         CvarRuntimeString("log_disable_mask")));
   out.append(
-      fmt::format("log_disable_mask = {}\n",
-                  CvarRuntimeString("log_disable_mask")));
-  out.append(fmt::format("obs_events_log = {}\n",
-                         path_to_utf8(EventsLogPath())));
+      fmt::format("obs_events_log = {}\n", path_to_utf8(EventsLogPath())));
   out.append(fmt::format("obs_guest_log = {}\n", path_to_utf8(GuestLogPath())));
   out.append(fmt::format("kernel_stub_hit_log = {}\n",
                          CvarRuntimeString("kernel_stub_hit_log")));
@@ -196,9 +198,9 @@ void WriteObsSummaryIfConfigured() {
   if (!cvars::obs_write_summary_on_shutdown || !TitleIdStorage()) {
     return;
   }
-  const auto path = std::filesystem::path("telemetry") /
-                    (string_util::to_hex_string(TitleIdStorage()) +
-                     "_obs_summary.json");
+  const auto path =
+      std::filesystem::path("telemetry") /
+      (string_util::to_hex_string(TitleIdStorage()) + "_obs_summary.json");
   std::filesystem::create_directories(path.parent_path());
   std::ofstream out(path);
   if (!out) {
@@ -209,7 +211,8 @@ void WriteObsSummaryIfConfigured() {
   out << fmt::format("  \"preset\": \"{}\",\n", PresetName(CurrentPreset()));
   out << fmt::format("  \"events_log\": \"{}\",\n",
                      path_to_utf8(EventsLogPath()));
-  out << "  \"note\": \"Run phoenixctl log summarize for full classification\"\n";
+  out << "  \"note\": \"Run phoenixctl log summarize for full "
+         "classification\"\n";
   out << "}\n";
 }
 
@@ -238,7 +241,8 @@ void WriteForensicBundleOnShutdown() {
       tail.resize(static_cast<size_t>(take));
       ev_in.read(tail.data(), take);
     }
-    std::ofstream ev_tail(bundle_dir / "events_last256k.jsonl", std::ios::binary);
+    std::ofstream ev_tail(bundle_dir / "events_last256k.jsonl",
+                          std::ios::binary);
     if (ev_tail && !tail.empty()) {
       ev_tail.write(tail.data(), static_cast<std::streamsize>(tail.size()));
     }
@@ -292,7 +296,8 @@ void WriteForensicBundleOnShutdown() {
 #if XE_PLATFORM_WIN32
   const auto zip_path =
       std::filesystem::path("telemetry") / (tid_hex + "_crash_bundle.zip");
-  std::wstring ps = L"powershell -NoProfile -Command \"Compress-Archive -Path '";
+  std::wstring ps =
+      L"powershell -NoProfile -Command \"Compress-Archive -Path '";
   ps += bundle_dir.wstring();
   ps += L'\\';
   ps += L"*' -DestinationPath '";

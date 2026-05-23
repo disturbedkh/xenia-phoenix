@@ -8,10 +8,10 @@
  */
 
 #include <android/log.h>
-#include <cstdio>
-#include <filesystem>
 #include <jni.h>
+#include <cstdio>
 #include <cstring>
+#include <filesystem>
 
 #include "xenia/base/filesystem.h"
 #include "xenia/base/main_android.h"
@@ -292,20 +292,19 @@ static std::filesystem::path AndroidPathFromContextDirMethod(
   if (!context_class) {
     return {};
   }
-  jmethodID get_dir = jni_env->GetMethodID(context_class, method_name,
-                                           "()Ljava/io/File;");
+  jmethodID get_dir =
+      jni_env->GetMethodID(context_class, method_name, "()Ljava/io/File;");
   jni_env->DeleteLocalRef(context_class);
   if (!get_dir) {
     return {};
   }
-  jobject file_object =
-      jni_env->CallObjectMethod(application_context, get_dir);
+  jobject file_object = jni_env->CallObjectMethod(application_context, get_dir);
   if (!file_object) {
     return {};
   }
   jclass file_class = jni_env->GetObjectClass(file_object);
-  jmethodID get_absolute_path =
-      jni_env->GetMethodID(file_class, "getAbsolutePath", "()Ljava/lang/String;");
+  jmethodID get_absolute_path = jni_env->GetMethodID(
+      file_class, "getAbsolutePath", "()Ljava/lang/String;");
   jni_env->DeleteLocalRef(file_class);
   if (!get_absolute_path) {
     jni_env->DeleteLocalRef(file_object);
@@ -345,27 +344,27 @@ bool AndroidRequestOpenDocument(const char* mime_type) {
   if (!intent_class) {
     return false;
   }
-  jmethodID intent_init = jni_env->GetMethodID(
-      intent_class, "<init>", "(Ljava/lang/String;)V");
+  jmethodID intent_init =
+      jni_env->GetMethodID(intent_class, "<init>", "(Ljava/lang/String;)V");
   jstring action_open =
       jni_env->NewStringUTF("android.intent.action.OPEN_DOCUMENT");
   if (!intent_init || !action_open) {
     jni_env->DeleteLocalRef(intent_class);
     return false;
   }
-  jobject intent =
-      jni_env->NewObject(intent_class, intent_init, action_open);
+  jobject intent = jni_env->NewObject(intent_class, intent_init, action_open);
   jni_env->DeleteLocalRef(action_open);
   if (!intent) {
     jni_env->DeleteLocalRef(intent_class);
     return false;
   }
-  jmethodID add_category = jni_env->GetMethodID(
-      intent_class, "addCategory", "(Ljava/lang/String;)Landroid/content/Intent;");
-  jmethodID set_type =
-      jni_env->GetMethodID(intent_class, "setType", "(Ljava/lang/String;)Landroid/content/Intent;");
-  jmethodID add_flags = jni_env->GetMethodID(
-      intent_class, "addFlags", "(I)Landroid/content/Intent;");
+  jmethodID add_category =
+      jni_env->GetMethodID(intent_class, "addCategory",
+                           "(Ljava/lang/String;)Landroid/content/Intent;");
+  jmethodID set_type = jni_env->GetMethodID(
+      intent_class, "setType", "(Ljava/lang/String;)Landroid/content/Intent;");
+  jmethodID add_flags = jni_env->GetMethodID(intent_class, "addFlags",
+                                             "(I)Landroid/content/Intent;");
   if (add_category) {
     jstring category =
         jni_env->NewStringUTF("android.intent.category.OPENABLE");
@@ -378,7 +377,8 @@ bool AndroidRequestOpenDocument(const char* mime_type) {
     jni_env->DeleteLocalRef(mime);
   }
   if (add_flags) {
-    jni_env->CallObjectMethod(intent, add_flags, 0x10000000);  // FLAG_ACTIVITY_NEW_TASK
+    jni_env->CallObjectMethod(intent, add_flags,
+                              0x10000000);  // FLAG_ACTIVITY_NEW_TASK
   }
   jclass context_class = jni_env->GetObjectClass(application_context);
   jmethodID start_activity = jni_env->GetMethodID(
@@ -398,7 +398,8 @@ bool AndroidRequestOpenDocument(const char* mime_type) {
   return true;
 }
 
-std::filesystem::path StageAndroidLaunchPath(const std::filesystem::path& path) {
+std::filesystem::path StageAndroidLaunchPath(
+    const std::filesystem::path& path) {
   const std::string uri = xe::path_to_utf8(path);
   if (!IsAndroidContentUri(uri)) {
     return path;

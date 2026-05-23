@@ -11,9 +11,9 @@
 #include <string>
 
 #include "xenia/base/filesystem.h"
+#include "xenia/base/obs/obs.h"
 #include "xenia/base/string_util.h"
 #include "xenia/cpu/ppc/ppc_context.h"
-#include "xenia/base/obs/obs.h"
 #include "xenia/debug/phoenix_probe.h"
 #include "xenia/kernel/kernel_flags.h"
 #include "xenia/kernel/kernel_state.h"
@@ -26,8 +26,7 @@ std::mutex g_stub_trace_mutex;
 }  // namespace
 
 void LogKernelStubHit(std::string_view module, std::string_view export_name,
-                      std::string_view detail, uint32_t title_id,
-                      uint32_t lr) {
+                      std::string_view detail, uint32_t title_id, uint32_t lr) {
   const auto& path = cvars::kernel_stub_hit_log;
   if (path.empty()) {
     return;

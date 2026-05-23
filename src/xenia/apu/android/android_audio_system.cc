@@ -41,8 +41,8 @@ X_STATUS AndroidAudioSystem::CreateDriver(size_t index,
 }
 
 AudioDriver* AndroidAudioSystem::CreateDriver(
-    xe::threading::Semaphore* semaphore, uint32_t frequency,
-    uint32_t channels, bool need_format_conversion) {
+    xe::threading::Semaphore* semaphore, uint32_t frequency, uint32_t channels,
+    bool need_format_conversion) {
   auto driver = std::make_unique<AndroidAudioDriver>(
       semaphore, frequency, channels, need_format_conversion);
   if (!driver->Initialize()) {

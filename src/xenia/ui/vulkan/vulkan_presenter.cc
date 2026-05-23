@@ -598,16 +598,18 @@ VulkanPresenter::ConnectOrReconnectPaintingToSurfaceFromUIThread(
 #endif
 #if XE_PLATFORM_MAC
       case Surface::kTypeIndex_MacMetalLayer: {
-        auto& mac_surface = static_cast<const MacMetalLayerSurface&>(new_surface);
+        auto& mac_surface =
+            static_cast<const MacMetalLayerSurface&>(new_surface);
         VkMetalSurfaceCreateInfoEXT surface_create_info;
-        surface_create_info.sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
+        surface_create_info.sType =
+            VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
         surface_create_info.pNext = nullptr;
         surface_create_info.flags = 0;
         surface_create_info.pLayer =
             static_cast<CAMetalLayer*>(mac_surface.metal_layer());
-        vulkan_surface_create_result = ifn.vkCreateMetalSurfaceEXT(
-            instance, &surface_create_info, nullptr,
-            &paint_context_.vulkan_surface);
+        vulkan_surface_create_result =
+            ifn.vkCreateMetalSurfaceEXT(instance, &surface_create_info, nullptr,
+                                        &paint_context_.vulkan_surface);
       } break;
 #endif
 #if XE_PLATFORM_GNU_LINUX

@@ -4627,9 +4627,11 @@ void D3D12RenderTargetCache::PerformTransfersAndResolveClears(
         command_list.D3DDispatch(group_count_x, group_count_y, 1);
         {
           char detail[64];
-          std::snprintf(detail, sizeof(detail), "msaa=%u", uint32_t(dest_rt_key.msaa_samples));
+          std::snprintf(detail, sizeof(detail), "msaa=%u",
+                        uint32_t(dest_rt_key.msaa_samples));
           debug::PhoenixProbeNotifyHostDepthStore(detail);
-          obs::Invariant("HostDepthStore", obs::ChannelId::kGpuEdram, true, detail);
+          obs::Invariant("HostDepthStore", obs::ChannelId::kGpuEdram, true,
+                         detail);
         }
         MarkEdramBufferModified(EdramBufferModificationStatus::kAsUAV, false);
       }

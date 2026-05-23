@@ -11,8 +11,7 @@
 #define XENIA_APU_APU_FLAGS_H_
 
 #include "xenia/base/cvar.h"
-DECLARE_bool(mute)
-DECLARE_path(apu_xma_divergence_log);
+DECLARE_bool(mute) DECLARE_path(apu_xma_divergence_log);
 DECLARE_path(apu_pcm_hash_log);
 DECLARE_uint32(apu_pcm_hash_interval_ms);
 

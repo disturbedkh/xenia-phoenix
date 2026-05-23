@@ -18,16 +18,16 @@
 #include "xenia/base/cvar.h"
 #include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
-#include "xenia/base/platform.h"
-#include "xenia/base/string_util.h"
 #include "xenia/base/obs/obs.h"
 #include "xenia/base/obs/obs_invariant.h"
+#include "xenia/base/platform.h"
+#include "xenia/base/string_util.h"
 #include "xenia/debug/phoenix_flags.h"
 
 #if XE_PLATFORM_WIN32
-#include "xenia/base/platform_win.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include "xenia/base/platform_win.h"
 #pragma comment(lib, "ws2_32.lib")
 #endif
 
@@ -125,12 +125,11 @@ std::string CvarValueOrEmpty(std::string_view name) {
     return {};
   }
   // Runtime value (CLI / game config), not on-disk TOML (config_value()).
-  if (auto* cv =
-          dynamic_cast<::cvar::ConfigVar<std::string>*>(it->second)) {
+  if (auto* cv = dynamic_cast<::cvar::ConfigVar<std::string>*>(it->second)) {
     return *cv->current_value();
   }
-  if (auto* cv = dynamic_cast<::cvar::ConfigVar<std::filesystem::path>*>(
-          it->second)) {
+  if (auto* cv =
+          dynamic_cast<::cvar::ConfigVar<std::filesystem::path>*>(it->second)) {
     return xe::path_to_utf8(*cv->current_value());
   }
   return it->second->config_value();
@@ -147,13 +146,16 @@ std::string PhoenixProbeBuildStatusJson() {
   std::ostringstream os;
   os << "{";
   if (snap.title_id) {
-    os << "\"title_id\":\"" << string_util::to_hex_string(snap.title_id) << "\",";
+    os << "\"title_id\":\"" << string_util::to_hex_string(snap.title_id)
+       << "\",";
   }
   os << "\"uptime_ms\":" << snap.uptime_ms;
   os << ",\"stub_hit_count\":" << snap.stub_hit_count;
   if (!snap.last_stub_module.empty()) {
-    os << ",\"last_stub_module\":\"" << JsonEscape(snap.last_stub_module) << "\"";
-    os << ",\"last_stub_export\":\"" << JsonEscape(snap.last_stub_export) << "\"";
+    os << ",\"last_stub_module\":\"" << JsonEscape(snap.last_stub_module)
+       << "\"";
+    os << ",\"last_stub_export\":\"" << JsonEscape(snap.last_stub_export)
+       << "\"";
   }
   if (!snap.last_pcm_hash.empty()) {
     os << ",\"last_pcm_hash\":\"" << JsonEscape(snap.last_pcm_hash) << "\"";
@@ -176,13 +178,16 @@ std::string PhoenixProbeBuildSnapshotJson() {
   std::ostringstream os;
   os << "{";
   if (snap.title_id) {
-    os << "\"title_id\":\"" << string_util::to_hex_string(snap.title_id) << "\",";
+    os << "\"title_id\":\"" << string_util::to_hex_string(snap.title_id)
+       << "\",";
   }
   os << "\"uptime_ms\":" << snap.uptime_ms;
   os << ",\"stub_hit_count\":" << snap.stub_hit_count;
   if (!snap.last_stub_module.empty()) {
-    os << ",\"last_stub_module\":\"" << JsonEscape(snap.last_stub_module) << "\"";
-    os << ",\"last_stub_export\":\"" << JsonEscape(snap.last_stub_export) << "\"";
+    os << ",\"last_stub_module\":\"" << JsonEscape(snap.last_stub_module)
+       << "\"";
+    os << ",\"last_stub_export\":\"" << JsonEscape(snap.last_stub_export)
+       << "\"";
   }
   if (!snap.last_pcm_hash.empty()) {
     os << ",\"last_pcm_hash\":\"" << JsonEscape(snap.last_pcm_hash) << "\"";
@@ -242,8 +247,8 @@ std::string PhoenixProbeBuildCvarsJson(std::string_view query) {
     size_t pos = 0;
     while (pos < query.size()) {
       size_t end = query.find(',', pos);
-      std::string name(query.substr(pos, end == std::string::npos ? std::string::npos
-                                                                 : end - pos));
+      std::string name(query.substr(
+          pos, end == std::string::npos ? std::string::npos : end - pos));
       while (!name.empty() && name[0] == ' ') {
         name.erase(name.begin());
       }
@@ -295,7 +300,8 @@ std::string PhoenixProbeBuildEventsJson(uint64_t since_seq) {
 #if XE_PLATFORM_WIN32
 namespace {
 
-std::string HttpResponse(int code, std::string_view status, std::string_view body) {
+std::string HttpResponse(int code, std::string_view status,
+                         std::string_view body) {
   std::ostringstream os;
   os << "HTTP/1.1 " << code << ' ' << status << "\r\n";
   os << "Content-Type: application/json\r\n";
@@ -459,9 +465,8 @@ void PhoenixProbeEnsureStarted() {
   g_start_time = std::chrono::steady_clock::now();
 #if XE_PLATFORM_WIN32
   g_stop.store(false);
-  g_server_thread = std::thread([port]() {
-    ServerThread(static_cast<uint16_t>(port));
-  });
+  g_server_thread =
+      std::thread([port]() { ServerThread(static_cast<uint16_t>(port)); });
 #else
   XELOGW("PhoenixProbe: HTTP server is only implemented on Windows in v1");
 #endif
@@ -512,7 +517,8 @@ void PhoenixProbeNotifyXmaDivergence() {
 
 void PhoenixProbeNotifyUploadRangeError() {
   g_gpu_upload_range_error_count.fetch_add(1, std::memory_order_relaxed);
-  PushEvent(PhoenixProbeEventKind::kUploadRangeError, "invalid_gpu_upload_range");
+  PushEvent(PhoenixProbeEventKind::kUploadRangeError,
+            "invalid_gpu_upload_range");
 }
 
 void PhoenixProbeNotifyPipelineSkip() {
@@ -537,7 +543,7 @@ void PhoenixProbeNotifyOwnershipChange(std::string_view detail) {
       g_gpu_ownership_change_count.load(std::memory_order_relaxed);
   if ((n & 15) == 1) {
     PushEvent(PhoenixProbeEventKind::kOwnershipChange, detail);
-  obs::BridgeProbeEvent("ownership_change", detail);
+    obs::BridgeProbeEvent("ownership_change", detail);
   }
 }
 
@@ -584,8 +590,7 @@ PhoenixProbeSnapshot PhoenixProbeGetSnapshot() {
   s.gpu_host_depth_store_count =
       g_gpu_host_depth_store_count.load(std::memory_order_relaxed);
   s.gpu_host_depth_transfer_mismatch_count =
-      g_gpu_host_depth_transfer_mismatch_count.load(
-          std::memory_order_relaxed);
+      g_gpu_host_depth_transfer_mismatch_count.load(std::memory_order_relaxed);
   s.obs_depth_host_sidecar_stale_count =
       obs::InvariantCounter("DepthHostSidecarStale");
   s.obs_host_depth_transfer_mismatch_count =

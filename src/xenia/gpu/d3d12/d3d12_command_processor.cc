@@ -15,6 +15,7 @@
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/math.h"
+#include "xenia/base/obs/obs_pm4_bridge.h"
 #include "xenia/base/profiling.h"
 #include "xenia/emulator.h"
 #include "xenia/gpu/d3d12/d3d12_graphics_system.h"
@@ -27,7 +28,6 @@
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/ui/d3d12/d3d12_presenter.h"
 #include "xenia/ui/d3d12/d3d12_util.h"
-#include "xenia/base/obs/obs_pm4_bridge.h"
 
 DEFINE_bool(d3d12_bindless, true,
             "Use bindless resources where available - may improve performance, "
@@ -2599,8 +2599,7 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
   }
 
   if (cvars::async_shader_compilation) {
-    if (pipeline_cache_->GetD3D12PipelineByHandle(pipeline_handle) ==
-        nullptr) {
+    if (pipeline_cache_->GetD3D12PipelineByHandle(pipeline_handle) == nullptr) {
       if (pipeline_cache_->EnsureD3D12PipelineReady(pipeline_handle) ==
           nullptr) {
         XELOGE(

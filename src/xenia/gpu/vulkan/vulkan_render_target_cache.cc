@@ -13,13 +13,13 @@
 #include <cstdint>
 #include <cstring>
 
+#include "third_party/fmt/include/fmt/format.h"
 #include "third_party/glslang/SPIRV/GLSL.std.450.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
-#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/base/logging.h"
-#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/math.h"
+#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/gpu/draw_util.h"
 #include "xenia/gpu/gpu_flags.h"
 #include "xenia/gpu/registers.h"
@@ -1176,8 +1176,9 @@ bool VulkanRenderTargetCache::Resolve(const Memory& memory,
                   "Falling back to unscaled resolve at 0x{:08X} - scaled "
                   "buffer not available",
                   resolve_info.copy_dest_base);
-              OBS_INVARIANT("ResolveScaledFallback", obs::ChannelId::kGpuPipeline,
-                            true, "dest=0x{:08X}", resolve_info.copy_dest_base);
+              OBS_INVARIANT("ResolveScaledFallback",
+                            obs::ChannelId::kGpuPipeline, true, "dest=0x{:08X}",
+                            resolve_info.copy_dest_base);
             }
             write_descriptor_set_dest_buffer_info.buffer =
                 shared_memory.buffer();
@@ -4693,8 +4694,8 @@ void VulkanRenderTargetCache::PerformTransfersAndResolveClears(
             &host_depth_store_rectangle_constant);
         command_processor_.SubmitBarriers(true);
         command_buffer.CmdVkDispatch(group_count_x, group_count_y, 1);
-        MarkEdramBufferModified(
-            EdramBufferModificationStatus::kViaUnordered, false);
+        MarkEdramBufferModified(EdramBufferModificationStatus::kViaUnordered,
+                                false);
       }
     }
     break;

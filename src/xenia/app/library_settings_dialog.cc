@@ -18,9 +18,9 @@
 namespace xe {
 namespace app {
 
-LibrarySettingsDialog::LibrarySettingsDialog(
-    ui::ImGuiDrawer* imgui_drawer, EmulatorWindow& emulator_window,
-    library::GameLibrary& game_library)
+LibrarySettingsDialog::LibrarySettingsDialog(ui::ImGuiDrawer* imgui_drawer,
+                                             EmulatorWindow& emulator_window,
+                                             library::GameLibrary& game_library)
     : ui::ImGuiDialog(imgui_drawer),
       emulator_window_(emulator_window),
       game_library_(game_library) {

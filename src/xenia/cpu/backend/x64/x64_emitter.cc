@@ -27,6 +27,8 @@
 #if XE_ARCH_AMD64
 #include "xenia/base/platform_amd64.h"
 #endif
+#include "xenia/base/obs/obs.h"
+#include "xenia/base/obs/obs_channel.h"
 #include "xenia/cpu/backend/x64/x64_backend.h"
 #include "xenia/cpu/backend/x64/x64_code_cache.h"
 #include "xenia/cpu/backend/x64/x64_function.h"
@@ -40,8 +42,6 @@
 #include "xenia/cpu/hir/value.h"
 #include "xenia/cpu/processor.h"
 #include "xenia/cpu/symbol.h"
-#include "xenia/base/obs/obs.h"
-#include "xenia/base/obs/obs_channel.h"
 #include "xenia/cpu/thread_state.h"
 
 DEFINE_bool(debugprint_trap_log, false,
@@ -426,8 +426,9 @@ uint64_t TrapDebugPrint(void* raw_context, uint64_t address) {
   XE_LOG_CHAN(obs::ChannelId::kGuestPrint, Debug, "(DebugPrint) {}",
               string_tmp);
   const uint32_t guest_lr =
-      thread_state->context() ? static_cast<uint32_t>(thread_state->context()->lr)
-                              : 0;
+      thread_state->context()
+          ? static_cast<uint32_t>(thread_state->context()->lr)
+          : 0;
   obs::EmitGuestPrint(string_tmp, guest_lr);
 
   if (cvars::debugprint_trap_log) {
