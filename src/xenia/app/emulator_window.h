@@ -10,6 +10,7 @@
 #ifndef XENIA_APP_EMULATOR_WINDOW_H_
 #define XENIA_APP_EMULATOR_WINDOW_H_
 
+#include <atomic>
 #include <memory>
 #include <string>
 
