@@ -10,7 +10,7 @@
 ## Typical build shell
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 # Open "x64 Native Tools Command Prompt for VS 2022" OR:
 & "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 $env:VULKAN_SDK = "C:\VulkanSDK\1.4.350.0"

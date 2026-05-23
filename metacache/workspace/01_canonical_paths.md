@@ -26,16 +26,16 @@ Use for diff/triage when comparing Phoenix against upstream forks. Config: [`wor
 
 ## Paths with spaces
 
-Workspace root: `G:\Dev\The Xenia Project\`. Canonical variable:
+Workspace root: `G:\The Xenia Project\`. Canonical variable:
 
 ```powershell
-$XeniaRoot = "G:\Dev\The Xenia Project"
+$XeniaRoot = "G:\The Xenia Project"
 ```
 
 Quote paths in PowerShell:
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 ```
 
-WSL: `/mnt/g/Dev/The Xenia Project/Xenia-Phoenix/xenia-phoenix-src`
+WSL: `/mnt/g/The Xenia Project/Xenia-Phoenix/xenia-phoenix-src`

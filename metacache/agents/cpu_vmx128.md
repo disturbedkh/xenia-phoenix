@@ -19,7 +19,7 @@ Maintain VMX128 differential fuzz at zero divergences; investigate regressions (
 ## Commands
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 powershell -File tools/tier0/run_vmx128_full_sweep.ps1
 .\build\bin\Windows\Release\vmx128-fuzz.exe --vmx128_fuzz_iters=50000 --vmx128_fuzz_seed=3735928559
 ```

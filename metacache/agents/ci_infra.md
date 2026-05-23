@@ -19,7 +19,7 @@ Keep Tier 0/1 CI workflows green; bootstrap reproducible builds; wire new gates 
 ## Commands
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 powershell -File tools/tier0/bootstrap.ps1
 ```
 

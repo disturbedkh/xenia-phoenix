@@ -57,7 +57,7 @@ The four runtime checks Phoenix uses. Each maps to one Tier 1 phase.
 **x64 (default):**
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 .\build\bin\Windows\Release\xenia-cpu-tests.exe
 ```
 
@@ -81,7 +81,7 @@ vmx128-fuzz on ARM64: build with `--target-arch arm64` and `XENIA_BUILD_MISC=ON`
 **Legacy canary path:**
 
 ```powershell
-cd "G:\Dev\The Xenia Project\xenia-canary"
+cd "G:\The Xenia Project\xenia-canary"
 .\build\src\xenia\cpu\testing\Release\xenia-cpu-tests.exe
 ```
 
@@ -106,7 +106,7 @@ Tier 1.1 backlog: extend opcode coverage in `tools/vmx128_fuzz/main.cc`.
 ## 3. GPU trace replay CI
 
 ```powershell
-cd "G:\Dev\The Xenia Project\xenia-canary"
+cd "G:\The Xenia Project\xenia-canary"
 
 python .\tools\gpu_replay_ci\run.py `
   --xenia-build .\build\src\xenia\gpu\d3d12\Release `

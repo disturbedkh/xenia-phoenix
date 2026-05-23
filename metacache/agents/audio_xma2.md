@@ -18,7 +18,7 @@ XMA2 fixture parity and empty XMA divergence logs on smoke captures; stable PCM 
 ## Commands
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 powershell -File tools/tier0/run_xma2_diff.ps1
 python tools/tier0/compare_pcm_baseline.py  # if present in tree
 ```

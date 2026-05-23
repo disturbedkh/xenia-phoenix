@@ -19,7 +19,7 @@ Phase 2 Linux desktop port: Docker build, runtime checklist, smoke column in ros
 ## Commands
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 powershell -File tools/docker/run-linux-build.ps1
 ```
 

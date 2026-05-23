@@ -19,7 +19,7 @@ Route work to the right phase and specialist agent without thrashing or duplicat
 ## Commands
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 # Delegate build/test to specialist; see dev/10_build_commands.md
 ```
 

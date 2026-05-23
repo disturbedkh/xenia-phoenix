@@ -21,7 +21,7 @@ GPU trace replay zero drift; legal retail `.xtr` captures; EDRAM / RTV-ROV corre
 ## Commands
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 phoenixctl repro capture --title-id <ID> --post-only --json
 phoenixctl log summarize --title-id <ID> --write-summary
 powershell -File tools/tier0/run_gpu_replay.ps1

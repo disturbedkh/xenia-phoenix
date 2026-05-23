@@ -19,7 +19,7 @@ Phase 4 Windows ARM64 (WoA): cross-build, verify script, smoke WoA column.
 ## Commands
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 powershell -File tools/tier0/arm64-verify.ps1
 ```
 

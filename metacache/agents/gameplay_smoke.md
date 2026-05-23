@@ -23,7 +23,7 @@ Finish Tier 1-Gameplay: smoke roster, 5-minute captures, empty stub/XMA logs, re
 **Prefer MCP** (`phoenix_launch_smoke`, `phoenix_triage`) or **phoenixctl** — see [dev/55_cursor_live_probe.md](../dev/55_cursor_live_probe.md).
 
 ```powershell
-cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 phoenixctl launch smoke --title-id 4D5307D1 --game "path\to\default.xex"
 phoenixctl triage --title-id 4D5307D1
 ```
