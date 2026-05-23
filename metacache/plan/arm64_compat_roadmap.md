@@ -42,7 +42,7 @@ Machine state: [arm64_status.md](../../xenia-phoenix-src/docs/arm64_status.md). 
 
 ## Phase 4.4b — Linux aarch64
 
-- [x] [build-linux_arm64.yml](../../xenia-phoenix-src/.github/workflows/build-linux_arm64.yml) on `ubuntu-24.04-arm`
+- [x] [build-linux_arm64.yml](../../xenia-phoenix-src/.github/workflows/build-linux_arm64.yml) on `ubuntu-24.04-arm` — LLVM 20 pinning + Vulkan SDK + doctor (2026-05-23)
 - [ ] First green Linux ARM64 CI run
 - [ ] Runtime parity (Phase 2.5+ on x86_64 Linux first)
 

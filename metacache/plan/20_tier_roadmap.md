@@ -188,7 +188,7 @@ Inventory: [linux_compat_gap_analysis.md](linux_compat_gap_analysis.md). Machine
 | **4.2** | `xenia-cpu-tests` + vmx128-fuzz on WoA | [ ] |
 | **4.3** | Runtime smoke + [60_smoke_titles.md](60_smoke_titles.md) WoA column | [ ] manual |
 | **4.4a** | macOS Apple Silicon (Cocoa + MoltenVK + CI) | [x] landed; CI smoke pending |
-| **4.4b** | Linux aarch64 CI (`ubuntu-24.04-arm`) | [x] landed; runtime deferred |
+| **4.4b** | Linux aarch64 CI (`ubuntu-24.04-arm`) | [x] workflow parity 2026-05-23; first green CI pending |
 
 ---
 

@@ -1,6 +1,6 @@
 # Linux compat gap analysis (Phase 2.0)
 
-Last updated: **2026-05-16**. **Roadmap:** all Linux work is Phase **2.x** in [20_tier_roadmap.md](20_tier_roadmap.md) (not Phase 3/4).
+Last updated: **2026-05-23**. **Roadmap:** all Linux work is Phase **2.x** in [20_tier_roadmap.md](20_tier_roadmap.md) (not Phase 3/4).
 
 ## Build matrix (Phase 2.2–2.4)
 

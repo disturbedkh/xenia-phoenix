@@ -12,6 +12,12 @@ Append-only log of what we decided and built across sessions. Newest at top.
 
 ---
 
+## 2026-05-23 — Linux x86 + aarch64 CI fix (B28/B29)
+
+- **B28:** `obs_event.cc` — hoist `fmt::format` to `std::string` before `ev.detail` assignment; fixes `-Wdangling-assignment-gsl` under clang-20 (Linux x86 Release/Debug/Checked).
+- **B29:** `build-linux_arm64.yml` — mirror `Linux_x86.yml` toolchain pinning (`apt.llvm.org`, `update-alternatives` for lld/llvm-ar), Vulkan SDK cache, doctor, smoke via `script -qefc`, cpu-tests via `xenia-build.py test --target`.
+- **Docs:** `linux_build_blockers.md` B28/B29; `arm64_status.md` Linux aarch64 CI section; gap analysis + roadmap bumped.
+
 ## 2026-05-23 — Lint + Windows ARM64 CI green
 
 - **Lint:** `clang-format --all` across Tier 0/1 sources; pinned [Lint.yml](../../xenia-phoenix-src/.github/workflows/Lint.yml) to LLVM **clang-format-19** (matches local/CI patch versions).
