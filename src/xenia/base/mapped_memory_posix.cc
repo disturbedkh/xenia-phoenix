@@ -42,6 +42,7 @@ class PosixMappedMemory : public MappedMemory {
         protection |= PROT_READ;
         break;
       case Mode::kReadWrite:
+      case Mode::kReadWriteShared:
         protection |= PROT_READ | PROT_WRITE;
         break;
     }
@@ -103,6 +104,7 @@ std::unique_ptr<MappedMemory> MappedMemory::Open(
       open_flags |= O_RDONLY;
       break;
     case Mode::kReadWrite:
+    case Mode::kReadWriteShared:
       open_flags |= O_RDWR;
       break;
   }
@@ -123,6 +125,7 @@ std::unique_ptr<MappedMemory> MappedMemory::OpenForAndroidContentUri(
       open_mode = "r";
       break;
     case Mode::kReadWrite:
+    case Mode::kReadWriteShared:
       open_mode = "rw";
       break;
   }

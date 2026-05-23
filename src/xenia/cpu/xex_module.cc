@@ -9,11 +9,14 @@
 
 #include "xenia/cpu/xex_module.h"
 
+#include <mutex>
+#include <system_error>
+
 #include "third_party/fmt/include/fmt/format.h"
 
-#include "xenia/base/agent_debug_log.h"
 #include "xenia/base/byte_order.h"
 #include "xenia/base/cvar.h"
+#include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/math.h"
 #include "xenia/base/memory.h"
@@ -1370,21 +1373,11 @@ void XexInfoCache::Init(XexModule* xexmod) {
 
   infocache_path.append(xexmod->image_sha_str_);
 
-  // #region agent log
-  xe::agent_debug::Log("xex_module.cc:XexInfoCache::Init", "before mkdir", "H3",
-                       "pre-fix", R"({{"infocache_path":"{}"}})",
-                       xe::path_to_utf8(infocache_path));
-  // #endregion
-  try {
-    std::filesystem::create_directories(infocache_path);
-  } catch (const std::filesystem::filesystem_error& ex) {
-    // #region agent log
-    xe::agent_debug::Log(
-        "xex_module.cc:XexInfoCache::Init", "filesystem_error", "H3", "pre-fix",
-        R"({{"path":"{}","code":{},"what":"{}"}})",
-        xe::path_to_utf8(infocache_path), ex.code().value(), ex.what());
-    // #endregion
-    throw;
+  if (std::error_code ec = xe::filesystem::CreateFolder(infocache_path);
+      ec && ec != std::errc::file_exists) {
+    XELOGE("XexInfoCache: failed to create {} ({})",
+           xe::path_to_utf8(infocache_path), ec.message());
+    return;
   }
   infocache_path.append("executable_addr_flags.bin");
 
@@ -1392,39 +1385,69 @@ void XexInfoCache::Init(XexModule* xexmod) {
   num_codebytes += 3;  // round up to nearest multiple of 4
   num_codebytes &= ~3;
 
-  auto try_open = [this, &infocache_path, num_codebytes]() {
-    bool did_exist = true;
-    const size_t file_size = sizeof(InfoCacheFlagsHeader) +
-                             (sizeof(InfoCacheFlags) * (num_codebytes / 4));
+  const size_t file_size = sizeof(InfoCacheFlagsHeader) +
+                           (sizeof(InfoCacheFlags) * (num_codebytes / 4));
 
-    if (!std::filesystem::exists(infocache_path)) {
-      xe::filesystem::CreateEmptyFile(infocache_path);
-      std::filesystem::resize_file(infocache_path, file_size);
-      did_exist = false;
+  static std::mutex infocache_init_mutex;
+  std::lock_guard<std::mutex> init_lock(infocache_init_mutex);
+
+  auto try_open = [this, &infocache_path, file_size]() -> bool {
+    executable_addr_flags_.reset();
+    std::error_code ec;
+
+    if (!std::filesystem::exists(infocache_path, ec)) {
+      if (!xe::filesystem::CreateEmptyFile(infocache_path)) {
+        if (!std::filesystem::exists(infocache_path, ec)) {
+          XELOGE("XexInfoCache: failed to create {}",
+                 xe::path_to_utf8(infocache_path));
+          return false;
+        }
+      }
+      std::filesystem::resize_file(infocache_path, file_size, ec);
+      if (ec) {
+        XELOGE("XexInfoCache: failed to size {} ({})",
+               xe::path_to_utf8(infocache_path), ec.message());
+        return false;
+      }
+    } else {
+      const auto actual_size = std::filesystem::file_size(infocache_path, ec);
+      if (ec || actual_size != file_size) {
+        XELOGW("XexInfoCache: size mismatch for {} ({} vs {}), skipping cache",
+               xe::path_to_utf8(infocache_path), actual_size, file_size);
+        return false;
+      }
     }
 
-    // todo: prepopulate with stuff from pdata, dll exports
-    this->executable_addr_flags_ = MappedMemory::Open(
-        infocache_path, xe::MappedMemory::Mode::kReadWrite, 0,
-        file_size);  // one infocacheflags entry for each PPC instr-sized addr
-
-    return did_exist;
+    executable_addr_flags_ = MappedMemory::Open(
+        infocache_path, xe::MappedMemory::Mode::kReadWriteShared, 0, file_size);
+    if (!executable_addr_flags_ || !executable_addr_flags_->data()) {
+      executable_addr_flags_.reset();
+      XELOGE("XexInfoCache: failed to map {}",
+             xe::path_to_utf8(infocache_path));
+      return false;
+    }
+    return true;
   };
 
-  bool did_exist = try_open();
-  if (!GetHeader()) {
+  if (!try_open()) {
     return;
   }
 
-  if (!did_exist) {
-    GetHeader()->version = CURRENT_INFOCACHE_VERSION;
+  InfoCacheFlagsHeader* header = GetHeader();
+  if (!header) {
+    executable_addr_flags_.reset();
+    return;
+  }
 
-  } else {
-    if (GetHeader()->version != CURRENT_INFOCACHE_VERSION) {
-      this->executable_addr_flags_->Close();
-      std::filesystem::remove(infocache_path);
-      try_open();
-    }
+  if (header->version != 0 && header->version != CURRENT_INFOCACHE_VERSION) {
+    XELOGW("XexInfoCache: stale version {} for {}, skipping cache",
+           header->version, xe::path_to_utf8(infocache_path));
+    executable_addr_flags_.reset();
+    return;
+  }
+
+  if (header->version != CURRENT_INFOCACHE_VERSION) {
+    header->version = CURRENT_INFOCACHE_VERSION;
   }
 }
 InfoCacheFlags* XexModule::GetInstructionAddressFlags(uint32_t guest_addr) {

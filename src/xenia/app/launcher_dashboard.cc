@@ -9,8 +9,6 @@
 
 #include "xenia/app/launcher_dashboard.h"
 
-#include "xenia/base/agent_debug_log.h"
-
 #include <algorithm>
 #include <fstream>
 
@@ -187,18 +185,11 @@ void LauncherDashboardDialog::DrawGrid() {
         launch = true;
       }
       if (launch) {
-        // #region agent log
-        xe::agent_debug::Log(
-            "launcher_dashboard.cc:DrawGrid", "launch tile", "H2", "pre-fix",
-            R"({{"path":"{}","from_button":{},"from_double_click":{}}})",
-            xe::path_to_utf8(entry->path), from_button ? "true" : "false",
-            from_double_click ? "true" : "false");
-        // #endregion
-        emulator_window_.RunTitle(entry->path);
+        emulator_window_.RequestLaunchTitle(entry->path);
       }
       if (ImGui::BeginPopupContextItem("tile_ctx")) {
         if (ImGui::MenuItem(PHX_ICON_PLAY "  Play")) {
-          emulator_window_.RunTitle(entry->path);
+          emulator_window_.RequestLaunchTitle(entry->path);
         }
         if (entry->title_id && ImGui::MenuItem("Configure for this game...")) {
           if (on_configure_title_) {

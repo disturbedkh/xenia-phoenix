@@ -7,6 +7,7 @@
 #include "xenia/base/obs/obs_jsonl_sink.h"
 
 #include <cstdio>
+#include <system_error>
 
 #include "xenia/base/filesystem.h"
 
@@ -59,7 +60,11 @@ void JsonlSink::Configure(const std::filesystem::path& path, bool enabled) {
   path_ = path;
   enabled_ = enabled && !path.empty();
   if (enabled_) {
-    std::filesystem::create_directories(path_.parent_path());
+    if (std::error_code ec = filesystem::CreateFolder(path_.parent_path());
+        ec && ec != std::errc::file_exists) {
+      enabled_ = false;
+      return;
+    }
     file_ = filesystem::OpenFile(path_, "ab");
   }
 }

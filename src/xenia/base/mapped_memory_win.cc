@@ -122,6 +122,13 @@ std::unique_ptr<MappedMemory> MappedMemory::Open(
       mapping_protect |= PAGE_READWRITE;
       view_access |= FILE_MAP_READ | FILE_MAP_WRITE;
       break;
+    case Mode::kReadWriteShared:
+      file_access |= GENERIC_READ | GENERIC_WRITE;
+      file_share |= FILE_SHARE_READ | FILE_SHARE_WRITE;
+      create_mode |= OPEN_EXISTING;
+      mapping_protect |= PAGE_READWRITE;
+      view_access |= FILE_MAP_READ | FILE_MAP_WRITE;
+      break;
   }
 
   SYSTEM_INFO system_info;

@@ -90,6 +90,7 @@ class GameLibrary {
   std::vector<LibraryEntry> entries_;
 
   mutable std::mutex scan_mu_;
+  std::mutex save_mu_;
   std::vector<std::thread> scan_threads_;
   std::atomic<bool> scan_active_{false};
   DirectoryScanner::Progress last_scan_progress_;

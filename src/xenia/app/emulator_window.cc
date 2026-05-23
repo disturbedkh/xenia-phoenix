@@ -24,9 +24,6 @@
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
-#include <atomic>
-
-#include "xenia/base/agent_debug_log.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/clock.h"
 #include "xenia/base/cvar.h"
@@ -2295,14 +2292,6 @@ std::string EmulatorWindow::CanonicalizeFileExtension(
 
 xe::X_STATUS EmulatorWindow::RunTitle(
     const std::filesystem::path& path_to_file) {
-  // #region agent log
-  static std::atomic<uint64_t> run_title_serial{0};
-  const uint64_t launch_id = ++run_title_serial;
-  xe::agent_debug::Log("emulator_window.cc:RunTitle", "entry", "H2", "pre-fix",
-                       R"({{"launch_id":{},"path":"{}","title_open":{}}})",
-                       launch_id, xe::path_to_utf8(path_to_file),
-                       emulator_->is_title_open() ? "true" : "false");
-  // #endregion
   std::filesystem::path launch_path = path_to_file;
 #if XE_PLATFORM_ANDROID
   if (!launch_path.empty() &&
@@ -2348,6 +2337,16 @@ xe::X_STATUS EmulatorWindow::RunTitle(
     return X_STATUS_UNSUCCESSFUL;
   }
 
+  bool launch_expected = false;
+  if (!title_launch_in_progress_.compare_exchange_strong(launch_expected,
+                                                         true)) {
+    return X_STATUS_UNSUCCESSFUL;
+  }
+  struct LaunchInProgressReset {
+    std::atomic<bool>& flag;
+    ~LaunchInProgressReset() { flag.store(false); }
+  } launch_in_progress_reset{title_launch_in_progress_};
+
   // Prevent crashing the emulator by not loading a game if a game is already
   // loaded.
   auto abs_path = std::filesystem::absolute(launch_path);
@@ -2368,12 +2367,6 @@ xe::X_STATUS EmulatorWindow::RunTitle(
   HideLauncher();
 
   auto result = emulator_->LaunchPath(abs_path);
-
-  // #region agent log
-  xe::agent_debug::Log("emulator_window.cc:RunTitle", "after LaunchPath", "H2",
-                       "pre-fix", R"({{"launch_id":{},"result":"{:08X}"}})",
-                       launch_id, static_cast<uint32_t>(result));
-  // #endregion
 
   disable_hotkeys_ = false;
 
@@ -2425,6 +2418,19 @@ xe::X_STATUS EmulatorWindow::RunTitle(
   }
 
   return result;
+}
+
+void EmulatorWindow::RequestLaunchTitle(
+    const std::filesystem::path& path_to_file) {
+#if XE_PLATFORM_WIN32
+  if (auto* win32_window = dynamic_cast<ui::Win32Window*>(window_.get())) {
+    win32_window->PostUiTask(
+        [this, path_to_file]() { RunTitle(path_to_file); });
+    return;
+  }
+#endif  // XE_PLATFORM_WIN32
+  app_context_.CallInUIThreadDeferred(
+      [this, path_to_file]() { RunTitle(path_to_file); });
 }
 
 void EmulatorWindow::RunPreviouslyPlayedTitle() {

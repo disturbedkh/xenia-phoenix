@@ -9,8 +9,6 @@
 
 #include "xenia/app/library/game_library.h"
 
-#include "xenia/base/agent_debug_log.h"
-
 #include <algorithm>
 #include <fstream>
 #include <thread>
@@ -135,11 +133,7 @@ void GameLibrary::Load() {
 }
 
 void GameLibrary::Save() {
-  // #region agent log
-  xe::agent_debug::Log("game_library.cc:Save", "entry", "H4", "pre-fix",
-                       R"({{"library_path":"{}"}})",
-                       xe::path_to_utf8(library_path_));
-  // #endregion
+  std::lock_guard<std::mutex> lock(save_mu_);
   toml::table root;
   root.insert(kLibraryVersionKey, kLibraryVersion);
 

@@ -23,6 +23,9 @@ class MappedMemory {
   enum class Mode {
     kRead,
     kReadWrite,
+    // Like kReadWrite, but allows other readers/writers (used for on-disk
+    // caches).
+    kReadWriteShared,
   };
 
   static std::unique_ptr<MappedMemory> Open(const std::filesystem::path& path,

@@ -312,10 +312,8 @@ X_RESULT ContentManager::WriteContentHeaderFile(const uint64_t xuid,
                                               data.title_id, data.content_type);
   auto parent_path = header_path.parent_path();
 
-  if (!std::filesystem::exists(parent_path)) {
-    if (!std::filesystem::create_directories(parent_path)) {
-      return X_STATUS_ACCESS_DENIED;
-    }
+  if (std::error_code ec = xe::filesystem::CreateFolder(parent_path); ec) {
+    return X_STATUS_ACCESS_DENIED;
   }
 
   xe::filesystem::CreateEmptyFile(header_path);
@@ -377,7 +375,7 @@ X_RESULT ContentManager::CreateContent(const std::string_view root_name,
     return X_ERROR_ALREADY_EXISTS;
   }
 
-  if (!std::filesystem::create_directories(package_path)) {
+  if (std::error_code ec = xe::filesystem::CreateFolder(package_path); ec) {
     return X_ERROR_ACCESS_DENIED;
   }
 
@@ -477,8 +475,10 @@ X_RESULT ContentManager::SetContentThumbnail(
     std::vector<uint8_t> buffer) {
   auto global_lock = global_critical_region_.Acquire();
   auto package_path = ResolvePackagePath(xuid, data);
-  std::filesystem::create_directories(package_path);
-  if (std::filesystem::exists(package_path)) {
+  if (std::error_code ec = xe::filesystem::CreateFolder(package_path); ec) {
+    return X_ERROR_FILE_NOT_FOUND;
+  }
+  if (!std::filesystem::exists(package_path)) {
     auto thumb_path = package_path / kThumbnailFileName;
     auto file = xe::filesystem::OpenFile(thumb_path, "wb");
     fwrite(buffer.data(), 1, buffer.size(), file);

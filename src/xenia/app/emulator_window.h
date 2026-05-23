@@ -90,6 +90,7 @@ class EmulatorWindow {
   void OnEmulatorInitialized();
 
   xe::X_STATUS RunTitle(const std::filesystem::path& path_to_file);
+  void RequestLaunchTitle(const std::filesystem::path& path_to_file);
   void UpdateTitle();
   void SetFullscreen(bool fullscreen);
   void ToggleFullscreen();
@@ -353,6 +354,7 @@ class EmulatorWindow {
 
   bool emulator_initialized_ = false;
   std::atomic<bool> disable_hotkeys_ = false;
+  std::atomic<bool> title_launch_in_progress_{false};
 
   std::string base_title_;
   bool initializing_shader_storage_ = false;

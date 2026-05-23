@@ -8,44 +8,23 @@
  */
 
 #include "xenia/base/filesystem.h"
-#include "xenia/base/agent_debug_log.h"
+
+#include <system_error>
 
 namespace xe {
 namespace filesystem {
 
 bool CreateParentFolder(const std::filesystem::path& path) {
-  if (path.has_parent_path()) {
-    auto parent_path = path.parent_path();
-    const bool parent_exists = std::filesystem::exists(parent_path);
-    // #region agent log
-    xe::agent_debug::Log("filesystem.cc:CreateParentFolder", "entry", "H1",
-                         "pre-fix",
-                         R"({{"path":"{}","parent":"{}","parent_exists":{}}})",
-                         xe::path_to_utf8(path), xe::path_to_utf8(parent_path),
-                         parent_exists ? "true" : "false");
-    // #endregion
-    if (!parent_exists) {
-      try {
-        const bool created = std::filesystem::create_directories(parent_path);
-        // #region agent log
-        xe::agent_debug::Log(
-            "filesystem.cc:CreateParentFolder", "created", "H1", "pre-fix",
-            R"({{"parent":"{}","created":{}}})", xe::path_to_utf8(parent_path),
-            created ? "true" : "false");
-        // #endregion
-        return created;
-      } catch (const std::filesystem::filesystem_error& ex) {
-        // #region agent log
-        xe::agent_debug::Log(
-            "filesystem.cc:CreateParentFolder", "filesystem_error", "H1",
-            "pre-fix", R"({{"parent":"{}","code":{},"what":"{}"}})",
-            xe::path_to_utf8(parent_path), ex.code().value(), ex.what());
-        // #endregion
-        throw;
-      }
-    }
+  if (!path.has_parent_path()) {
+    return true;
   }
-  return true;
+
+  std::error_code ec = CreateFolder(path.parent_path());
+  if (!ec || ec == std::errc::file_exists) {
+    return true;
+  }
+
+  return false;
 }
 
 std::error_code CreateFolder(const std::filesystem::path& path) {
