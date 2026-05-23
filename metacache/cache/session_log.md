@@ -11,6 +11,12 @@ Append-only log of what we decided and built across sessions. Newest at top.
 
 ---
 
+## 2026-05-23 — Lint + Windows ARM64 CI green
+
+- **Lint:** `clang-format --all` across Tier 0/1 sources; pinned [Lint.yml](../../xenia-phoenix-src/.github/workflows/Lint.yml) to LLVM **clang-format-19** (matches local/CI patch versions).
+- **ARM64 CI:** First green `Windows (ARM64)` on `disturbedkh/xenia-phoenix` — cross-compile + `arm64-verify.ps1` PE check on x64 runner (no execute smoke on cross-host).
+- **Cleanup:** Removed `agent_debug_log.h`; launch mutex + `RequestLaunchTitle` for UI-thread launches.
+
 ## 2026-05-17 — Edge harvest + smoke roster automation
 
 - **EDGE-PORT-A-1:** `audio_media_player.cc` — worker thread stop in destructor (from Edge).

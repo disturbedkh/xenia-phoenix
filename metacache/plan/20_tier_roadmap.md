@@ -184,7 +184,7 @@ Inventory: [linux_compat_gap_analysis.md](linux_compat_gap_analysis.md). Machine
 | Sub-phase | Goal | Status |
 |-----------|------|--------|
 | **4.0** | Gap analysis (JIT, third_party, CI) | [x] 2026-05-16 |
-| **4.1** | Windows ARM64 build + CI (`build-win_arm64.yml`) | [x] landed; first green CI run pending |
+| **4.1** | Windows ARM64 build + CI (`build-win_arm64.yml`) | [x] first green CI 2026-05-23 |
 | **4.2** | `xenia-cpu-tests` + vmx128-fuzz on WoA | [ ] |
 | **4.3** | Runtime smoke + [60_smoke_titles.md](60_smoke_titles.md) WoA column | [ ] manual |
 | **4.4a** | macOS Apple Silicon (Cocoa + MoltenVK + CI) | [x] landed; CI smoke pending |

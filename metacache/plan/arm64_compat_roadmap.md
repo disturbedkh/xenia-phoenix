@@ -17,7 +17,7 @@ Machine state: [arm64_status.md](../../xenia-phoenix-src/docs/arm64_status.md). 
 - [x] [arm64_windows_build.md](../../xenia-phoenix-src/docs/arm64_windows_build.md)
 - [x] [build-win_arm64.yml](../../xenia-phoenix-src/.github/workflows/build-win_arm64.yml) + Orchestrator job
 - [x] [arm64-verify.ps1](../../xenia-phoenix-src/tools/tier0/arm64-verify.ps1)
-- [ ] First green CI run on `windows-2025` (requires runner with ARM64 build tools)
+- [x] First green CI run on `windows-2025` (2026-05-23, run 26335584966)
 
 ## Phase 4.2 — CPU validation
 
