@@ -275,8 +275,6 @@ class VulkanCommandProcessor final : public CommandProcessor {
   void IssueSwap(uint32_t frontbuffer_ptr, uint32_t frontbuffer_width,
                  uint32_t frontbuffer_height) override;
 
-  void OnPrimaryBufferEnd() override;
-
   Shader* LoadShader(xenos::ShaderType shader_type,
                      const uint32_t* host_address,
                      uint32_t dword_count) override;
