@@ -1,16 +1,12 @@
 {
   "backend": "d3d12",
-  "note": "format_validate_only",
+  "note": "format_validate_only (synthetic slot fixtures; retail traces are local via InstallCorpus)",
   "cross_path": "none",
-  "corpus_count": 11,
+  "corpus_count": 10,
   "rtv_rov_drift": false,
   "drift_traces": [],
   "total_diff_files": 0,
   "traces": [
-    {
-      "file": "454107DB_6004.xtr",
-      "format_ok": true
-    },
     {
       "file": "phoenix_slot_a_depth_resolve_min.xtr",
       "format_ok": true

@@ -122,3 +122,7 @@ recent.toml
 /build-windows/
 /build-android-arm64/
 
+# Retail GPU captures — install via tools/tier0/bf2_native_engineering.ps1 -InstallCorpus
+tests/gpu_traces/454107DB_*.xtr
+telemetry/**/*.xtr
+
