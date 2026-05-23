@@ -527,6 +527,9 @@ bool VulkanRenderTargetCache::Initialize(uint32_t shared_memory_binding_count) {
     // the SAMPLED_IMAGE | COLOR_ATTACHMENT | COLOR_ATTACHMENT_BLEND features.
     gamma_render_target_as_unorm16_ = false;
 
+    depth_float24_convert_in_pixel_shader_ =
+        cvars::depth_float24_convert_in_pixel_shader &&
+        path_ == Path::kHostRenderTargets;
     depth_float24_round_ = cvars::depth_float24_round;
 
     // Host depth storing pipeline layout.

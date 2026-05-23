@@ -2790,6 +2790,14 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type,
         // Ensure shared memory is ready for transfer.
         shared_memory_->Use(VulkanSharedMemory::Usage::kRead);
 
+        // Sync against any prior write to this readback buffer.
+        PushBufferMemoryBarrier(
+            readback_buffer, 0, VK_WHOLE_SIZE, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_QUEUE_FAMILY_IGNORED,
+            VK_QUEUE_FAMILY_IGNORED, false);
+        SubmitBarriers(true);
+
         // Copy each memexport range to the readback buffer.
         uint32_t readback_buffer_offset = 0;
         for (const draw_util::MemExportRange& memexport_range :
@@ -2978,6 +2986,14 @@ bool VulkanCommandProcessor::IssueCopy() {
 
     // Ensure shared memory is ready for transfer.
     shared_memory_->Use(VulkanSharedMemory::Usage::kRead);
+
+    // Sync against any prior write to this readback buffer.
+    PushBufferMemoryBarrier(
+        rb.buffers[write_index], 0, VK_WHOLE_SIZE,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, false);
+    SubmitBarriers(true);
 
     // Copy GPU buffer → staging buffer.
     VkBufferCopy copy_region = {};
