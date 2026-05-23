@@ -1,13 +1,13 @@
 # Windows ARM64 port status
 
-Last updated: **2026-05-16** (Phase 4.1 landing).
+Last updated: **2026-05-23** (Phase 4.1 CI green).
 
 ## Automated gates (CI)
 
 - [x] `build-win_arm64.yml` — cross-compile via `xenia-build.py --target-arch arm64`
 - [x] Orchestrator `build-windows-arm64` job enabled
-- [x] `tools/tier0/arm64-verify.ps1` — size check, `--help`, optional `xenia-cpu-tests`
-- [ ] First green CI run confirmed (needs MSVC ARM64 tools on runner; local dev requires VS **ARM64 build tools** component)
+- [x] `tools/tier0/arm64-verify.ps1` — PE machine check (0xAA64); execution smoke on ARM64 host only
+- [x] First green CI run confirmed — [Orchestrator run 26335584966](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26335584966) (2026-05-23)
 
 ## Local dev (this machine)
 
