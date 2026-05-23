@@ -1,18 +1,18 @@
 # Windows ARM64 port status
 
-Last updated: **2026-05-23** (Phase 4.1 CI green; Linux aarch64 CI fix landed).
+Last updated: **2026-05-23** (Phase 4.1 + 4.4b CI green on [Orchestrator 26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305)).
 
 ## Automated gates (CI) — Windows ARM64
 
 - [x] `build-win_arm64.yml` — cross-compile via `xenia-build.py --target-arch arm64`
 - [x] Orchestrator `build-windows-arm64` job enabled
 - [x] `tools/tier0/arm64-verify.ps1` — PE machine check (0xAA64); execution smoke on ARM64 host only
-- [x] First green CI run confirmed — [Orchestrator run 26335584966](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26335584966) (2026-05-23)
+- [x] First green CI run confirmed — [26335584966](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26335584966); reconfirmed [26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305) with B36 Vulkan cache hardening
 
 ## Automated gates (CI) — Linux aarch64 (Phase 4.4b)
 
 - [x] `build-linux_arm64.yml` on `ubuntu-24.04-arm` — LLVM 20 toolchain pinning, Vulkan SDK, doctor, smoke, cpu-tests (parity with `Linux_x86.yml`)
-- [ ] First green Linux ARM64 CI run (fix landed 2026-05-23: B28 `obs_event.cc`, B29 LTO toolchain)
+- [x] First green Linux ARM64 CI run — [26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305) (B28–B35)
 - [ ] Runtime parity deferred until Phase 2.5+ Linux x86_64 sign-off
 
 ## Local dev (this machine)

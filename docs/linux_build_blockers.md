@@ -40,6 +40,7 @@ Tracked work for [issue #549](https://github.com/xenia-canary/xenia-canary/issue
 | B32 | verify | Checked smoke + LSAN | `--help` smoke exits 1 on LeakSanitizer GTK/SDL leaks | `LSAN_OPTIONS=detect_leaks=0` in CI smoke step | 2.3 |
 | B34 | configure | ARM64 shader compile | `glslangValidator` missing (no LunarG aarch64 SDK) | Install `glslang-tools` apt package in `build-linux_arm64.yml` | 4.4b |
 | B35 | compile | `toml.hpp` on aarch64 clang-20 | `-Wabsolute-value`: `abs(log10(double))` | `-Wno-absolute-value` when `XE_TARGET_AARCH64` in root `CMakeLists.txt` | 4.4b |
+| B36 | configure | `build-win_arm64.yml` Vulkan cache | Cache restore interrupted (~20s job, no compile); steps skipped after cache hit | `continue-on-error` on cache; validate `C:\VulkanSDK\…\Bin\glslangValidator.exe` or reinstall | 4.1 |
 
 ## Platform source inventory (`*_win.cc` → Linux peer)
 
