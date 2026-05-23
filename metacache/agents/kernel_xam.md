@@ -19,7 +19,7 @@ Drain kernel/XAM stub hits on smoke titles by implementing shims, not patches.
 ## Commands
 
 ```powershell
-cd "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 python tools/tier0/aggregate_stub_hits.py telemetry/TTTTTTTT_stubs.jsonl
 ```
 

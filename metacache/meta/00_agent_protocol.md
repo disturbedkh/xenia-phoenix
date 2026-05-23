@@ -6,7 +6,7 @@ How Phoenix agents operate (not 360-specific).
 
 - **Code:** `Xenia-Phoenix/xenia-phoenix-src/` — build, edit, PR from here.
 - **Memory:** `Xenia-Phoenix/metacache/` — plans, RE notes, runbooks.
-- **Reference only:** `../../xenia-canary-canary_experimental/` — sibling snapshot; do not treat as build root.
+- **Reference only:** `../../xenia-canary/` — sibling snapshot; do not treat as build root.
 - Do **not** duplicate the source tree under Phoenix.
 
 ## Workflow loop

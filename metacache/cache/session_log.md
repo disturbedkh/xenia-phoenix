@@ -1,6 +1,7 @@
 ---
 last_verified: 2026-05-16
 verified_by: session-bf2-triage
+workspace_root_note: Meta root moved to G:\Dev\The Xenia Project (2026-05-23). Historical paths below may reference the old location.
 ---
 
 # Session log

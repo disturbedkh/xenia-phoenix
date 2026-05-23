@@ -5,7 +5,7 @@
 Phoenix is the working copy where Xenia Canary will deviate. Upstream stays at:
 
 - `..\xenia-master\` — original Xenia (mostly archival).
-- `..\xenia-canary-canary_experimental\` — Xenia Canary `canary_experimental` branch (reference snapshot).
+- `..\xenia-canary\` — Xenia Canary `canary_experimental` branch (reference snapshot).
 - `.\xenia-phoenix-src\` — canonical build tree (git + submodules).
 - `.\` (this folder) — Project Phoenix: metacache + coordination.
 

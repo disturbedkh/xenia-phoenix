@@ -20,7 +20,7 @@ Shrink category C and D patches on the smoke set by fixing emulator root causes,
 ## Commands
 
 ```powershell
-cd "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 python tools/tier0/categorize_patches.py
 python tools/tier0/list_smoke_patches.py --title-id <TITLE_ID>
 ```

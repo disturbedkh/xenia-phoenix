@@ -45,9 +45,9 @@ Public, citable resources. The agent should prefer these before guessing.
 
 ## Phoenix-specific (this repo)
 
-- `xenia-canary-canary_experimental/docs/TIER0_README.md` — Phoenix Tier 0 pipeline doc.
-- `xenia-canary-canary_experimental/docs/TIER0_PR_TEMPLATE.md` — Phoenix PR template.
-- `xenia-canary-canary_experimental/docs/patch_debt_dashboard.md` — patch categorization spec.
+- `xenia-canary/docs/TIER0_README.md` — Phoenix Tier 0 pipeline doc.
+- `xenia-canary/docs/TIER0_PR_TEMPLATE.md` — Phoenix PR template.
+- `xenia-canary/docs/patch_debt_dashboard.md` — patch categorization spec.
 
 ## Citation rule
 

@@ -147,7 +147,7 @@ $env:VULKAN_SDK = "C:\VulkanSDK\1.4.350.0"
 
 **Symptom:** CMake errors, missing `third_party/imgui/imgui.cpp`, empty submodule dirs.
 
-**Cause:** Building `xenia-canary-canary_experimental/` without git, or never running `git submodule update`.
+**Cause:** Building `xenia-canary/` without git, or never running `git submodule update`.
 
 **Fix:** Build only `Xenia-Phoenix/xenia-phoenix-src/`. Docker script runs submodule init inside container.
 

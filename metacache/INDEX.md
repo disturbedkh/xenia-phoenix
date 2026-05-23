@@ -83,7 +83,7 @@ Port analyses: `plan/linux_compat_*`, `android_compat_*`, `arm64_compat_*`, `mac
 - **Build + develop:** [xenia-phoenix-src/](../xenia-phoenix-src/)
 - Tier 0: `xenia-phoenix-src/docs/TIER0_README.md`
 - Telemetry playbook: `xenia-phoenix-src/telemetry/README.md`
-- Reference canary: `../../xenia-canary-canary_experimental/` (read-only)
+- Reference canary: `../../xenia-canary/` (read-only)
 - Tools: `xenia-phoenix-src/tools/` — see [workspace/01_canonical_paths.md](workspace/01_canonical_paths.md)
 
 ## Meta / process

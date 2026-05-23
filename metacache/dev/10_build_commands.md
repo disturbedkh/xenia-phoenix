@@ -32,7 +32,7 @@ Ninja on Windows requires the MSVC Developer environment (vcvars64) to be active
 
 ```powershell
 $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-$src    = "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+$src    = "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 
 cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 && python xenia-build.py build"
 ```
@@ -41,11 +41,11 @@ cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 &
 
 ```powershell
 # 1. Clone
-git clone https://github.com/xenia-canary/xenia-canary --branch canary_experimental --recurse-submodules --shallow-submodules --depth=1 "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+git clone https://github.com/xenia-canary/xenia-canary --branch canary_experimental --recurse-submodules --shallow-submodules --depth=1 "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 
 # 2. Configure + build (from inside vcvars64)
 $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-$src    = "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+$src    = "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 && python xenia-build.py setup && python xenia-build.py build"
 ```
 
@@ -53,7 +53,7 @@ cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 &
 
 ```powershell
 $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-$src    = "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+$src    = "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 && python xenia-build.py build"
 ```
 
@@ -95,7 +95,7 @@ Remove-Item -Recurse -Force build
 Requires Docker Desktop running. See [linux_compat_runbook.md](linux_compat_runbook.md).
 
 ```powershell
-$src = "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+$src = "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 cd $src
 .\tools\docker\run-linux-build.ps1
 .\tools\docker\run-linux-build.ps1 -Config all
@@ -120,7 +120,7 @@ Requires **MSVC ARM64 build tools**. See [arm64_compat_runbook.md](arm64_compat_
 
 ```powershell
 $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-$src    = "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+$src    = "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 && python xenia-build.py setup --target-arch arm64 && python xenia-build.py build --target-arch arm64 --config=release --target=xenia-app --build-tests"
 ```
 

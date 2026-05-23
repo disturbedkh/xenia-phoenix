@@ -1,4 +1,4 @@
-﻿# Monorepo pointers (read-only)
+# Monorepo pointers (read-only)
 
 Phoenix metacache is **Phoenix-only**. Sibling trees are context, not second brains.
 
@@ -6,7 +6,7 @@ Phoenix metacache is **Phoenix-only**. Sibling trees are context, not second bra
 |------|--------|--------|------|
 | `Xenia-Phoenix/xenia-phoenix-src/` | [disturbedkh/xenia-phoenix](https://github.com/disturbedkh/xenia-phoenix) | `canary_experimental` | **Canonical** Phoenix build + git |
 | `Xenia-Phoenix/metacache/` | [disturbedkh/xenia-phoenix](https://github.com/disturbedkh/xenia-phoenix) | `metacache` | Agent memory (this tree) |
-| `../../xenia-canary-canary_experimental/` | [xenia-canary/xenia-canary](https://github.com/xenia-canary/xenia-canary) | `canary_experimental` | Reference canary snapshot |
+| `../../xenia-canary/` | [xenia-canary/xenia-canary](https://github.com/xenia-canary/xenia-canary) | `canary_experimental` | Reference canary snapshot |
 | `../../xenia-master/` | [xenia-project/xenia](https://github.com/xenia-project/xenia) | `master` | Archival upstream Xenia |
 | `../../Xenia-Edge/` | [has207/xenia-edge](https://github.com/has207/xenia-edge) | `edge` | Edge fork (Windows/Linux focus); port queue — [edge_port_queue.md](../plan/edge_port_queue.md) |
 | `../../XeniOS/` | [xenios-jp/XeniOS](https://github.com/xenios-jp/XeniOS) | `xenios` | Apple-focused fork |

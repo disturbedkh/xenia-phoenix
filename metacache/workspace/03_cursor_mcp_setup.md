@@ -3,7 +3,7 @@
 ## 1. Install Python tools
 
 ```powershell
-cd "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+cd "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 pip install -e tools/phoenixctl
 pip install -e tools/phoenix-mcp
 ```

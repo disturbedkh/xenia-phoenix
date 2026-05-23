@@ -64,6 +64,6 @@ tools/docker/          Linux / Android Docker builds
 | Path | Role |
 |------|------|
 | `Xenia-Phoenix/metacache/` | Agent memory (this tree) |
-| `../../xenia-canary-canary_experimental/` | Reference snapshot only |
+| `../../xenia-canary/` | Reference snapshot only |
 
 Keep this file aligned with the tree after large refactors.

@@ -18,7 +18,7 @@ Always use **vcvars64** on an x64 host, then:
 
 ```powershell
 $vcvars = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-$src    = "G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src"
+$src    = "G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src"
 cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 && python xenia-build.py setup --target-arch arm64 && python xenia-build.py build --target-arch arm64 --config=release --target=xenia-app --build-tests"
 ```
 

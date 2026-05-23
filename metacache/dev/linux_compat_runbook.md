@@ -5,7 +5,7 @@ Linux is **Phase 2** only — see [plan/20_tier_roadmap.md](../plan/20_tier_road
 ## Canonical build (Windows host)
 
 ```powershell
-cd G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src
+cd G:\Dev\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src
 .\tools\docker\run-linux-build.ps1              # release + verify
 .\tools\docker\run-linux-build.ps1 -Config all  # release, debug, checked
 .\tools\docker\run-linux-build.ps1 -SkipVerify  # compile only
