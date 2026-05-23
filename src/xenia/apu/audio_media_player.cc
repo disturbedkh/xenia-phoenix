@@ -13,6 +13,10 @@
 #include "xenia/apu/xma_context.h"
 #include "xenia/base/logging.h"
 
+#if XE_PLATFORM_LINUX
+#include "xenia/apu/sdl/sdl_audio_driver.h"
+#endif
+
 extern "C" {
 #if XE_COMPILER_MSVC
 #pragma warning(push)
@@ -153,6 +157,10 @@ AudioMediaPlayer::AudioMediaPlayer(apu::AudioSystem* audio_system,
 
 AudioMediaPlayer::~AudioMediaPlayer() {
   Stop();
+  // Edge: stop worker before fences get destroyed; worker waits on resume_fence_.
+  worker_running_ = false;
+  resume_fence_.Signal();
+  worker_thread_.reset();
   DeleteDriver();
 };
 
@@ -538,8 +546,14 @@ bool AudioMediaPlayer::SetupDriver(uint32_t sample_rate, uint32_t channels) {
     return false;
   }
 
+#if XE_PLATFORM_LINUX
+  // Edge: use SDL for XMP to avoid ALSA exclusive-mode conflicts with main APU.
+  driver_ = std::unique_ptr<AudioDriver>(new xe::apu::sdl::SDLAudioDriver(
+      driver_semaphore_.get(), sample_rate, channels, false));
+#else
   driver_ = std::unique_ptr<AudioDriver>(audio_system_->CreateDriver(
       driver_semaphore_.get(), sample_rate, channels, false));
+#endif
   if (!driver_) {
     driver_semaphore_.reset();
     return false;

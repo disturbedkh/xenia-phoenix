@@ -14,6 +14,7 @@
 #include "devices/host_path_entry.h"
 #include "xenia/base/literals.h"
 #include "xenia/base/logging.h"
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/base/string.h"
 #include "xenia/kernel/xfile.h"
 
@@ -148,6 +149,7 @@ Entry* VirtualFileSystem::ResolvePath(const std::string_view path) {
     // not an actual problem nor something we care about.
     if (path != "ShaderDumpxe:\\CompareBackEnds") {
       XELOGE("ResolvePath({}) failed - device not found", path);
+      debug::PhoenixProbeNotifyVfsResolveFail(path);
     }
     return nullptr;
   }

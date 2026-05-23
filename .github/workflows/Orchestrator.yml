@@ -29,7 +29,11 @@ jobs:
     name: Lint
     uses: ./.github/workflows/Lint.yml
 
-  # Add optional steps here
+  tier0-differential:
+    name: Tier0 differential (Windows)
+    needs: [lint, commit-message]
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/tier0-differential.yml
 
   # ===========================================================================
   # Stage 2: Platform builds
@@ -41,31 +45,59 @@ jobs:
     uses: ./.github/workflows/Windows_x86.yml
 
   build-linux:
-    name: Linux (x86-64)
+    name: Linux (x86-64) Release
     needs: [lint, commit-message]
     if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/Linux_x86.yml
+    with:
+      config: Release
+      run_smoke_test: true
 
-  # Uncomment when platform support is ready:
-  # build-windows-arm64:
-  #   name: Windows-ARM64
-  #   needs: [lint]
-  #   uses: ./.github/workflows/build-win_arm64.yml
+  build-linux-debug:
+    name: Linux (x86-64) Debug
+    needs: [lint, commit-message]
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/Linux_x86.yml
+    with:
+      config: Debug
+      run_smoke_test: true
+      run_cpu_tests: false
 
-  # build-linux-arm64:
-  #   name: Linux-ARM64
-  #   needs: [lint]
-  #   uses: ./.github/workflows/build-linux_arm64.yml
+  build-linux-checked:
+    name: Linux (x86-64) Checked
+    needs: [lint, commit-message]
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/Linux_x86.yml
+    with:
+      config: Checked
+      run_smoke_test: true
+      run_cpu_tests: false
 
-  # build-macos:
-  #   name: macOS
-  #   needs: [lint]
-  #   uses: ./.github/workflows/build-macos.yml
+  build-windows-arm64:
+    name: Windows (ARM64)
+    needs: [lint, commit-message]
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/build-win_arm64.yml
+    with:
+      run_cpu_tests: true
 
-  # build-android:
-  #   name: Android
-  #   needs: [lint]
-  #   uses: ./.github/workflows/build-android.yml
+  build-linux-arm64:
+    name: Linux (ARM64)
+    needs: [lint, commit-message]
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/build-linux_arm64.yml
+
+  build-macos:
+    name: macOS (Apple Silicon)
+    needs: [lint, commit-message]
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/build-macos.yml
+
+  build-android:
+    name: Android (arm64)
+    needs: [lint, commit-message]
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/Android_arm64.yml
 
   # ===========================================================================
   # Stage 3: Release

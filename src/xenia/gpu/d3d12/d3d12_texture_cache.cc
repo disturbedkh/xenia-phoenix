@@ -16,6 +16,7 @@
 
 #include "xenia/base/assert.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/math.h"
 #include "xenia/base/profiling.h"
 #include "xenia/gpu/d3d12/d3d12_command_processor.h"
@@ -455,6 +456,8 @@ void D3D12TextureCache::EndFrame() {
     if (!unsupported_header_written) {
       XELOGE("Unsupported texture formats used in the frame:");
       unsupported_header_written = true;
+      OBS_INVARIANT("TextureFormatUnsupported", obs::ChannelId::kGpuEdram, true,
+                    "frame_has_unsupported_texture_formats");
     }
     XELOGE("* {}{}{}{}", FormatInfo::GetName(xenos::TextureFormat(i)),
            unsupported_features & kUnsupportedResourceBit ? " resource" : "",

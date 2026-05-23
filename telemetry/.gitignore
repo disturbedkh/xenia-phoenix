@@ -1,0 +1,7 @@
+# Per-title smoke captures — do not commit (may include paths / session metadata).
+*.jsonl
+*.json
+!README.md
+.phoenix_session.json
+*_crash.log
+*_triage_report.txt

@@ -1,6 +1,55 @@
 {
   "backend": "d3d12",
-  "note": "no_traces",
-  "traces_dir": "G:\\Xenia-Xenia Canary\\Xenia-Phoenix\\xenia-phoenix-src\\tests\\gpu_traces",
-  "traces": []
+  "note": "format_validate_only",
+  "cross_path": "none",
+  "corpus_count": 11,
+  "rtv_rov_drift": false,
+  "drift_traces": [],
+  "total_diff_files": 0,
+  "traces": [
+    {
+      "file": "454107DB_6004.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_a_depth_resolve_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_b_msaa_color_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_c_msaa_depth_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_d_tiled_color_resolve_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_e_predicated_viewport_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_f_memexport_stress_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_g_depth_only_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_h_gamma_ramp_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_i_bin_mask_min.xtr",
+      "format_ok": true
+    },
+    {
+      "file": "phoenix_slot_j_generic_clear_min.xtr",
+      "format_ok": true
+    }
+  ]
 }

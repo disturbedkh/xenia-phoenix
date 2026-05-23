@@ -154,6 +154,10 @@ class Emulator {
     return graphics_system_.get();
   }
 
+  // Recreate GPU backend (e.g. after internal resolution scale change). Not
+  // supported while a title is running.
+  X_STATUS RecreateGraphicsSystem();
+
   // Human-interface Device (HID) adapters for controllers.
   hid::InputSystem* input_system() const { return input_system_.get(); }
 

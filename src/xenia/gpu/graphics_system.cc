@@ -16,6 +16,8 @@
 #include "xenia/base/profiling.h"
 #include "xenia/base/threading.h"
 #include "xenia/config.h"
+#include "xenia/base/obs/obs.h"
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/gpu/command_processor.h"
 #include "xenia/gpu/gpu_flags.h"
 #include "xenia/kernel/kernel_state.h"
@@ -365,8 +367,11 @@ void GraphicsSystem::DispatchInterruptCallback(uint32_t source, uint32_t cpu) {
 void GraphicsSystem::MarkVblank() {
   SCOPE_profile_cpu_f("gpu");
 
+  debug::PhoenixProbeNotifyPresent();
+
   // Increment vblank counter (so the game sees us making progress).
   command_processor_->increment_counter();
+  obs::OnFrameBegin(command_processor_->counter());
 
   // TODO(benvanik): we shouldn't need to do the dispatch here, but there's
   //     something wrong and the CP will block waiting for code that

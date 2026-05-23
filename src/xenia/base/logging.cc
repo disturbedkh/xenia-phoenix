@@ -55,7 +55,12 @@ DEFINE_bool(flush_log, true, "Flush log file after each log line batch.",
 
 DEFINE_uint32(log_mask, 0,
               "Disables specific categorizes for more granular debug logging. "
-              "Kernel = 1, Apu = 2, Cpu = 4, Gpu = 8.",
+              "Kernel = 1, Apu = 2, Cpu = 4, Gpu = 8. "
+              "(Alias: log_disable_mask — same semantics.)",
+              "Logging");
+
+DEFINE_uint32(log_disable_mask, 0,
+              "Alias for log_mask — bit mask of LogSrc channels to disable.",
               "Logging");
 
 DEFINE_int32(
@@ -476,9 +481,13 @@ void logging::ToggleLogLevel() {
   cvars::log_level = swap;
 }
 
+uint32_t EffectiveLogDisableMask() {
+  return cvars::log_disable_mask ? cvars::log_disable_mask : cvars::log_mask;
+}
+
 bool logging::ShouldLog(LogLevel log_level, uint32_t log_mask) {
   return static_cast<int32_t>(log_level) <= cvars::log_level &&
-         (log_mask & cvars::log_mask) == 0;
+         (log_mask & EffectiveLogDisableMask()) == 0;
 }
 
 uint32_t logging::internal::GetLogLevel() { return cvars::log_level; }

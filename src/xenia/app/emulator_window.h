@@ -24,10 +24,15 @@
 #include "xenia/ui/window.h"
 #include "xenia/ui/window_listener.h"
 #include "xenia/ui/windowed_app_context.h"
+#include "xenia/app/library/game_library.h"
 #include "xenia/xbox.h"
 
 namespace xe {
 namespace app {
+
+class LauncherDashboardDialog;
+class LibrarySettingsDialog;
+class GraphicsSettingsDialog;
 
 struct RecentTitleEntry {
   std::string title_name;
@@ -74,6 +79,9 @@ class EmulatorWindow {
   ui::WindowedAppContext& app_context() const { return app_context_; }
   ui::Window* window() const { return window_.get(); }
   ui::ImGuiDrawer* imgui_drawer() const { return imgui_drawer_.get(); }
+  ui::ImmediateDrawer* immediate_drawer() const {
+    return immediate_drawer_.get();
+  }
 
   ui::Presenter* GetGraphicsSystemPresenter() const;
   void SetupGraphicsSystemPresenterPainting();
@@ -94,7 +102,17 @@ class EmulatorWindow {
 
   void ToggleProfilesConfigDialog();
   void ToggleXMPConfigDialog();
+  void ToggleDisplayConfigDialog();
+  void ToggleGraphicsSettingsDialog();
+  void ToggleGraphicsSettingsDialogFromKeyboard();
+  void ToggleLibrarySettingsDialog();
+  void ScheduleCloseGraphicsSettingsDialog();
+  void ScheduleCloseLibrarySettingsDialog();
   void SetHotkeysState(bool enabled) { disable_hotkeys_ = !enabled; }
+
+  // Called from ImGuiDialog::OnClose when a self-deleting owned dialog ends.
+  void OnLibrarySettingsDialogClosed(ui::ImGuiDialog* dialog);
+  void OnDisplayConfigDialogClosed(ui::ImGuiDialog* dialog);
 
   // Types of button functions for hotkeys.
   enum class ButtonFunctions {
@@ -149,6 +167,9 @@ class EmulatorWindow {
 
     void OnMouseDown(ui::MouseEvent& e) override;
     void OnMouseUp(ui::MouseEvent& e) override;
+#if XE_PLATFORM_ANDROID
+    void OnTouchEvent(ui::TouchEvent& e) override;
+#endif
 
     void OnUsbDeviceChanged(bool is_arrival) override;
 
@@ -161,6 +182,20 @@ class EmulatorWindow {
    public:
     DisplayConfigGameConfigLoadCallback(Emulator& emulator,
                                         EmulatorWindow& emulator_window)
+        : Emulator::GameConfigLoadCallback(emulator),
+          emulator_window_(emulator_window) {}
+
+    void PostGameConfigLoad() override;
+
+   private:
+    EmulatorWindow& emulator_window_;
+  };
+
+  class GraphicsSettingsGameConfigLoadCallback
+      : public Emulator::GameConfigLoadCallback {
+   public:
+    GraphicsSettingsGameConfigLoadCallback(Emulator& emulator,
+                                           EmulatorWindow& emulator_window)
         : Emulator::GameConfigLoadCallback(emulator),
           emulator_window_(emulator_window) {}
 
@@ -206,6 +241,7 @@ class EmulatorWindow {
 
    protected:
     void OnDraw(ImGuiIO& io) override;
+    void OnClose() override;
 
    private:
     EmulatorWindow& emulator_window_;
@@ -271,7 +307,8 @@ class EmulatorWindow {
   void CpuBreakIntoHostDebugger();
   void GpuTraceFrame();
   void GpuClearCaches();
-  void ToggleDisplayConfigDialog();
+  void ShowLauncher();
+  void HideLauncher();
   void ToggleControllerVibration();
   void ShowCompatibility();
   void ShowFAQ();
@@ -303,6 +340,14 @@ class EmulatorWindow {
   std::unique_ptr<ui::ImGuiDrawer> imgui_drawer_;
   std::unique_ptr<DisplayConfigGameConfigLoadCallback>
       display_config_game_config_load_callback_;
+  std::unique_ptr<GraphicsSettingsGameConfigLoadCallback>
+      graphics_settings_game_config_load_callback_;
+  std::unique_ptr<library::GameLibrary> game_library_;
+  std::unique_ptr<LauncherDashboardDialog> launcher_dashboard_;
+  std::unique_ptr<LibrarySettingsDialog> library_settings_dialog_;
+  std::unique_ptr<GraphicsSettingsDialog> graphics_settings_dialog_;
+  bool graphics_settings_close_pending_ = false;
+  bool library_settings_close_pending_ = false;
   // Creation may fail, in this case immediate drawer UI must not be drawn.
   std::unique_ptr<ui::ImmediateDrawer> immediate_drawer_;
 

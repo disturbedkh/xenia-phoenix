@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: phoenix-mcp
+Version: 1.0.0
+Summary: MCP server for Phoenix Xenia telemetry and control
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: mcp>=1.0.0
+
+# phoenix-mcp
+
+stdio MCP server exposing Phoenix telemetry tools to Cursor.
+
+Setup: [`Xenia-Phoenix/metacache/workspace/03_cursor_mcp_setup.md`](../../../metacache/workspace/03_cursor_mcp_setup.md).
+
+```powershell
+pip install -e ../phoenixctl
+pip install -e .
+python -m phoenix_mcp.server
+```

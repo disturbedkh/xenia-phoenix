@@ -2155,15 +2155,10 @@ struct RSQRT_V128 : Sequence<RSQRT_V128, I<OPCODE_RSQRT, V128Op, V128Op>> {
        part of a vector normalization sequence. in fact, its difficult to find
        uses of vrsqrte in titles that have inputs which do not come from vmsum.
     */
-    if (i.src1.value && i.src1.value->AllFloatVectorLanesSameValue()) {
-      e.vmovss(e.xmm0, src1);
-      e.call(e.backend()->vrsqrtefp_scalar_helper);
-      e.vshufps(i.dest, e.xmm0, e.xmm0, 0);
-    } else {
-      e.vmovaps(e.xmm0, src1);
-      e.call(e.backend()->vrsqrtefp_vector_helper);
-      e.vmovaps(i.dest, e.xmm0);
-    }
+    (void)i.src1.value;
+    e.vmovaps(e.xmm0, src1);
+    e.call(e.backend()->vrsqrtefp_vector_helper);
+    e.vmovaps(i.dest, e.xmm0);
   }
 };
 EMITTER_OPCODE_TABLE(OPCODE_RSQRT, RSQRT_F32, RSQRT_F64, RSQRT_V128);

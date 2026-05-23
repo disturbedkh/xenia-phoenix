@@ -36,13 +36,23 @@ class ImGuiDialog {
 
   bool IsClosing() const { return has_close_pending_; }
 
+  // Called by the owner (e.g. EmulatorWindow) to begin self-close.
+  void RequestClose() { Close(); }
+
+  // When true, the owner destroys via unique_ptr; ImGuiDialog never delete this.
+  bool IsLifetimeManagedByOwner() const { return lifetime_managed_by_owner_; }
+
  protected:
+  void SetLifetimeManagedByOwner(bool managed) {
+    lifetime_managed_by_owner_ = managed;
+  }
+
   ImGuiDialog(ImGuiDrawer* imgui_drawer);
 
   ImGuiDrawer* imgui_drawer() const { return imgui_drawer_; }
   ImGuiIO& GetIO();
 
-  uint64_t GetWindowId() const { return next_window_id_; }
+  uint64_t GetWindowId() const { return window_id_; }
   // Closes the dialog and returns to any waiters.
   void Close();
 
@@ -54,7 +64,9 @@ class ImGuiDialog {
   static std::atomic<uint64_t> next_window_id_;
 
   ImGuiDrawer* imgui_drawer_ = nullptr;
+  uint64_t window_id_ = 0;
   bool has_close_pending_ = false;
+  bool lifetime_managed_by_owner_ = false;
   std::vector<xe::threading::Fence*> waiting_fences_;
 };
 

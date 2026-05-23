@@ -125,7 +125,7 @@ void VdGetCurrentDisplayGamma_entry(lpdword_t type_ptr, lpfloat_t power_ptr) {
   *type_ptr = cvars::kernel_display_gamma_type;
   *power_ptr = float(cvars::kernel_display_gamma_power);
 }
-DECLARE_XBOXKRNL_EXPORT1(VdGetCurrentDisplayGamma, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdGetCurrentDisplayGamma, kVideo, kImplemented);
 
 struct X_D3DPRIVATE_RECT {
   xe::be<uint32_t> x1;  // 0x0
@@ -198,7 +198,7 @@ void VdGetCurrentDisplayInformation_entry(
   display_info->display_interlaced = mode.is_interlaced;
   display_info->actual_display_width = (uint16_t)mode.display_width;
 }
-DECLARE_XBOXKRNL_EXPORT1(VdGetCurrentDisplayInformation, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdGetCurrentDisplayInformation, kVideo, kImplemented);
 
 void VdQueryVideoMode(X_VIDEO_MODE* video_mode,
                       [[maybe_unused]] bool is_internal_resolution) {
@@ -221,12 +221,12 @@ void VdQueryVideoMode(X_VIDEO_MODE* video_mode,
 void VdQueryRealVideoMode_entry(pointer_t<X_VIDEO_MODE> video_mode) {
   VdQueryVideoMode(video_mode, true);
 }
-DECLARE_XBOXKRNL_EXPORT1(VdQueryRealVideoMode, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdQueryRealVideoMode, kVideo, kImplemented);
 
 void VdQueryVideoMode_entry(pointer_t<X_VIDEO_MODE> video_mode) {
   VdQueryVideoMode(video_mode, false);
 }
-DECLARE_XBOXKRNL_EXPORT1(VdQueryVideoMode, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdQueryVideoMode, kVideo, kImplemented);
 
 dword_result_t VdQueryVideoFlags_entry() {
   X_VIDEO_MODE mode;
@@ -239,7 +239,7 @@ dword_result_t VdQueryVideoFlags_entry() {
 
   return flags;
 }
-DECLARE_XBOXKRNL_EXPORT1(VdQueryVideoFlags, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdQueryVideoFlags, kVideo, kImplemented);
 
 dword_result_t VdSetDisplayMode_entry(dword_t flags) {
   // Often 0x40000000.
@@ -258,7 +258,7 @@ dword_result_t VdSetDisplayMode_entry(dword_t flags) {
 
   return 0;
 }
-DECLARE_XBOXKRNL_EXPORT1(VdSetDisplayMode, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdSetDisplayMode, kVideo, kImplemented);
 
 dword_result_t VdSetDisplayModeOverride_entry(dword_t width, dword_t height,
                                               double_t refresh_rate,
@@ -278,7 +278,7 @@ dword_result_t VdInitializeEngines_entry(unknown_t unk0, function_t callback,
   // r7 = ME Microcode
   return 1;
 }
-DECLARE_XBOXKRNL_EXPORT1(VdInitializeEngines, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdInitializeEngines, kVideo, kImplemented);
 
 void VdShutdownEngines_entry() {
   // Ignored for now.
@@ -292,7 +292,7 @@ dword_result_t VdGetGraphicsAsicID_entry() {
   // (retrain/etc).
   return 0x11;
 }
-DECLARE_XBOXKRNL_EXPORT1(VdGetGraphicsAsicID, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdGetGraphicsAsicID, kVideo, kImplemented);
 
 dword_result_t VdEnableDisableClockGating_entry(dword_t enabled) {
   // Ignored, as it really doesn't matter.
@@ -328,17 +328,19 @@ void VdEnableRingBufferRPtrWriteBack_entry(lpvoid_t ptr,
 DECLARE_XBOXKRNL_EXPORT1(VdEnableRingBufferRPtrWriteBack, kVideo, kImplemented);
 
 void VdGetSystemCommandBuffer_entry(lpunknown_t p0_ptr, lpunknown_t p1_ptr) {
+  // Canary-compatible placeholders; games (e.g. BF2) expect these magic values
+  // during boot. Tagged implemented so stub telemetry does not spam polls.
   p0_ptr.Zero(0x94);
   xe::store_and_swap<uint32_t>(p0_ptr, 0xBEEF0000);
   xe::store_and_swap<uint32_t>(p1_ptr, 0xBEEF0001);
 }
-DECLARE_XBOXKRNL_EXPORT1(VdGetSystemCommandBuffer, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdGetSystemCommandBuffer, kVideo, kImplemented);
 
 void VdSetSystemCommandBufferGpuIdentifierAddress_entry(lpunknown_t unk) {
   // r3 = 0x2B10(d3d?) + 8
 }
 DECLARE_XBOXKRNL_EXPORT1(VdSetSystemCommandBufferGpuIdentifierAddress, kVideo,
-                         kStub);
+                         kImplemented);
 
 // VdVerifyMEInitCommand
 // r3
@@ -408,7 +410,7 @@ dword_result_t VdIsHSIOTrainingSucceeded_entry() {
   // BOOL return value
   return 1;
 }
-DECLARE_XBOXKRNL_EXPORT1(VdIsHSIOTrainingSucceeded, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdIsHSIOTrainingSucceeded, kVideo, kImplemented);
 
 dword_result_t VdPersistDisplay_entry(unknown_t unk0, lpdword_t unk1_ptr) {
   // unk1_ptr needs to be populated with a pointer passed to
@@ -426,14 +428,14 @@ dword_result_t VdPersistDisplay_entry(unknown_t unk0, lpdword_t unk1_ptr) {
 DECLARE_XBOXKRNL_EXPORT2(VdPersistDisplay, kVideo, kImplemented, kSketchy);
 
 dword_result_t VdRetrainEDRAMWorker_entry(unknown_t unk0) { return 0; }
-DECLARE_XBOXKRNL_EXPORT1(VdRetrainEDRAMWorker, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdRetrainEDRAMWorker, kVideo, kImplemented);
 
 dword_result_t VdRetrainEDRAM_entry(unknown_t unk0, unknown_t unk1,
                                     unknown_t unk2, unknown_t unk3,
                                     unknown_t unk4, unknown_t unk5) {
   return 0;
 }
-DECLARE_XBOXKRNL_EXPORT1(VdRetrainEDRAM, kVideo, kStub);
+DECLARE_XBOXKRNL_EXPORT1(VdRetrainEDRAM, kVideo, kImplemented);
 
 void VdSwap_entry(
     lpvoid_t buffer_ptr,        // ptr into primary ringbuffer

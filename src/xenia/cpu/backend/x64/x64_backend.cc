@@ -10,6 +10,11 @@
 #include "xenia/cpu/backend/x64/x64_backend.h"
 
 #include <cstddef>
+
+#if XE_ARCH_AMD64
+#include <immintrin.h>
+#endif
+
 #include "third_party/capstone/include/capstone/capstone.h"
 #include "third_party/capstone/include/capstone/x86.h"
 
@@ -69,7 +74,9 @@ class X64HelperEmitter : public X64Emitter {
   void* EmitReservedStoreHelper(bool bit64 = false);
 
   void* EmitScalarVRsqrteHelper();
+  void* EmitScalarVRsqrteInvokeHelper(void* scalar_helper);
   void* EmitVectorVRsqrteHelper(void* scalar_helper);
+  void* EmitVectorVRsqrteInvokeHelper(void* vector_helper);
 
   void* EmitFrsqrteHelper();
 
@@ -282,8 +289,12 @@ bool X64Backend::Initialize(Processor* processor) {
   reserved_store_32_helper = thunk_emitter.EmitReservedStoreHelper(false);
   reserved_store_64_helper = thunk_emitter.EmitReservedStoreHelper(true);
   vrsqrtefp_scalar_helper = thunk_emitter.EmitScalarVRsqrteHelper();
+  vrsqrtefp_scalar_invoke_helper_ =
+      thunk_emitter.EmitScalarVRsqrteInvokeHelper(vrsqrtefp_scalar_helper);
   vrsqrtefp_vector_helper =
       thunk_emitter.EmitVectorVRsqrteHelper(vrsqrtefp_scalar_helper);
+  vrsqrtefp_vector_invoke_helper_ =
+      thunk_emitter.EmitVectorVRsqrteInvokeHelper(vrsqrtefp_vector_helper);
   frsqrtefp_helper = thunk_emitter.EmitFrsqrteHelper();
   // Set the code cache to use the ResolveFunction thunk for default
   // indirections.
@@ -316,6 +327,22 @@ bool X64Backend::Initialize(Processor* processor) {
 #endif
 
   return true;
+}
+
+vec128_t X64Backend::InvokeVrsqrtefpVector(const vec128_t& in,
+                                           void* guest_ctx) const {
+  if (!vrsqrtefp_vector_invoke_helper_ || !guest_ctx) {
+    return {};
+  }
+#if XE_ARCH_AMD64
+  vec128_t io = in;
+  using Fn = void (*)(vec128_t*, void*);
+  reinterpret_cast<Fn>(vrsqrtefp_vector_invoke_helper_)(&io, guest_ctx);
+  return io;
+#else
+  (void)guest_ctx;
+  return {};
+#endif
 }
 
 void X64Backend::CommitExecutableRange(uint32_t guest_low,
@@ -1282,6 +1309,29 @@ void* X64HelperEmitter::EmitScalarVRsqrteHelper() {
   return EmitCurrentForOffsets(code_offsets);
 }
 
+void* X64HelperEmitter::EmitScalarVRsqrteInvokeHelper(void* scalar_helper) {
+  _code_offsets code_offsets = {};
+  // float (*)(void* guest_ctx, float in) — RCX = guest_ctx, XMM1 = in (Win64).
+  mov(rsi, rcx);
+  vmovss(xmm0, xmm1);
+  mov(eax, DEFAULT_VMX_MXCSR);
+  sub(rsp, 8);
+  mov(dword[rsp], eax);
+  vldmxcsr(dword[rsp]);
+  add(rsp, 8);
+  mov(rax, reinterpret_cast<uintptr_t>(scalar_helper));
+  sub(rsp, 0x20);
+  call(rax);
+  add(rsp, 0x20);
+  ret();
+  code_offsets.prolog_stack_alloc = getSize();
+  code_offsets.body = getSize();
+  code_offsets.epilog = getSize();
+  code_offsets.tail = getSize();
+  code_offsets.prolog = getSize();
+  return EmitCurrentForOffsets(code_offsets);
+}
+
 void* X64HelperEmitter::EmitVectorVRsqrteHelper(void* scalar_helper) {
   _code_offsets code_offsets = {};
   Xbyak::Label check_scalar_operation_in_vmx, actual_vector_version;
@@ -1341,6 +1391,32 @@ void* X64HelperEmitter::EmitVectorVRsqrteHelper(void* scalar_helper) {
   jl(loop);
   vmovaps(xmm0, result_ptr);
   ret();
+  code_offsets.prolog_stack_alloc = getSize();
+  code_offsets.body = getSize();
+  code_offsets.epilog = getSize();
+  code_offsets.tail = getSize();
+  code_offsets.prolog = getSize();
+  return EmitCurrentForOffsets(code_offsets);
+}
+
+void* X64HelperEmitter::EmitVectorVRsqrteInvokeHelper(void* vector_helper) {
+  _code_offsets code_offsets = {};
+  // void(vec128_t* io, void* guest_ctx) — RCX = io, RDX = guest_ctx (RSI).
+  mov(rsi, rdx);
+  mov(eax, DEFAULT_VMX_MXCSR);
+  sub(rsp, 8);
+  mov(dword[rsp], eax);
+  vldmxcsr(dword[rsp]);
+  add(rsp, 8);
+
+  vmovaps(xmm0, ptr[rcx]);
+  mov(rax, reinterpret_cast<uintptr_t>(vector_helper));
+  sub(rsp, 0x20);
+  call(rax);
+  add(rsp, 0x20);
+  vmovaps(ptr[rcx], xmm0);
+  ret();
+
   code_offsets.prolog_stack_alloc = getSize();
   code_offsets.body = getSize();
   code_offsets.epilog = getSize();

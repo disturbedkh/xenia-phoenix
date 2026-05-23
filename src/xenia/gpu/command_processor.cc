@@ -10,6 +10,7 @@
 #include "xenia/gpu/command_processor.h"
 
 #include "third_party/fmt/include/fmt/format.h"
+#include "xenia/base/obs/obs_pm4_bridge.h"
 #include "xenia/base/byte_stream.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
@@ -49,7 +50,7 @@ DEFINE_bool(clear_memory_page_state, false,
             "GPU");
 
 DEFINE_string(
-    readback_resolve, "none",
+    readback_resolve, "fast",
     "Controls CPU readback of render-to-texture resolve results.\n"
     " fast: Read from previous frame (1 frame delay, no GPU stall, slight "
     "performance hit)\n"

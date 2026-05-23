@@ -1,0 +1,69 @@
+# Tier 1-PC differential gates (PR). 1M vmx128 = release gate (run_vmx128_full_sweep.ps1).
+name: Tier0 Differential (Windows)
+
+on:
+  workflow_call:
+
+jobs:
+  tier0:
+    name: Tier0 differential
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure (VS 2022 x64, tests + misc)
+        run: |
+          cmake --preset vs -DXENIA_BUILD_TESTS=ON -DXENIA_BUILD_MISC=ON
+
+      - name: Build Release (tests, vmx128-fuzz, xma2-diff, trace-dump)
+        run: |
+          cmake --build build --config Release --parallel `
+            --target xenia-cpu-tests vmx128-fuzz xma2-diff xenia-gpu-d3d12-trace-dump
+
+      - name: Run xenia-cpu-tests
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows/Release
+          ./xenia-cpu-tests.exe
+
+      - name: Run vmx128-fuzz (50k smoke)
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows/Release
+          ./vmx128-fuzz.exe --vmx128_fuzz_iters=50000 --vmx128_fuzz_seed=3735928559 `
+            --vmx128_fuzz_report_out=vmx128_fuzz_report_ci.json
+
+      - name: Run xma2-diff (fixtures)
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows/Release
+          ./xma2-diff.exe --xma2_diff_fixtures_dir=../../../tests/xma2_packets `
+            --xma2_diff_report_out=../../../tests/xma2_packets/golden/last_report.json
+
+      - name: GPU trace replay (synthetic corpus, D3D12 RTV/ROV)
+        shell: pwsh
+        run: |
+          python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12
+
+      - name: Aggregate kernel stub fixture JSONL
+        shell: pwsh
+        run: |
+          python tools/tier0/aggregate_stub_hits.py tests/kernel_stub/stub_hits_fixture.jsonl `
+            --out tests/kernel_stub/stub_hit_summary.json
+
+      - name: phoenixctl unit tests
+        run: |
+          pip install -e tools/phoenixctl[dev]
+          python -m pytest tools/phoenixctl/tests -q
+
+      - name: Upload vmx128-fuzz artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmx128-fuzz-report-pr
+          path: |
+            build/bin/Windows/Release/vmx128_fuzz_report_ci.json
+            build/bin/Windows/Release/vmx128_divergences.jsonl
+          if-no-files-found: ignore

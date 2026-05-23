@@ -10,6 +10,7 @@
 #include "xenia/apu/xaudio2/xaudio2_audio_driver.h"
 
 #include "xenia/apu/apu_flags.h"
+#include "xenia/apu/util/apu_trace.h"
 #include "xenia/apu/conversion.h"
 #include "xenia/apu/xaudio2/xaudio2_api.h"
 #include "xenia/base/assert.h"
@@ -223,6 +224,9 @@ void XAudio2AudioDriver::SubmitFrame(float* frame) {
   } else {
     memcpy(output_frame, frame, frame_size_);
   }
+
+  OnSubmitFramePcm(output_frame, frame_channels_, channel_samples_,
+                   frame_frequency_, GetTelemetryTitleId());
 
   api::XAUDIO2_BUFFER buffer;
   buffer.Flags = 0;

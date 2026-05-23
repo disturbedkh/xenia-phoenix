@@ -2,6 +2,9 @@
 
 *.bat       text eol=crlf
 *.sh        text eol=lf
+.gitmodules text eol=lf
+xenia-build.py text eol=lf
+tools/docker/* text eol=lf
 
 *.sln       text eol=crlf -whitespace
 *.csproj    text eol=crlf -whitespace merge=union

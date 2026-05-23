@@ -110,6 +110,10 @@ class PipelineCache {
         std::memory_order_acquire);
   }
 
+  // Blocks until the pipeline is ready (sync-creates on the caller thread if
+  // async compilation has not finished yet). Returns nullptr if creation failed.
+  ID3D12PipelineState* EnsureD3D12PipelineReady(void* handle);
+
   ID3D12RootSignature* GetRootSignatureByHandle(void* handle) const {
     return reinterpret_cast<const Pipeline*>(handle)
         ->description.root_signature;

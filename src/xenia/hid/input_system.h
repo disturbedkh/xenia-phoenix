@@ -58,6 +58,10 @@ class InputSystem {
 
   Portal* GetPortal() { return portal_.get(); }
 
+#if XE_PLATFORM_ANDROID
+  void OnAndroidTouch(float norm_x, float norm_y, bool down);
+#endif
+
   std::unique_lock<xe_unlikely_mutex> lock();
 
  private:

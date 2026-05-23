@@ -9,6 +9,11 @@
 
 #include "xenia/app/emulator_window.h"
 
+#include "xenia/app/graphics_settings_dialog.h"
+#include "xenia/app/launcher_dashboard.h"
+#include "xenia/app/library/game_library.h"
+#include "xenia/app/library_settings_dialog.h"
+
 #include "third_party/imgui/imgui.h"
 #include "third_party/stb/stb_image_write.h"
 #if defined(__clang__)
@@ -19,8 +24,12 @@
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+#include <atomic>
+
+#include "xenia/base/agent_debug_log.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/clock.h"
+#include "xenia/base/filesystem.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/debugging.h"
 #include "xenia/base/logging.h"
@@ -45,6 +54,9 @@
 #include "xenia/ui/presenter.h"
 #include "xenia/ui/ui_event.h"
 #include "xenia/ui/virtual_key.h"
+#if XE_PLATFORM_WIN32
+#include "xenia/ui/window_win.h"
+#endif  // XE_PLATFORM_WIN32
 
 #include "version.h"
 
@@ -175,7 +187,9 @@ EmulatorWindow::EmulatorWindow(Emulator* emulator,
       imgui_drawer_(
           std::make_unique<ui::ImGuiDrawer>(window_.get(), kZOrderImGui)),
       display_config_game_config_load_callback_(
-          new DisplayConfigGameConfigLoadCallback(*emulator, *this)) {
+          new DisplayConfigGameConfigLoadCallback(*emulator, *this)),
+      graphics_settings_game_config_load_callback_(
+          new GraphicsSettingsGameConfigLoadCallback(*emulator, *this)) {
   base_title_ = std::string(kBaseTitle) +
 #ifdef DEBUG
 #if _NO_DEBUG_HEAP == 1
@@ -281,6 +295,22 @@ void EmulatorWindow::OnEmulatorInitialized() {
         threading::Thread::Create({}, [&] { GamepadHotKeys(); });
     Gamepad_HotKeys_Listener->set_name("Gamepad HotKeys Listener");
   }
+
+  game_library_ =
+      std::make_unique<library::GameLibrary>(emulator_->storage_root());
+  game_library_->Load();
+
+  std::vector<std::pair<std::string, std::filesystem::path>> recent;
+  for (const auto& t : recently_launched_titles_) {
+    recent.emplace_back(t.title_name, t.path_to_file);
+  }
+  game_library_->ImportRecentTitles(recent);
+
+  if (!game_library_->watched_directories().empty()) {
+    game_library_->StartScan();
+  }
+
+  ShowLauncher();
 }
 
 void EmulatorWindow::EmulatorWindowListener::OnClosing(ui::UIEvent& e) {
@@ -302,6 +332,25 @@ void EmulatorWindow::EmulatorWindowListener::OnMouseDown(ui::MouseEvent& e) {
 void EmulatorWindow::EmulatorWindowListener::OnMouseUp(ui::MouseEvent& e) {
   emulator_window_.OnMouseUp(e);
 }
+
+#if XE_PLATFORM_ANDROID
+void EmulatorWindow::EmulatorWindowListener::OnTouchEvent(ui::TouchEvent& e) {
+  auto* emulator = emulator_window_.emulator();
+  auto* input = emulator ? emulator->input_system() : nullptr;
+  auto* window = emulator_window_.window();
+  if (!input || !window) {
+    return;
+  }
+  const uint32_t width = std::max(window->GetActualPhysicalWidth(), 1u);
+  const uint32_t height = std::max(window->GetActualPhysicalHeight(), 1u);
+  const float norm_x = (2.0f * e.x() / static_cast<float>(width)) - 1.0f;
+  const float norm_y = 1.0f - (2.0f * e.y() / static_cast<float>(height));
+  const bool down =
+      e.action() == ui::TouchEvent::Action::kDown ||
+      e.action() == ui::TouchEvent::Action::kMove;
+  input->OnAndroidTouch(norm_x, norm_y, down);
+}
+#endif
 
 void EmulatorWindow::EmulatorWindowListener::OnUsbDeviceChanged(
     bool is_arrival) {
@@ -329,6 +378,10 @@ void EmulatorWindow::DisplayConfigGameConfigLoadCallback::PostGameConfigLoad() {
   emulator_window_.ApplyDisplayConfigForCvars();
 }
 
+void EmulatorWindow::GraphicsSettingsGameConfigLoadCallback::PostGameConfigLoad() {
+  emulator_window_.ApplyDisplayConfigForCvars();
+}
+
 void EmulatorWindow::DisplayConfigDialog::OnDraw(ImGuiIO& io) {
   gpu::GraphicsSystem* graphics_system =
       emulator_window_.emulator_->graphics_system();
@@ -346,7 +399,7 @@ void EmulatorWindow::DisplayConfigDialog::OnDraw(ImGuiIO& io) {
   // through it.
   ImGui::SetNextWindowBgAlpha(0.6f);
   bool dialog_open = true;
-  if (!ImGui::Begin("Post-processing", &dialog_open,
+  if (!ImGui::Begin("Display & Output", &dialog_open,
                     ImGuiWindowFlags_NoCollapse |
                         ImGuiWindowFlags_AlwaysAutoResize |
                         ImGuiWindowFlags_HorizontalScrollbar)) {
@@ -358,7 +411,11 @@ void EmulatorWindow::DisplayConfigDialog::OnDraw(ImGuiIO& io) {
   // Even if the close button has been pressed, still paint everything not to
   // have one frame with an empty window.
 
-  // Prevent user confusion which has been reported multiple times.
+  ImGui::TextColored(ImVec4(1.f, 0.75f, 0.35f, 1.f),
+                     "These filters run AFTER the game has rendered. For sharper "
+                     "4K in-game detail, use Settings > Graphics > Resolution "
+                     "scale (internal).");
+  ImGui::Spacing();
   ImGui::TextUnformatted("All effects can be used on GPUs of any brand.");
   ImGui::Spacing();
 
@@ -589,6 +646,10 @@ void EmulatorWindow::DisplayConfigDialog::OnDraw(ImGuiIO& io) {
   }
 }
 
+void EmulatorWindow::DisplayConfigDialog::OnClose() {
+  emulator_window_.OnDisplayConfigDialogClosed(this);
+}
+
 void EmulatorWindow::ContentInstallDialog::OnDraw(ImGuiIO& io) {
   ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize(ImVec2(20, 20), ImGuiCond_FirstUseEver);
@@ -777,110 +838,107 @@ bool EmulatorWindow::Initialize() {
         MenuItem::Type::kString, "Show content directory...",
         std::bind(&EmulatorWindow::ShowContentDirectory, this)));
     file_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    file_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "Open &Launcher", "F9",
+        std::bind(&EmulatorWindow::ShowLauncher, this)));
+    file_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
     file_menu->AddChild(
         MenuItem::Create(MenuItem::Type::kString, "E&xit", "Alt+F4",
                          [this]() { window_->RequestClose(); }));
   }
   main_menu->AddChild(std::move(file_menu));
 
-  // Profile Menu
-  auto profile_menu = MenuItem::Create(MenuItem::Type::kPopup, "&Profile");
+  auto library_menu = MenuItem::Create(MenuItem::Type::kPopup, "&Library");
   {
-    profile_menu->AddChild(MenuItem::Create(
-        MenuItem::Type::kString, "&Show Profile Menu", "",
-        std::bind(&EmulatorWindow::ToggleProfilesConfigDialog, this)));
+    library_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "Open &launcher", "F9",
+        std::bind(&EmulatorWindow::ShowLauncher, this)));
+    library_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "Add game &folder...",
+        std::bind(&EmulatorWindow::ToggleLibrarySettingsDialog, this)));
+    library_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "&Rescan library",
+        [this]() {
+          if (game_library_) {
+            game_library_->StartScan();
+          }
+        }));
+    library_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    library_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "&Manage folders...",
+        std::bind(&EmulatorWindow::ToggleLibrarySettingsDialog, this)));
   }
-  main_menu->AddChild(std::move(profile_menu));
+  main_menu->AddChild(std::move(library_menu));
 
-  // CPU menu.
-  auto cpu_menu = MenuItem::Create(MenuItem::Type::kPopup, "&CPU");
+  auto settings_menu = MenuItem::Create(MenuItem::Type::kPopup, "&Settings");
   {
-    cpu_menu->AddChild(MenuItem::Create(
+    settings_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "&Graphics...", "F7",
+        std::bind(&EmulatorWindow::ToggleGraphicsSettingsDialog, this)));
+    settings_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "Display / &Output...", "F6",
+        std::bind(&EmulatorWindow::ToggleDisplayConfigDialog, this)));
+    settings_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    settings_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "&Profile...",
+        std::bind(&EmulatorWindow::ToggleProfilesConfigDialog, this)));
+    settings_menu->AddChild(MenuItem::Create(
+        MenuItem::Type::kString, "&XMP...",
+        std::bind(&EmulatorWindow::ToggleXMPConfigDialog, this)));
+  }
+  main_menu->AddChild(std::move(settings_menu));
+
+  auto tools_menu = MenuItem::Create(MenuItem::Type::kPopup, "&Tools");
+  {
+    tools_menu->AddChild(MenuItem::Create(
         MenuItem::Type::kString, "&Reset Time Scalar", "Numpad *",
         std::bind(&EmulatorWindow::CpuTimeScalarReset, this)));
-    cpu_menu->AddChild(MenuItem::Create(
+    tools_menu->AddChild(MenuItem::Create(
         MenuItem::Type::kString, "Time Scalar /= 2", "Numpad -",
         std::bind(&EmulatorWindow::CpuTimeScalarSetHalf, this)));
-    cpu_menu->AddChild(MenuItem::Create(
+    tools_menu->AddChild(MenuItem::Create(
         MenuItem::Type::kString, "Time Scalar *= 2", "Numpad +",
         std::bind(&EmulatorWindow::CpuTimeScalarSetDouble, this)));
-  }
 #if XE_OPTION_PROFILING
-  cpu_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
-  {
-    cpu_menu->AddChild(MenuItem::Create(MenuItem::Type::kString,
-                                        "Toggle Profiler &Display", "F3",
-                                        []() { Profiler::ToggleDisplay(); }));
-    cpu_menu->AddChild(MenuItem::Create(MenuItem::Type::kString,
-                                        "&Pause/Resume Profiler", "`",
-                                        []() { Profiler::TogglePause(); }));
-  }
+    tools_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    tools_menu->AddChild(MenuItem::Create(MenuItem::Type::kString,
+                                          "Toggle Profiler &Display", "F3",
+                                          []() { Profiler::ToggleDisplay(); }));
+    tools_menu->AddChild(MenuItem::Create(MenuItem::Type::kString,
+                                          "&Pause/Resume Profiler", "`",
+                                          []() { Profiler::TogglePause(); }));
 #endif
-  cpu_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
-  {
-    cpu_menu->AddChild(MenuItem::Create(
+    tools_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    tools_menu->AddChild(MenuItem::Create(
         MenuItem::Type::kString, "&Break and Show Guest Debugger",
         "Pause/Break", std::bind(&EmulatorWindow::CpuBreakIntoDebugger, this)));
-    cpu_menu->AddChild(MenuItem::Create(
+    tools_menu->AddChild(MenuItem::Create(
         MenuItem::Type::kString, "&Break into Host Debugger",
         "Ctrl+Pause/Break",
         std::bind(&EmulatorWindow::CpuBreakIntoHostDebugger, this)));
-  }
-  main_menu->AddChild(std::move(cpu_menu));
-
-  // GPU menu.
-  auto gpu_menu = MenuItem::Create(MenuItem::Type::kPopup, "&GPU");
-  {
-    gpu_menu->AddChild(
-        MenuItem::Create(MenuItem::Type::kString, "&Trace Frame", "F4",
+    tools_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    tools_menu->AddChild(
+        MenuItem::Create(MenuItem::Type::kString, "GPU &Trace Frame", "F4",
                          std::bind(&EmulatorWindow::GpuTraceFrame, this)));
-  }
-  gpu_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
-  {
-    gpu_menu->AddChild(
-        MenuItem::Create(MenuItem::Type::kString, "&Clear Runtime Caches", "F5",
-                         std::bind(&EmulatorWindow::GpuClearCaches, this)));
-  }
-  main_menu->AddChild(std::move(gpu_menu));
-
-  // Display menu.
-  auto display_menu = MenuItem::Create(MenuItem::Type::kPopup, "&Display");
-  {
-    display_menu->AddChild(MenuItem::Create(
-        MenuItem::Type::kString, "&Post-processing settings", "F6",
-        std::bind(&EmulatorWindow::ToggleDisplayConfigDialog, this)));
-  }
-  display_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
-  {
-    display_menu->AddChild(
-        MenuItem::Create(MenuItem::Type::kString, "&Fullscreen", "F11",
-                         std::bind(&EmulatorWindow::ToggleFullscreen, this)));
-    display_menu->AddChild(
-        MenuItem::Create(MenuItem::Type::kString, "&Take Screenshot", "F12",
-                         std::bind(&EmulatorWindow::TakeScreenshot, this)));
-  }
-  main_menu->AddChild(std::move(display_menu));
-
-  // HID menu.
-  auto hid_menu = MenuItem::Create(MenuItem::Type::kPopup, "&HID");
-  {
-    hid_menu->AddChild(MenuItem::Create(
+    tools_menu->AddChild(
+        MenuItem::Create(MenuItem::Type::kString, "GPU &Clear Runtime Caches",
+                         "F5", std::bind(&EmulatorWindow::GpuClearCaches, this)));
+    tools_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    tools_menu->AddChild(MenuItem::Create(
         MenuItem::Type::kString, "&Toggle controller vibration", "",
         std::bind(&EmulatorWindow::ToggleControllerVibration, this)));
-    hid_menu->AddChild(MenuItem::Create(
+    tools_menu->AddChild(MenuItem::Create(
         MenuItem::Type::kString, "&Display controller hotkeys", "",
         std::bind(&EmulatorWindow::DisplayHotKeysConfig, this)));
+    tools_menu->AddChild(MenuItem::Create(MenuItem::Type::kSeparator));
+    tools_menu->AddChild(
+        MenuItem::Create(MenuItem::Type::kString, "&Fullscreen", "F11",
+                         std::bind(&EmulatorWindow::ToggleFullscreen, this)));
+    tools_menu->AddChild(
+        MenuItem::Create(MenuItem::Type::kString, "Take &Screenshot", "F12",
+                         std::bind(&EmulatorWindow::TakeScreenshot, this)));
   }
-  main_menu->AddChild(std::move(hid_menu));
-
-  // XMP menu
-  auto xmp_menu = MenuItem::Create(MenuItem::Type::kPopup, "&XMP");
-  {
-    xmp_menu->AddChild(MenuItem::Create(
-        MenuItem::Type::kString, "&Show XMP Menu", "",
-        std::bind(&EmulatorWindow::ToggleXMPConfigDialog, this)));
-  }
-  main_menu->AddChild(std::move(xmp_menu));
+  main_menu->AddChild(std::move(tools_menu));
 
   // Help menu.
   auto help_menu = MenuItem::Create(MenuItem::Type::kPopup, "&Help");
@@ -1048,6 +1106,18 @@ void EmulatorWindow::OnKeyDown(ui::KeyEvent& e) {
     case ui::VirtualKey::kF6: {
       ToggleDisplayConfigDialog();
     } break;
+    case ui::VirtualKey::kF7: {
+      if (e.prev_state()) {
+        break;
+      }
+#ifdef DEBUG
+      if (e.is_ctrl_pressed()) {
+        emulator()->SaveToFile("test.sav");
+        break;
+      }
+#endif
+      ToggleGraphicsSettingsDialogFromKeyboard();
+    } break;
     case ui::VirtualKey::kF11: {
       ToggleFullscreen();
     } break;
@@ -1064,12 +1134,6 @@ void EmulatorWindow::OnKeyDown(ui::KeyEvent& e) {
     } break;
 
 #ifdef DEBUG
-    case ui::VirtualKey::kF7: {
-      // Save to file
-      // TODO: Choose path based on user input, or from options
-      // TODO: Spawn a new thread to do this.
-      emulator()->SaveToFile("test.sav");
-    } break;
     case ui::VirtualKey::kF8: {
       // Restore from file
       // TODO: Choose path from user
@@ -1094,7 +1158,7 @@ void EmulatorWindow::OnKeyDown(ui::KeyEvent& e) {
     } break;
 
     case ui::VirtualKey::kF9: {
-      RunPreviouslyPlayedTitle();
+      ShowLauncher();
     } break;
 
     default:
@@ -1257,7 +1321,10 @@ void EmulatorWindow::FileOpen() {
   }
 }
 
-void EmulatorWindow::FileClose() { emulator_->TerminateTitle(); }
+void EmulatorWindow::FileClose() {
+  emulator_->TerminateTitle();
+  ShowLauncher();
+}
 
 void EmulatorWindow::InstallContent() {
   std::vector<std::filesystem::path> paths;
@@ -1555,6 +1622,46 @@ void EmulatorWindow::ToggleFullscreen() {
   SetFullscreen(!window_->IsFullscreen());
 }
 
+void EmulatorWindow::ScheduleCloseGraphicsSettingsDialog() {
+  if (!graphics_settings_dialog_ || graphics_settings_close_pending_) {
+    return;
+  }
+  graphics_settings_close_pending_ = true;
+  GraphicsSettingsDialog* const dialog = graphics_settings_dialog_.get();
+  app_context_.CallInUIThreadDeferred([this, dialog]() {
+    graphics_settings_close_pending_ = false;
+    if (graphics_settings_dialog_.get() != dialog) {
+      return;
+    }
+    graphics_settings_dialog_.reset();
+  });
+}
+
+void EmulatorWindow::ScheduleCloseLibrarySettingsDialog() {
+  if (!library_settings_dialog_ || library_settings_close_pending_) {
+    return;
+  }
+  library_settings_close_pending_ = true;
+  LibrarySettingsDialog* const dialog = library_settings_dialog_.get();
+  app_context_.CallInUIThreadDeferred([this, dialog]() {
+    library_settings_close_pending_ = false;
+    if (library_settings_dialog_.get() == dialog) {
+      library_settings_dialog_.reset();
+    }
+  });
+}
+
+void EmulatorWindow::OnLibrarySettingsDialogClosed(ui::ImGuiDialog* dialog) {
+  if (library_settings_dialog_.get() == dialog) {
+    library_settings_dialog_.release();
+  }
+}
+
+void EmulatorWindow::OnDisplayConfigDialogClosed(ui::ImGuiDialog* dialog) {
+  (void)dialog;
+  display_config_dialog_.release();
+}
+
 void EmulatorWindow::ToggleDisplayConfigDialog() {
   if (!display_config_dialog_) {
     display_config_dialog_ =
@@ -1594,6 +1701,60 @@ void EmulatorWindow::ToggleXMPConfigDialog() {
   } else {
     xmp_config_dialog_.reset();
   }
+}
+
+void EmulatorWindow::ToggleGraphicsSettingsDialogFromKeyboard() {
+#if XE_PLATFORM_WIN32
+  if (auto* win32_window = dynamic_cast<ui::Win32Window*>(window_.get())) {
+    win32_window->PostUiTask(
+        [this]() { ToggleGraphicsSettingsDialog(); });
+    return;
+  }
+#endif  // XE_PLATFORM_WIN32
+  app_context_.CallInUIThreadDeferred([this]() {
+    ToggleGraphicsSettingsDialog();
+  });
+}
+
+void EmulatorWindow::ToggleGraphicsSettingsDialog() {
+  graphics_settings_close_pending_ = false;
+  if (!graphics_settings_dialog_) {
+    graphics_settings_dialog_ = std::make_unique<GraphicsSettingsDialog>(
+        imgui_drawer_.get(), *this);
+  } else {
+    graphics_settings_dialog_.reset();
+  }
+}
+
+void EmulatorWindow::ToggleLibrarySettingsDialog() {
+  if (!game_library_) {
+    return;
+  }
+  library_settings_close_pending_ = false;
+  if (!library_settings_dialog_) {
+    library_settings_dialog_ = std::make_unique<LibrarySettingsDialog>(
+        imgui_drawer_.get(), *this, *game_library_);
+  } else {
+    library_settings_dialog_.reset();
+  }
+}
+
+void EmulatorWindow::ShowLauncher() {
+  if (!game_library_) {
+    return;
+  }
+  if (!launcher_dashboard_) {
+    launcher_dashboard_ = std::make_unique<LauncherDashboardDialog>(
+        imgui_drawer_.get(), *this, *game_library_);
+    launcher_dashboard_->SetOnOpenLibrarySettings(
+        std::bind(&EmulatorWindow::ToggleLibrarySettingsDialog, this));
+    launcher_dashboard_->SetOnConfigureTitle(
+        [this](uint32_t /*title_id*/) { ToggleGraphicsSettingsDialog(); });
+  }
+}
+
+void EmulatorWindow::HideLauncher() {
+  launcher_dashboard_.reset();
 }
 
 void EmulatorWindow::ToggleControllerVibration() {
@@ -2138,16 +2299,34 @@ std::string EmulatorWindow::CanonicalizeFileExtension(
 
 xe::X_STATUS EmulatorWindow::RunTitle(
     const std::filesystem::path& path_to_file) {
-  std::error_code ec = {};
-  bool titleExists = std::filesystem::exists(path_to_file, ec);
+  // #region agent log
+  static std::atomic<uint64_t> run_title_serial{0};
+  const uint64_t launch_id = ++run_title_serial;
+  xe::agent_debug::Log(
+      "emulator_window.cc:RunTitle", "entry", "H2", "pre-fix",
+      R"({{"launch_id":{},"path":"{}","title_open":{}}})",
+      launch_id, xe::path_to_utf8(path_to_file),
+      emulator_->is_title_open() ? "true" : "false");
+  // #endregion
+  std::filesystem::path launch_path = path_to_file;
+#if XE_PLATFORM_ANDROID
+  if (!launch_path.empty() &&
+      xe::filesystem::IsAndroidContentUri(xe::path_to_utf8(launch_path))) {
+    launch_path = xe::filesystem::StageAndroidLaunchPath(launch_path);
+  }
+#endif
 
-  if (path_to_file.empty() || !titleExists) {
+  std::error_code ec = {};
+  const bool titleExists =
+      !launch_path.empty() && std::filesystem::exists(launch_path, ec);
+
+  if (launch_path.empty() || !titleExists) {
     std::string log_msg =
         fmt::format("Failed to launch title path is {}.",
-                    path_to_file.empty() ? "empty" : "invalid");
+                    launch_path.empty() ? "empty" : "invalid");
 
-    if (!path_to_file.empty() && !titleExists) {
-      log_msg.append(fmt::format("\nProvided Path: {}", path_to_file));
+    if (!launch_path.empty() && !titleExists) {
+      log_msg.append(fmt::format("\nProvided Path: {}", launch_path));
     }
 
     if (ec) {
@@ -2176,7 +2355,7 @@ xe::X_STATUS EmulatorWindow::RunTitle(
 
   // Prevent crashing the emulator by not loading a game if a game is already
   // loaded.
-  auto abs_path = std::filesystem::absolute(path_to_file);
+  auto abs_path = std::filesystem::absolute(launch_path);
 
   auto extension = CanonicalizeFileExtension(abs_path);
 
@@ -2191,7 +2370,16 @@ xe::X_STATUS EmulatorWindow::RunTitle(
     return X_STATUS_UNSUCCESSFUL;
   }
 
+  HideLauncher();
+
   auto result = emulator_->LaunchPath(abs_path);
+
+  // #region agent log
+  xe::agent_debug::Log("emulator_window.cc:RunTitle", "after LaunchPath", "H2",
+                       "pre-fix",
+                       R"({{"launch_id":{},"result":"{:08X}"}})",
+                       launch_id, static_cast<uint32_t>(result));
+  // #endregion
 
   disable_hotkeys_ = false;
 
@@ -2207,15 +2395,33 @@ xe::X_STATUS EmulatorWindow::RunTitle(
   ClearDialogs();
 
   if (result) {
-    XELOGE("Failed to launch target: {:08X}", result);
+    XELOGE("Failed to launch target: {:08X} ({})", result,
+           xe::path_to_utf8(abs_path));
 
-    xe::ui::ImGuiDialog::ShowMessageBox(
-        imgui_drawer_.get(), "Title Launch Failed!",
-        "Failed to launch title.\n\nCheck xenia.log for technical details.");
+    std::string message =
+        "Failed to launch title.\n\nCheck xenia.log for technical details.";
+    if (result == X_STATUS_NOT_SUPPORTED) {
+      message = fmt::format(
+          "Failed to launch title (unsupported or incomplete path).\n\n"
+          "Path:\n{}\n\n"
+          "If the path contains spaces, quote it when launching from a shell "
+          "(for example \"D:\\Xbox 360\\Games\\title.iso\"), or use "
+          "phoenixctl / launch_bf2_triage.ps1.",
+          xe::path_to_utf8(abs_path));
+    }
+
+    xe::ui::ImGuiDialog::ShowMessageBox(imgui_drawer_.get(),
+                                        "Title Launch Failed!", message);
 
     emulator_->file_system()->Clear();
+    ShowLauncher();
   } else {
     AddRecentlyLaunchedTitle(path_to_file, emulator_->title_name());
+
+    if (game_library_) {
+      game_library_->RecordPlay(launch_path, emulator_->title_id(),
+                                emulator_->title_name());
+    }
 
     auto xam =
         emulator_->kernel_state()->GetKernelModule<kernel::xam::XamModule>(
@@ -2341,8 +2547,17 @@ void EmulatorWindow::ClearDialogs() {
     display_config_dialog_.reset();
   }
 
+  if (graphics_settings_dialog_) {
+    graphics_settings_dialog_.reset();
+  }
+  if (library_settings_dialog_) {
+    library_settings_dialog_.reset();
+  }
+
   imgui_drawer_.get()->ClearDialogs();
-  emulator_->kernel_state()->xam_state()->xam_dialogs_shown_ = 0;
+  if (emulator_->kernel_state() && emulator_->kernel_state()->xam_state()) {
+    emulator_->kernel_state()->xam_state()->xam_dialogs_shown_ = 0;
+  }
 }
 
 }  // namespace app

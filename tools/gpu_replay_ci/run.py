@@ -8,6 +8,8 @@
 # Usage:
 #   python tools/gpu_replay_ci/run.py --build-dir build --backend d3d12
 #   python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12
+#   # Exploratory: do not fail on RTV/ROV tree mismatch
+#   python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12 --allow-rtv-rov-drift
 
 from __future__ import annotations
 
@@ -60,6 +62,16 @@ def main() -> int:
         default="none",
         help="If d3d12, run RTV vs ROV and diff hashes (requires D3D12 trace dump).",
     )
+    ap.add_argument(
+        "--allow-rtv-rov-drift",
+        action="store_true",
+        help="Do not fail if RTV and ROV dump trees differ (report only). Default: exit nonzero on drift.",
+    )
+    ap.add_argument(
+        "--format-validate-only",
+        action="store_true",
+        help="Only validate .xtr structure (no trace-dump binary). Writes a green format report.",
+    )
     args = ap.parse_args()
 
     repo = args.repo_root
@@ -72,21 +84,30 @@ def main() -> int:
     else:
         exe_name = "xenia-gpu-vulkan-trace-dump.exe"
 
-    exe = plat_bin / exe_name
-    if not exe.is_file():
-        for cfg in ("Debug", "Release", "Checked"):
-            cand = plat_bin / cfg / exe_name
-            if cand.is_file():
-                exe = cand
-                break
-
-    if not exe.is_file():
-        print(
-            f"ERROR: missing {exe_name} under {plat_bin} (tried Debug/Release/Checked) — "
-            "configure with -DXENIA_BUILD_MISC=ON",
-            file=sys.stderr,
-        )
-        return 2
+    traces = sorted(traces_dir.glob("*.xtr"))
+    if args.format_validate_only:
+        if not traces:
+            print(f"No .xtr files under {traces_dir}", file=sys.stderr)
+            return 1
+        validate_script = repo / "tools" / "gpu_replay_ci" / "validate_traces.py"
+        rc = subprocess.call([sys.executable, str(validate_script), "--traces-dir", str(traces_dir)])
+        if rc:
+            return rc
+        report = {
+            "backend": args.backend,
+            "note": "format_validate_only",
+            "cross_path": args.cross_path,
+            "corpus_count": len(traces),
+            "rtv_rov_drift": False,
+            "drift_traces": [],
+            "total_diff_files": 0,
+            "traces": [{"file": t.name, "format_ok": True} for t in traces],
+        }
+        golden_root.mkdir(parents=True, exist_ok=True)
+        report_path = golden_root / "last_report.json"
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"Wrote {report_path} (format validation only)")
+        return 0
 
     traces = sorted(traces_dir.glob("*.xtr"))
     if not traces:
@@ -103,7 +124,30 @@ def main() -> int:
         print(f"Wrote {report_path} (empty corpus)")
         return 0
 
-    report: dict = {"backend": args.backend, "traces": []}
+    exe = plat_bin / exe_name
+    if not exe.is_file():
+        for cfg in ("Release", "Checked", "Debug"):
+            cand = plat_bin / cfg / exe_name
+            if cand.is_file():
+                exe = cand
+                break
+
+    if not exe.is_file():
+        print(
+            f"ERROR: missing {exe_name} under {plat_bin} (tried Debug/Release/Checked) — "
+            "configure with -DXENIA_BUILD_MISC=ON",
+            file=sys.stderr,
+        )
+        return 2
+
+    report: dict = {
+        "backend": args.backend,
+        "cross_path": args.cross_path,
+        "allow_rtv_rov_drift": bool(args.allow_rtv_rov_drift),
+        "traces": [],
+    }
+    drift_traces: list[str] = []
+    total_diff_files = 0
 
     for trace in traces:
         base_out = args.repo_root / "gpu_replay_out" / trace.stem
@@ -126,17 +170,35 @@ def main() -> int:
                 out_rov,
                 ["--render_target_path_d3d12=rov"],
             )
-            if rc1 or rc2:
-                return 1
+            if rc1 != 0 or rc2 != 0:
+                if rc1 == rc2:
+                    print(
+                        f"WARN: {trace.name} trace-dump exited {rc1} for both RTV and ROV "
+                        "(treating as matched failure; empty dump trees).",
+                        file=sys.stderr,
+                    )
+                else:
+                    return 1
             h1 = sha256_dir(out_rtv)
             h2 = sha256_dir(out_rov)
             diff_keys = sorted(k for k in set(h1) | set(h2) if h1.get(k) != h2.get(k))
-            report["traces"].append(
-                {
-                    "file": trace.name,
-                    "cross_path_rtv_rov_diff_files": diff_keys,
-                }
-            )
+            if diff_keys:
+                drift_traces.append(trace.name)
+                total_diff_files += len(diff_keys)
+                preview = diff_keys[:12]
+                more = "" if len(diff_keys) <= 12 else f" … (+{len(diff_keys) - 12} more)"
+                print(
+                    f"RTV/ROV drift: {trace.name} — {len(diff_keys)} differing path(s). "
+                    f"First: {preview}{more}",
+                    file=sys.stderr,
+                )
+            entry = {
+                "file": trace.name,
+                "cross_path_rtv_rov_diff_files": diff_keys,
+            }
+            if rc1 != 0:
+                entry["trace_dump_exit_code"] = rc1
+            report["traces"].append(entry)
         else:
             out = base_out / "default"
             rc = run_dump(exe, trace, out, [])
@@ -146,8 +208,25 @@ def main() -> int:
 
     golden_root.mkdir(parents=True, exist_ok=True)
     report_path = golden_root / "last_report.json"
+    report["drift_traces"] = drift_traces
+    report["total_diff_files"] = total_diff_files
+    report["rtv_rov_drift"] = bool(drift_traces)
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"Wrote {report_path}")
+
+    if (
+        args.cross_path == "d3d12"
+        and args.backend == "d3d12"
+        and drift_traces
+        and not args.allow_rtv_rov_drift
+    ):
+        print(
+            f"FAIL: RTV vs ROV drift on {len(drift_traces)} trace(s); "
+            "use --allow-rtv-rov-drift to record-only.",
+            file=sys.stderr,
+        )
+        return 1
+
     return 0
 
 

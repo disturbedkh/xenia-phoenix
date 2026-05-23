@@ -31,6 +31,30 @@ XESL_WRAPPER = (
 )
 
 
+def run_spirv_opt(spirv_opt, glslang_spv, opt_spv):
+    """Run spirv-opt, falling back if --canonicalize-ids is unsupported."""
+    args_with = [spirv_opt, "-O", "-O", "--canonicalize-ids", glslang_spv, "-o", opt_spv]
+    result = subprocess.run(args_with, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    if result.returncode == 0:
+        return True
+    stderr = (result.stderr or b"").decode(errors="replace")
+    if "canonicalize-ids" in stderr or "unknown" in stderr.lower():
+        print(
+            "WARNING: spirv-opt does not support --canonicalize-ids; "
+            "install LunarG Vulkan SDK (see docs/building.md). Retrying without it.",
+            file=sys.stderr,
+        )
+        args_without = [spirv_opt, "-O", "-O", glslang_spv, "-o", opt_spv]
+        result = subprocess.run(
+            args_without, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+        )
+    if result.returncode != 0:
+        if result.stderr:
+            sys.stderr.write(result.stderr.decode(errors="replace"))
+        return False
+    return True
+
+
 def find_vulkan_tools():
     """Find Vulkan SDK tools via VULKAN_SDK env or PATH."""
     vulkan_sdk = os.environ.get("VULKAN_SDK")
@@ -111,14 +135,8 @@ def main():
             return 1
 
         # Step 2: spirv-opt
-        result = subprocess.run([
-            spirv_opt, "-O", "-O", "--canonicalize-ids",
-            glslang_spv, "-o", opt_spv,
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        if result.returncode != 0:
+        if not run_spirv_opt(spirv_opt, glslang_spv, opt_spv):
             print(f"ERROR: spirv-opt failed for {src_name}", file=sys.stderr)
-            if result.stderr:
-                sys.stderr.write(result.stderr)
             return 1
 
         # Step 3: spirv-dis

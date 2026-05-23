@@ -1,12 +1,16 @@
-# src/xenia/app/CMakeLists.txt - Main xenia_canary executable.
+# src/xenia/app/CMakeLists.txt - Main xenia_canary executable / Android libxenia-app.so
 
-if(WIN32)
-  add_executable(xenia-app WIN32)
+if(ANDROID)
+  add_library(xenia-app SHARED)
+  set_target_properties(xenia-app PROPERTIES OUTPUT_NAME "xenia-app")
 else()
-  add_executable(xenia-app)
+  if(WIN32)
+    add_executable(xenia-app WIN32)
+  else()
+    add_executable(xenia-app)
+  endif()
+  set_target_properties(xenia-app PROPERTIES OUTPUT_NAME "xenia_canary")
 endif()
-
-set_target_properties(xenia-app PROPERTIES OUTPUT_NAME "xenia_canary")
 
 # Main source
 target_sources(xenia-app PRIVATE
@@ -14,7 +18,7 @@ target_sources(xenia-app PRIVATE
 )
 
 # Other app sources (emulator_window, profile_dialogs, etc.)
-xe_platform_sources(xenia-app ${CMAKE_CURRENT_SOURCE_DIR})
+xe_platform_sources(xenia-app ${CMAKE_CURRENT_SOURCE_DIR} RECURSIVE)
 
 # Platform-specific entry points
 if(WIN32)
@@ -25,12 +29,23 @@ if(WIN32)
     ${PROJECT_SOURCE_DIR}/src/xenia/base/app_win32.manifest
   )
   if(XE_TARGET_X86_64)
-    # main_init_win.cc needs SSE2 only (not AVX)
     set_source_files_properties(
       ${PROJECT_SOURCE_DIR}/src/xenia/base/main_init_win.cc
       PROPERTIES COMPILE_OPTIONS "/arch:SSE2"
     )
   endif()
+elseif(ANDROID)
+  # JNI + WindowedApp registry live in xenia-ui (whole-archive); no posix main.
+  target_sources(xenia-app PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/xenia/gpu/vulkan/vulkan_trace_viewer_main.cc
+    ${PROJECT_SOURCE_DIR}/src/xenia/ui/vulkan/vulkan_window_demo.cc
+    ${PROJECT_SOURCE_DIR}/src/xenia/ui/window_demo.cc
+  )
+elseif(APPLE)
+  target_sources(xenia-app PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/xenia/base/main_init_posix.cc
+    ${PROJECT_SOURCE_DIR}/src/xenia/ui/windowed_app_main_mac.mm
+  )
 else()
   target_sources(xenia-app PRIVATE
     ${PROJECT_SOURCE_DIR}/src/xenia/base/main_init_posix.cc
@@ -62,14 +77,12 @@ target_link_libraries(xenia-app PRIVATE
   xenia-hid-nop
   xenia-kernel
   xenia-patcher
-  xenia-ui
   xenia-vfs
   # Third-party
   aes_128
   capstone
   fmt
   dxbc
-  discord-rpc
   imgui
   libavcodec
   libavutil
@@ -78,23 +91,40 @@ target_link_libraries(xenia-app PRIVATE
   xxhash
 )
 
-# Vulkan/SPIR-V backends (not macOS)
-if(NOT APPLE)
+# Vulkan/MoltenVK guest + UI presentation
+target_link_libraries(xenia-app PRIVATE
+  xenia-gpu-vulkan
+  xenia-ui-vulkan
+  glslang-spirv
+)
+
+# Desktop-only optional modules
+if(NOT ANDROID)
   target_link_libraries(xenia-app PRIVATE
-    xenia-gpu-vulkan
-    xenia-ui-vulkan
-    glslang-spirv
+    discord-rpc
+    xenia-app-discord
+    xenia-apu-sdl
+    xenia-debug-ui
+    xenia-phoenix-probe
+    xenia-helper-sdl
+    xenia-hid-sdl
   )
 endif()
 
-# Non-Android specific (always true for Windows/Linux)
-target_link_libraries(xenia-app PRIVATE
-  xenia-app-discord
-  xenia-apu-sdl
-  xenia-debug-ui
-  xenia-helper-sdl
-  xenia-hid-sdl
-)
+if(ANDROID)
+  target_link_libraries(xenia-app PRIVATE
+    xenia-apu-android
+    xenia-hid-android
+  )
+  # Pull in all xenia-ui object files (JNI exports).
+  target_link_options(xenia-app PRIVATE
+    "-Wl,--whole-archive"
+    "$<TARGET_FILE:xenia-ui>"
+    "-Wl,--no-whole-archive"
+  )
+endif()
+
+target_link_libraries(xenia-app PRIVATE xenia-ui)
 
 # Architecture-specific backend
 if(XE_TARGET_X86_64)
@@ -112,6 +142,8 @@ if(WIN32)
     xenia-hid-xinput
     xenia-ui-d3d12
   )
+elseif(ANDROID)
+  target_link_libraries(xenia-app PRIVATE android log)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_libraries(xenia-app PRIVATE
     xenia-apu-alsa

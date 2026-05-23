@@ -10,6 +10,7 @@
 #include "xenia/kernel/xam/apps/xlivebase_app.h"
 
 #include "xenia/base/logging.h"
+#include "xenia/kernel/util/stub_trace.h"
 
 namespace xe {
 namespace kernel {
@@ -100,6 +101,8 @@ X_HRESULT XLiveBaseApp::DispatchMessageSync(uint32_t message,
       return X_E_SUCCESS;
     }
   }
+  LogKernelStubHit("xam", "XLiveBaseApp::DispatchMessage",
+                   "unimplemented message");
   XELOGE(
       "Unimplemented XLIVEBASE message app={:08X}, msg={:08X}, arg1={:08X}, "
       "arg2={:08X}",

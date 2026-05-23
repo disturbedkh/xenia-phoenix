@@ -10,8 +10,13 @@
 #include "xenia/gpu/render_target_cache.h"
 
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 
+#include "xenia/base/obs/obs.h"
+#include "xenia/base/obs/obs_invariant.h"
+#include "third_party/fmt/include/fmt/format.h"
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
@@ -21,6 +26,18 @@
 #include "xenia/gpu/registers.h"
 #include "xenia/gpu/xenos.h"
 
+DEFINE_bool(
+    depth_resync_on_guest_edram_touch, true,
+    "When guest depth tiles in EDRAM are updated without an ownership change "
+    "(reload/evict), schedule a depth self-transfer so host float32 DSV is "
+    "refreshed from guest 20e4 before drawing.",
+    "GPU");
+DEFINE_bool(
+    depth_resync_each_depth_draw, false,
+    "Mark depth tiles stale before every draw that uses the depth buffer, "
+    "forcing a host sidecar self-transfer each frame (expensive; use to test "
+    "whether resync fixes flicker when EDRAM touch detection does not fire).",
+    "GPU");
 DEFINE_bool(
     depth_transfer_not_equal_test, true,
     "When transferring data between depth render targets, use the \"not "
@@ -871,9 +888,26 @@ bool RenderTargetCache::Update(bool is_rasterization_done,
   // draw with whatever contents currently are in the render target in this
   // case).
 
+  if (cvars::depth_resync_on_guest_edram_touch && !interlock_barrier_only &&
+      (depth_and_color_rts_used_bits & 1)) {
+    const RenderTargetKey& depth_key = rt_keys[0];
+    if (depth_key != last_update_depth_key_) {
+      if (!last_update_depth_key_.IsEmpty()) {
+        NotifyGuestDepthEdramTilesTouched(0, xenos::kEdramTileCount);
+      }
+      last_update_depth_key_ = depth_key;
+    }
+  } else if (!(depth_and_color_rts_used_bits & 1)) {
+    last_update_depth_key_ = RenderTargetKey();
+  }
+
   for (uint32_t i = 0; i < edram_bases_sorted_count; ++i) {
     const std::pair<uint32_t, uint32_t>& rt_base_index = edram_bases_sorted[i];
     uint32_t rt_bit_index = rt_base_index.second;
+    if (cvars::depth_resync_each_depth_draw && !interlock_barrier_only &&
+        rt_bit_index == 0) {
+      NotifyGuestDepthEdramTilesTouched(0, rt_lengths_tiles[i]);
+    }
     ChangeOwnership(rt_keys[rt_bit_index], 0, rt_lengths_tiles[i],
                     interlock_barrier_only
                         ? nullptr
@@ -1440,6 +1474,41 @@ RenderTargetCache::RenderTarget* RenderTargetCache::GetOrCreateRenderTarget(
   return render_target;
 }
 
+void RenderTargetCache::NotifyGuestDepthEdramTilesTouched(
+    uint32_t start_tiles, uint32_t length_tiles) {
+  if (!cvars::depth_resync_on_guest_edram_touch || length_tiles == 0) {
+    return;
+  }
+  auto mark_extent = [&](uint32_t extent_start, uint32_t extent_end) {
+    auto it = ownership_ranges_.lower_bound(extent_start);
+    if (it != ownership_ranges_.begin()) {
+      auto it_pre = std::prev(it);
+      if (it_pre->second.end_tiles > extent_start) {
+        it = it_pre;
+      }
+    }
+    for (; it != ownership_ranges_.end(); ++it) {
+      if (it->first >= extent_end) {
+        break;
+      }
+      const OwnershipRange& range = it->second;
+      if (!range.host_depth_render_target_unorm24.IsEmpty() ||
+          !range.host_depth_render_target_float24.IsEmpty() ||
+          range.render_target.is_depth) {
+        it->second.host_depth_guest_edram_stale = true;
+        OBS_INVARIANT("DepthHostSidecarStale", obs::ChannelId::kGpuEdram, true,
+                      "tiles={}-{}", extent_start, extent_end);
+      }
+    }
+  };
+  uint32_t start = start_tiles & (xenos::kEdramTileCount - 1);
+  uint32_t end_tiles = start + length_tiles;
+  mark_extent(start, std::min(end_tiles, xenos::kEdramTileCount));
+  if (end_tiles > xenos::kEdramTileCount) {
+    mark_extent(0, std::min(end_tiles & (xenos::kEdramTileCount - 1), start));
+  }
+}
+
 bool RenderTargetCache::WouldOwnershipChangeRequireTransfers(
     RenderTargetKey dest, uint32_t start_tiles_base_relative,
     uint32_t length_tiles) const {
@@ -1567,7 +1636,11 @@ void RenderTargetCache::ChangeOwnership(
         // Only perform the copying when actually changing the latest owner, not
         // just the latest host depth owner - the transfer source is expected to
         // be different than the destination.
-        if (!transfer_source.IsEmpty() && transfer_source != dest) {
+        const bool depth_self_resync =
+            host_depth_encoding_different && dest.is_depth &&
+            transfer_source == dest;
+        if (!transfer_source.IsEmpty() &&
+            (transfer_source != dest || depth_self_resync)) {
           uint32_t transfer_end_tiles =
               std::min(it->second.end_tiles, extent_end);
           if (!resolve_clear_cutout ||
@@ -1579,9 +1652,27 @@ void RenderTargetCache::ChangeOwnership(
                 host_depth_encoding_different
                     ? it->second.GetHostDepthRenderTarget(dest.GetDepthFormat())
                     : RenderTargetKey();
+            if (depth_self_resync && transfer_host_depth_source.IsEmpty()) {
+              transfer_host_depth_source = dest;
+            }
+            if (host_depth_encoding_different && dest.is_depth &&
+                transfer_host_depth_source.IsEmpty() &&
+                !transfer_source.IsEmpty()) {
+              // Color or another surface overwrote tiles; no host sidecar to
+              // transfer — guest 20e4 may disagree with stale host DSV later.
+              debug::PhoenixProbeNotifyHostDepthTransferMismatch();
+              OBS_INVARIANT("HostDepthTransferMismatch",
+                            obs::ChannelId::kGpuEdram, true,
+                            "no_host_sidecar_for_depth_transfer");
+            }
             if (transfer_host_depth_source == transfer_source) {
-              // Same render target, don't provide a separate host depth source.
-              transfer_host_depth_source = RenderTargetKey();
+              // Same render target key for color/depth and host float32 sidecar.
+              // When host depth uses a different encoding, keep the key so D3D12
+              // can use kColorAndHostDepthToDepth / kDepthAndHostDepthToDepth
+              // (host_depth_source_is_copy) instead of dropping host precision.
+              if (!host_depth_encoding_different) {
+                transfer_host_depth_source = RenderTargetKey();
+              }
             }
             if (!transfers_append_out->empty() &&
                 transfers_append_out->back().end_tiles == it->first &&
@@ -1599,6 +1690,11 @@ void RenderTargetCache::ChangeOwnership(
                   render_targets_.find(transfer_source);
               if (transfer_source_rt_it != render_targets_.end()) {
                 assert_not_null(transfer_source_rt_it->second);
+                if (!transfer_host_depth_source.IsEmpty() &&
+                    render_targets_.find(transfer_host_depth_source) ==
+                        render_targets_.end()) {
+                  GetOrCreateRenderTarget(transfer_host_depth_source);
+                }
                 auto transfer_host_depth_source_rt_it =
                     !transfer_host_depth_source.IsEmpty()
                         ? render_targets_.find(transfer_host_depth_source)
@@ -1608,12 +1704,33 @@ void RenderTargetCache::ChangeOwnership(
                   assert_false(transfer_host_depth_source_rt_it !=
                                    render_targets_.end() &&
                                !transfer_host_depth_source_rt_it->second);
+                  if (host_depth_encoding_different && dest.is_depth &&
+                      !transfer_host_depth_source.IsEmpty() &&
+                      transfer_host_depth_source_rt_it ==
+                          render_targets_.end()) {
+                    debug::PhoenixProbeNotifyHostDepthTransferMismatch();
+                    OBS_INVARIANT("HostDepthTransferMismatch",
+                                  obs::ChannelId::kGpuEdram, true,
+                                  "missing_host_depth_rt");
+                  }
                   transfers_append_out->emplace_back(
                       it->first, transfer_end_tiles,
                       transfer_source_rt_it->second,
                       transfer_host_depth_source_rt_it != render_targets_.end()
                           ? transfer_host_depth_source_rt_it->second
                           : nullptr);
+                  {
+                    char detail[96];
+                    std::snprintf(
+                        detail, sizeof(detail), "tiles=%u-%u depth=%d host=%d",
+                        it->first, transfer_end_tiles, dest.is_depth ? 1 : 0,
+                        transfer_host_depth_source_rt_it !=
+                                render_targets_.end()
+                            ? 1
+                            : 0);
+                    debug::PhoenixProbeNotifyOwnershipChange(detail);
+                    debug::PhoenixProbeNotifyEdramTransfer(detail);
+                  }
                 }
               }
             }
@@ -1625,6 +1742,7 @@ void RenderTargetCache::ChangeOwnership(
       if (host_depth_encoding_different) {
         it->second.GetHostDepthRenderTarget(dest.GetDepthFormat()) = dest;
       }
+      it->second.host_depth_guest_edram_stale = false;
       // Check if can merge with the next range after claiming.
       std::map<uint32_t, OwnershipRange>::iterator it_next;
       if (it != ownership_ranges_.end()) {

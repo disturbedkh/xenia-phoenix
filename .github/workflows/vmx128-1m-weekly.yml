@@ -1,0 +1,37 @@
+# Release gate: full 1M vmx128 registry (rn + rm=all). Long-running; weekly or manual.
+name: VMX128 1M weekly
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 0'  # Sundays 06:00 UTC
+
+jobs:
+  vmx128-1m:
+    name: vmx128 1M sign-off
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure and build vmx128-fuzz
+        run: |
+          cmake --preset vs -DXENIA_BUILD_TESTS=ON -DXENIA_BUILD_MISC=ON
+          cmake --build build --config Release --parallel --target xenia-cpu-backend-x64 vmx128-fuzz
+
+      - name: Run full sweep (1M rn + 1M rm=all)
+        shell: pwsh
+        run: |
+          powershell -File tools/tier0/run_vmx128_full_sweep.ps1
+
+      - name: Upload sign-off report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmx128-1m-report
+          path: |
+            docs/vmx128_fuzz_report.json
+            docs/vmx128_fuzz_report.md
+          if-no-files-found: ignore

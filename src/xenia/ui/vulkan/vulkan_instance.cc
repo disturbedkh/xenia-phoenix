@@ -20,8 +20,10 @@
 #include "xenia/base/platform.h"
 #include "xenia/ui/vulkan/vulkan_presenter.h"
 
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX || XE_PLATFORM_MAC
 #include <dlfcn.h>
+#include <cstdlib>
+#include <string>
 #elif XE_PLATFORM_WIN32
 #include "xenia/base/platform_win.h"
 #endif
@@ -74,6 +76,23 @@ std::unique_ptr<VulkanInstance> VulkanInstance::Create(
 #define XE_VULKAN_LOAD_LOADER_FUNCTION(name)                 \
   functions_loaded &= (ifn.name = PFN_##name(GetProcAddress( \
                            vulkan_instance->loader_, #name))) != nullptr;
+#elif XE_PLATFORM_MAC
+  std::string vulkan_loader_path = "libvulkan.1.dylib";
+  if (const char* sdk = std::getenv("VULKAN_SDK")) {
+    vulkan_loader_path = std::string(sdk) + "/lib/libvulkan.dylib";
+  }
+  vulkan_instance->loader_ = dlopen(vulkan_loader_path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  if (!vulkan_instance->loader_) {
+    vulkan_instance->loader_ = dlopen("libMoltenVK.dylib", RTLD_NOW | RTLD_LOCAL);
+  }
+  if (!vulkan_instance->loader_) {
+    XELOGE("Failed to load Vulkan loader on macOS (set VULKAN_SDK)");
+    return nullptr;
+  }
+#define XE_VULKAN_LOAD_LOADER_FUNCTION(name)                             \
+  functions_loaded &=                                                    \
+      (ifn.name = PFN_##name(dlsym(vulkan_instance->loader_, #name))) != \
+      nullptr;
 #else
 #error No Vulkan loader library loading provided for the target platform.
 #endif
@@ -157,6 +176,11 @@ std::unique_ptr<VulkanInstance> VulkanInstance::Create(
     requested_extensions.emplace(
         "VK_KHR_win32_surface",
         &vulkan_instance->extensions_.ext_KHR_win32_surface);
+#endif
+#ifdef VK_USE_PLATFORM_METAL_EXT
+    requested_extensions.emplace(
+        "VK_EXT_metal_surface",
+        &vulkan_instance->extensions_.ext_EXT_metal_surface);
 #endif
   }
 
@@ -441,6 +465,11 @@ std::unique_ptr<VulkanInstance> VulkanInstance::Create(
 #include "xenia/ui/vulkan/functions/instance_khr_win32_surface.inc"
   }
 #endif
+#ifdef VK_USE_PLATFORM_METAL_EXT
+  if (vulkan_instance->extensions_.ext_EXT_metal_surface) {
+#include "xenia/ui/vulkan/functions/instance_ext_metal_surface.inc"
+  }
+#endif
   if (vulkan_instance->extensions_.ext_KHR_surface) {
 #include "xenia/ui/vulkan/functions/instance_khr_surface.inc"
   }
@@ -540,7 +569,7 @@ VulkanInstance::~VulkanInstance() {
     functions_.vkDestroyInstance(instance_, nullptr);
   }
 
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX || XE_PLATFORM_MAC
   if (loader_) {
     dlclose(loader_);
   }

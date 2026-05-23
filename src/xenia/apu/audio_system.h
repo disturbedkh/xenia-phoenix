@@ -21,6 +21,9 @@
 #include "xenia/xbox.h"
 
 namespace xe {
+namespace kernel {
+class KernelState;
+}
 namespace apu {
 
 constexpr fourcc_t kAudioSaveSignature = make_fourcc("XAUD");
@@ -76,6 +79,7 @@ class AudioSystem {
 
   Memory* memory_ = nullptr;
   cpu::Processor* processor_ = nullptr;
+  xe::kernel::KernelState* kernel_state_ = nullptr;
   std::unique_ptr<XmaDecoder> xma_decoder_;
   uint32_t queued_frames_;
 

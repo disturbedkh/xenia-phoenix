@@ -115,7 +115,7 @@ dword_result_t XamContentGetDeviceState_entry(dword_t device_id,
     return X_ERROR_SUCCESS;
   }
 }
-DECLARE_XAM_EXPORT1(XamContentGetDeviceState, kContent, kStub);
+DECLARE_XAM_EXPORT1(XamContentGetDeviceState, kContent, kImplemented);
 
 typedef struct {
   xe::be<uint32_t> device_id;

@@ -22,6 +22,7 @@
 #include "xenia/cpu/ppc/ppc_context.h"
 #include "xenia/kernel/kernel_flags.h"
 #include "xenia/kernel/kernel_state.h"
+#include "xenia/kernel/util/stub_trace.h"
 
 namespace xe {
 namespace kernel {
@@ -544,6 +545,14 @@ struct ExportRegistrerHelper {
         new cpu::Export(ORDINAL, xe::cpu::Export::Type::kFunction, name, TAGS);
     struct X {
       static void Trampoline(PPCContext* ppc_context) {
+        if (TAGS & xe::cpu::ExportTag::kStub) {
+          const char* module_name = MODULE == KernelModuleId::xboxkrnl
+                                        ? "xboxkrnl"
+                                        : (MODULE == KernelModuleId::xam
+                                               ? "xam"
+                                               : "xbdm");
+          LogKernelStubHitGuest(ppc_context, module_name, export_entry->name);
+        }
         Param::Init init = {
             ppc_context,
             0,
@@ -575,6 +584,14 @@ struct ExportRegistrerHelper {
     };
     struct Y {
       static void Trampoline(PPCContext* ppc_context) {
+        if (TAGS & xe::cpu::ExportTag::kStub) {
+          const char* module_name = MODULE == KernelModuleId::xboxkrnl
+                                        ? "xboxkrnl"
+                                        : (MODULE == KernelModuleId::xam
+                                               ? "xam"
+                                               : "xbdm");
+          LogKernelStubHitGuest(ppc_context, module_name, export_entry->name);
+        }
         Param::Init init = {
             ppc_context,
             0,

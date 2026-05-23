@@ -10,6 +10,7 @@
 #include "xenia/kernel/xam/apps/messenger_app.h"
 
 #include "xenia/base/logging.h"
+#include "xenia/kernel/util/stub_trace.h"
 
 namespace xe {
 namespace kernel {
@@ -54,6 +55,8 @@ X_RESULT MessengerApp::DispatchMessageSync(uint32_t message,
       return X_E_FAIL;
     }
   }
+  LogKernelStubHit("xam", "MessengerApp::DispatchMessage",
+                   "unimplemented message");
   XELOGE(
       "Unimplemented Messenger message app={:08X}, msg={:08X}, arg1={:08X}, "
       "arg2={:08X}",

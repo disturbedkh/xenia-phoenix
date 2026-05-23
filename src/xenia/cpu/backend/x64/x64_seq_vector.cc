@@ -2177,21 +2177,54 @@ struct INSERT_I8
     : Sequence<INSERT_I8, I<OPCODE_INSERT, V128Op, V128Op, I8Op, I8Op>> {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     assert_true(i.src2.is_constant);
-    e.vpinsrb(i.dest, i.src3.reg().cvt32(), i.src2.constant() ^ 0x3);
+    const uint8_t idx = static_cast<uint8_t>(i.src2.constant() ^ 0x3);
+    if (i.src1.is_constant) {
+      e.LoadConstantXmm(i.dest, i.src1.constant());
+    } else {
+      e.vmovaps(i.dest, i.src1);
+    }
+    if (i.src3.is_constant) {
+      e.mov(e.eax, i.src3.constant());
+      e.vpinsrb(i.dest, i.dest, e.eax, idx);
+    } else {
+      e.vpinsrb(i.dest, i.dest, i.src3.reg().cvt32(), idx);
+    }
   }
 };
 struct INSERT_I16
     : Sequence<INSERT_I16, I<OPCODE_INSERT, V128Op, V128Op, I8Op, I16Op>> {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     assert_true(i.src2.is_constant);
-    e.vpinsrw(i.dest, i.src3.reg().cvt32(), i.src2.constant() ^ 0x1);
+    const uint8_t idx = static_cast<uint8_t>(i.src2.constant() ^ 0x1);
+    if (i.src1.is_constant) {
+      e.LoadConstantXmm(i.dest, i.src1.constant());
+    } else {
+      e.vmovaps(i.dest, i.src1);
+    }
+    if (i.src3.is_constant) {
+      e.mov(e.eax, i.src3.constant());
+      e.vpinsrw(i.dest, i.dest, e.eax, idx);
+    } else {
+      e.vpinsrw(i.dest, i.dest, i.src3.reg().cvt32(), idx);
+    }
   }
 };
 struct INSERT_I32
     : Sequence<INSERT_I32, I<OPCODE_INSERT, V128Op, V128Op, I8Op, I32Op>> {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     assert_true(i.src2.is_constant);
-    e.vpinsrd(i.dest, i.src3, i.src2.constant());
+    const uint8_t idx = static_cast<uint8_t>(i.src2.constant());
+    if (i.src1.is_constant) {
+      e.LoadConstantXmm(i.dest, i.src1.constant());
+    } else {
+      e.vmovaps(i.dest, i.src1);
+    }
+    if (i.src3.is_constant) {
+      e.mov(e.eax, i.src3.constant());
+      e.vpinsrd(i.dest, i.dest, e.eax, idx);
+    } else {
+      e.vpinsrd(i.dest, i.dest, i.src3.reg().cvt32(), idx);
+    }
   }
 };
 EMITTER_OPCODE_TABLE(OPCODE_INSERT, INSERT_I8, INSERT_I16, INSERT_I32);

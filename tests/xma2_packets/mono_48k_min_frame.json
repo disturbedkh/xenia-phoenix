@@ -1,0 +1,11 @@
+{
+  "id": "mono_48k_min_frame",
+  "mode": "structural",
+  "sample_rate_id": 3,
+  "sample_rate_hz": 48000,
+  "channels": 1,
+  "is_stereo": 0,
+  "packet_count": 1,
+  "allow_pcm": true,
+  "first_frame_offset_bits": 32
+}

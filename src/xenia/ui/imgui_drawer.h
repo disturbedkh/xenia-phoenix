@@ -49,6 +49,7 @@ class ImGuiDrawer : public WindowInputListener, public UIDrawer {
 
   void AddDialog(ImGuiDialog* dialog);
   void RemoveDialog(ImGuiDialog* dialog);
+  bool HasDialog(const ImGuiDialog* dialog) const;
 
   void AddNotification(ImGuiNotification* notification);
   void RemoveNotification(ImGuiNotification* notification);

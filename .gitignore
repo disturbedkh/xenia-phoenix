@@ -99,6 +99,8 @@ node_modules/.bin/
 # Local-only paths
 # ==============================================================================
 
+/gpu_replay_out/
+
 .vagrant
 /attic/
 /content/
@@ -116,3 +118,7 @@ node_modules/.bin/
 /cache0
 /devkit
 recent.toml
+
+/build-windows/
+/build-android-arm64/
+

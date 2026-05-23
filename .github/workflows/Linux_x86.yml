@@ -4,10 +4,20 @@ on:
   workflow_call:
     inputs:
       config:
-        description: 'Build configuration (Release)'
+        description: 'Build configuration (Release, Debug, or Checked)'
         required: false
-        default: 'release'
+        default: 'Release'
         type: string
+      run_smoke_test:
+        description: 'Run xenia_canary --help under xvfb after build'
+        required: false
+        default: true
+        type: boolean
+      run_cpu_tests:
+        description: 'Build and run xenia-cpu-tests (Release only recommended)'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   build:
@@ -42,7 +52,7 @@ jobs:
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
           sudo apt-add-repository "deb http://apt.llvm.org/${{ env.UBUNTU_BASE }}/ llvm-toolchain-${{ env.UBUNTU_BASE }}-${{ env.LLVM_VERSION }} main"
           sudo apt-get -y update
-          sudo apt-get -y install mesa-vulkan-drivers valgrind libc++-dev libc++abi-dev libgtk-3-dev libsdl2-dev libvulkan-dev libx11-xcb-dev clang-${{ env.LLVM_VERSION }} lld-${{ env.LLVM_VERSION }} ninja-build cmake spirv-tools libfuse2
+          sudo apt-get -y install mesa-vulkan-drivers valgrind libc++-dev libc++abi-dev libgtk-3-dev libsdl2-dev libvulkan-dev libx11-xcb-dev libasound2-dev libfontconfig1-dev liblz4-dev clang-${{ env.LLVM_VERSION }} lld-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }} ninja-build cmake spirv-tools libfuse2 xvfb libsdl2-2.0-0 libasound2t64 python3
 
           # Pin LLVM tools to the correct version so system ar/ranlib/lld
           # don't use the older LLVM 17 gold plugin with clang-20 LTO bitcode
@@ -84,19 +94,52 @@ jobs:
         run: |
           # Exclude not needed 3pp modules
           EXCLUDE="DirectXShaderCompiler"
-          SUBMODULES=$(grep -oP '(?<=path = ).+' .gitmodules | grep -vE "$EXCLUDE")
-          git submodule update --init --depth=1 -j$(nproc) $SUBMODULES
+          SUBMODULES=$(grep 'path = ' .gitmodules | sed 's/^[[:space:]]*path = //' | tr -d '\r' | grep -vE "$EXCLUDE")
+          git submodule update --init --depth=1 $SUBMODULES
+
+      - name: Doctor
+        env:
+          CC: clang-${{ env.LLVM_VERSION }}
+          CXX: clang++-${{ env.LLVM_VERSION }}
+        run: python3 xenia-build.py doctor
 
       - name: Build Xenia
         env:
           CC: clang-${{ env.LLVM_VERSION }}
           CXX: clang++-${{ env.LLVM_VERSION }}
-        run: ./xenia-build.py build --config=Release
+        run: python3 xenia-build.py build --config=${{ inputs.config }}
+
+      - name: Build and run xenia-cpu-tests
+        if: inputs.run_cpu_tests && inputs.config == 'Release'
+        env:
+          CC: clang-${{ env.LLVM_VERSION }}
+          CXX: clang++-${{ env.LLVM_VERSION }}
+        run: |
+          python3 xenia-build.py build --config=${{ inputs.config }} --build-tests --target xenia-cpu-tests
+          python3 xenia-build.py test --no_build --config=${{ inputs.config }} --target xenia-cpu-tests
+
+      - name: Smoke test (help)
+        if: inputs.run_smoke_test
+        env:
+          GDK_BACKEND: x11
+        run: |
+          binary="build/bin/Linux/${{ inputs.config }}/xenia_canary"
+          if [ ! -f "$binary" ]; then
+            echo "::error::Binary not found at $binary"
+            exit 1
+          fi
+          chmod +x "$binary"
+          xvfb-run -a script -qefc "$binary --help" /dev/null
+          if [ -x scripts/xenia-phoenix-linux.sh ]; then
+            chmod +x scripts/xenia-phoenix-linux.sh
+            xvfb-run -a script -qefc "env XENIA_CONFIG=${{ inputs.config }} bash scripts/xenia-phoenix-linux.sh --help" /dev/null
+          fi
 
       - name: Prepare AppImage
+        if: inputs.config == 'Release'
         id: prepare_artifacts
         run: |
-          binary=build/bin/Linux/Release/xenia_canary
+          binary=build/bin/Linux/${{ inputs.config }}/xenia_canary
           if [ $(stat -c%s $binary) -le 100000 ]; then
             echo "::error::Binary is too small."
             exit 1
@@ -126,7 +169,7 @@ jobs:
           cp assets/icon/1024.png $APPDIR/usr/share/icons/hicolor/1024x1024/apps/xenia_canary.png
 
           # Copy any extra runtime data directories alongside the binary
-          find build/bin/Linux/Release -maxdepth 1 -type d ! -name Release -exec cp -r {} $APPDIR/usr/bin/ \;
+          find build/bin/Linux/${{ inputs.config }} -maxdepth 1 -type d ! -name ${{ inputs.config }} -exec cp -r {} $APPDIR/usr/bin/ \;
 
           # Build AppImage with linuxdeploy (requires absolute paths)
           linuxdeploy --appdir $APPDIR \
@@ -146,8 +189,26 @@ jobs:
           mv "$appimage_file" artifacts/release/xenia_canary_linux.AppImage
           chmod +x artifacts/release/xenia_canary_linux.AppImage
 
+      - name: Smoke test (AppImage)
+        if: inputs.config == 'Release' && inputs.run_smoke_test && steps.prepare_artifacts.outcome == 'success'
+        env:
+          GDK_BACKEND: x11
+        run: |
+          appimage="artifacts/release/xenia_canary_linux.AppImage"
+          chmod +x "$appimage"
+          xvfb-run -a "$appimage" --help
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-build-log-${{ inputs.config }}
+          path: linux_build_*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload Xenia Canary artifact
-        if: steps.prepare_artifacts.outcome == 'success'
+        if: inputs.config == 'Release' && steps.prepare_artifacts.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
           name: xenia_canary_linux

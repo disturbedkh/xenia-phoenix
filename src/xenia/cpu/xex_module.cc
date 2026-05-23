@@ -11,6 +11,7 @@
 
 #include "third_party/fmt/include/fmt/format.h"
 
+#include "xenia/base/agent_debug_log.h"
 #include "xenia/base/byte_order.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
@@ -1369,7 +1370,24 @@ void XexInfoCache::Init(XexModule* xexmod) {
 
   infocache_path.append(xexmod->image_sha_str_);
 
-  std::filesystem::create_directories(infocache_path);
+  // #region agent log
+  xe::agent_debug::Log("xex_module.cc:XexInfoCache::Init", "before mkdir",
+                       "H3", "pre-fix",
+                       R"({{"infocache_path":"{}"}})",
+                       xe::path_to_utf8(infocache_path));
+  // #endregion
+  try {
+    std::filesystem::create_directories(infocache_path);
+  } catch (const std::filesystem::filesystem_error& ex) {
+    // #region agent log
+    xe::agent_debug::Log("xex_module.cc:XexInfoCache::Init",
+                         "filesystem_error", "H3", "pre-fix",
+                         R"({{"path":"{}","code":{},"what":"{}"}})",
+                         xe::path_to_utf8(infocache_path), ex.code().value(),
+                         ex.what());
+    // #endregion
+    throw;
+  }
   infocache_path.append("executable_addr_flags.bin");
 
   unsigned num_codebytes = xexmod->high_address_ - xexmod->low_address_;

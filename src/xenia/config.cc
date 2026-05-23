@@ -9,7 +9,10 @@
 
 #include "config.h"
 
+#include <fstream>
+
 #include "third_party/fmt/include/fmt/format.h"
+#include "xenia/emulator.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/filesystem.h"
@@ -306,12 +309,97 @@ void SetupConfig(const std::filesystem::path& config_folder) {
 }
 
 void LoadGameConfig(const std::string_view title_id) {
-  const auto game_config_folder = config_folder / "config";
-  const auto game_config_path =
-      game_config_folder / (std::string(title_id) + game_config_suffix);
+  const auto game_config_path = GetGameConfigPath(std::string(title_id));
   if (std::filesystem::exists(game_config_path)) {
     ReadGameConfig(game_config_path);
   }
+}
+
+std::filesystem::path GetGameConfigPath(const std::string& title_id) {
+  return config_folder / "config" / (title_id + game_config_suffix);
+}
+
+toml::table LoadGameConfig(uint32_t title_id) {
+  const auto game_config_path =
+      GetGameConfigPath(fmt::format("{:08X}", title_id));
+  toml::table config_table;
+  if (std::filesystem::exists(game_config_path)) {
+    try {
+      config_table = toml::parse_file(xe::path_to_utf8(game_config_path));
+    } catch (const std::exception& e) {
+      XELOGE("Failed to parse game config {}: {}",
+             xe::path_to_utf8(game_config_path), e.what());
+    }
+  }
+  return config_table;
+}
+
+void SaveGameConfig(uint32_t title_id, const toml::table& config_table) {
+  const auto game_config_path =
+      GetGameConfigPath(fmt::format("{:08X}", title_id));
+  try {
+    xe::filesystem::CreateParentFolder(game_config_path);
+    std::ofstream file(game_config_path);
+    if (!file.is_open()) {
+      throw std::runtime_error("Failed to open file for writing");
+    }
+    file << "# Game-specific config overrides\n";
+    file << "# Title ID: " << fmt::format("{:08X}", title_id) << "\n\n";
+    file << config_table << "\n";
+    file.close();
+    XELOGI("Saved game config for title {:08X}", title_id);
+  } catch (const std::exception& e) {
+    XELOGE("Failed to save game config {}: {}",
+           xe::path_to_utf8(game_config_path), e.what());
+    throw;
+  }
+}
+
+namespace {
+
+template <typename T>
+void SaveGameConfigSettingImpl(xe::Emulator* emulator, const char* section,
+                               const char* cvar_name, const T& value) {
+  if (!emulator || !emulator->is_title_open()) {
+    return;
+  }
+  uint32_t title_id = emulator->title_id();
+  toml::table config_table = LoadGameConfig(title_id);
+  if (!config_table.contains(section)) {
+    config_table.insert(section, toml::table{});
+  }
+  auto* section_table = config_table[section].as_table();
+  if (section_table) {
+    section_table->insert_or_assign(cvar_name, value);
+  }
+  SaveGameConfig(title_id, config_table);
+}
+
+}  // namespace
+
+void SaveGameConfigSetting(xe::Emulator* emulator, const char* section,
+                           const char* cvar_name, const std::string& value) {
+  SaveGameConfigSettingImpl(emulator, section, cvar_name, value);
+}
+
+void SaveGameConfigSetting(xe::Emulator* emulator, const char* section,
+                           const char* cvar_name, bool value) {
+  SaveGameConfigSettingImpl(emulator, section, cvar_name, value);
+}
+
+void SaveGameConfigSetting(xe::Emulator* emulator, const char* section,
+                           const char* cvar_name, int32_t value) {
+  SaveGameConfigSettingImpl(emulator, section, cvar_name, value);
+}
+
+void SaveGameConfigSetting(xe::Emulator* emulator, const char* section,
+                           const char* cvar_name, uint32_t value) {
+  SaveGameConfigSettingImpl(emulator, section, cvar_name, value);
+}
+
+void SaveGameConfigSetting(xe::Emulator* emulator, const char* section,
+                           const char* cvar_name, double value) {
+  SaveGameConfigSettingImpl(emulator, section, cvar_name, value);
 }
 
 }  // namespace config

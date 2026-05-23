@@ -16,7 +16,9 @@
 #include "third_party/glslang/SPIRV/GLSL.std.450.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
+#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/math.h"
 #include "xenia/gpu/draw_util.h"
 #include "xenia/gpu/gpu_flags.h"
@@ -1174,6 +1176,8 @@ bool VulkanRenderTargetCache::Resolve(const Memory& memory,
                   "Falling back to unscaled resolve at 0x{:08X} - scaled "
                   "buffer not available",
                   resolve_info.copy_dest_base);
+              OBS_INVARIANT("ResolveScaledFallback", obs::ChannelId::kGpuPipeline,
+                            true, "dest=0x{:08X}", resolve_info.copy_dest_base);
             }
             write_descriptor_set_dest_buffer_info.buffer =
                 shared_memory.buffer();
@@ -1847,6 +1851,14 @@ RenderTargetCache::RenderTarget* VulkanRenderTargetCache::CreateRenderTarget(
   if (image_create_info.format == VK_FORMAT_UNDEFINED) {
     XELOGE("VulkanRenderTargetCache: Unknown {} render target format {}",
            key.is_depth ? "depth" : "color", key.resource_format);
+    {
+      const uint32_t resource_format =
+          static_cast<uint32_t>(key.resource_format);
+      obs::Invariant(
+          "RtFormatUnknown", obs::ChannelId::kGpuEdram, true,
+          ::fmt::format("{} fmt={}", key.is_depth ? "depth" : "color",
+                        resource_format));
+    }
     return nullptr;
   }
   VkImage image;
@@ -2079,7 +2091,8 @@ void VulkanRenderTargetCache::UseEdramBuffer(EdramBufferUsage new_usage) {
 }
 
 void VulkanRenderTargetCache::MarkEdramBufferModified(
-    EdramBufferModificationStatus modification_status) {
+    EdramBufferModificationStatus modification_status,
+    bool guest_depth_may_have_changed) {
   assert_true(modification_status !=
               EdramBufferModificationStatus::kUnmodified);
   switch (edram_buffer_usage_) {
@@ -2103,6 +2116,9 @@ void VulkanRenderTargetCache::MarkEdramBufferModified(
           "indication of architectural mistakes. Alternatively, this may "
           "indicate that the usage switch has been forgotten before writing, "
           "which is a clearly invalid situation.");
+  }
+  if (guest_depth_may_have_changed) {
+    NotifyGuestDepthEdramTilesTouched(0, xenos::kEdramTileCount);
   }
 }
 
@@ -4677,7 +4693,8 @@ void VulkanRenderTargetCache::PerformTransfersAndResolveClears(
             &host_depth_store_rectangle_constant);
         command_processor_.SubmitBarriers(true);
         command_buffer.CmdVkDispatch(group_count_x, group_count_y, 1);
-        MarkEdramBufferModified();
+        MarkEdramBufferModified(
+            EdramBufferModificationStatus::kViaUnordered, false);
       }
     }
     break;
@@ -6168,7 +6185,8 @@ void VulkanRenderTargetCache::DumpRenderTargets(uint32_t dump_base,
               kDumpSamplesPerGroupY,
           1);
     }
-    MarkEdramBufferModified();
+    MarkEdramBufferModified(EdramBufferModificationStatus::kViaUnordered,
+                            false);
   }
 }
 

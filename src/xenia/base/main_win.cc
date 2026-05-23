@@ -8,6 +8,9 @@
  */
 
 #include <cstring>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
@@ -77,6 +80,80 @@ static void RequestWin32MMCSS() {
   FreeLibrary(dwmapi_module);
 }
 
+namespace {
+
+bool IsLaunchOptionToken(std::string_view arg) {
+  // Treat lone "-" as positional; "--foo" and "-f" are options.
+  return arg.size() >= 2 && arg[0] == '-';
+}
+
+// Start-Process / some shells split paths at spaces (e.g. D:\Xbox 360\game.iso).
+// Merge the leading positional run and --target values before cxxopts parsing.
+void CoalesceSplitPathArgv(int& argc, char**& argv) {
+  if (argc <= 1) {
+    return;
+  }
+
+  static std::vector<std::string> storage;
+  static std::vector<char*> ptrs;
+  storage.clear();
+  ptrs.clear();
+  storage.emplace_back(argv[0]);
+
+  auto merge_range = [&](int begin, int end) {
+    std::string merged = argv[begin];
+    for (int i = begin + 1; i <= end; ++i) {
+      merged.push_back(' ');
+      merged += argv[i];
+    }
+    storage.push_back(std::move(merged));
+  };
+
+  int i = 1;
+  bool merged_leading_positional = false;
+  while (i < argc) {
+    std::string_view arg(argv[i]);
+    if (!merged_leading_positional && !IsLaunchOptionToken(arg)) {
+      int begin = i;
+      while (i < argc && !IsLaunchOptionToken(argv[i])) {
+        ++i;
+      }
+      merge_range(begin, i - 1);
+      merged_leading_positional = true;
+      continue;
+    }
+
+    if (arg == "--target" && i + 1 < argc &&
+        !IsLaunchOptionToken(argv[i + 1])) {
+      int begin = i + 1;
+      int j = begin + 1;
+      while (j < argc && !IsLaunchOptionToken(argv[j])) {
+        ++j;
+      }
+      storage.emplace_back("--target");
+      merge_range(begin, j - 1);
+      i = j;
+      continue;
+    }
+
+    storage.emplace_back(argv[i]);
+    ++i;
+  }
+
+  if (storage.size() == static_cast<size_t>(argc)) {
+    return;
+  }
+
+  ptrs.reserve(storage.size());
+  for (auto& s : storage) {
+    ptrs.push_back(s.data());
+  }
+  argc = static_cast<int>(ptrs.size());
+  argv = ptrs.data();
+}
+
+}  // namespace
+
 bool ParseWin32LaunchArguments(
     bool transparent_options, const std::string_view positional_usage,
     const std::vector<std::string>& positional_options,
@@ -99,6 +176,8 @@ bool ParseWin32LaunchArguments(
   }
 
   LocalFree(wargv);
+
+  CoalesceSplitPathArgv(argc, argv);
 
   if (!transparent_options) {
     cvar::ParseLaunchArguments(argc, argv, positional_usage,

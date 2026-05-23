@@ -259,7 +259,8 @@ class VulkanRenderTargetCache final : public RenderTargetCache {
   void UseEdramBuffer(EdramBufferUsage new_usage);
   void MarkEdramBufferModified(
       EdramBufferModificationStatus modification_status =
-          EdramBufferModificationStatus::kViaUnordered);
+          EdramBufferModificationStatus::kViaUnordered,
+      bool guest_depth_may_have_changed = true);
   void CommitEdramBufferShaderWrites(
       EdramBufferModificationStatus commit_status =
           EdramBufferModificationStatus::kViaFragmentShaderInterlock);

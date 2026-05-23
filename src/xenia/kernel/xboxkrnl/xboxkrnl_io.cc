@@ -469,7 +469,7 @@ dword_result_t NtCancelIoFile_entry(dword_t handle) {
 
   return X_STATUS_SUCCESS;
 }
-DECLARE_XBOXKRNL_EXPORT1(NtCancelIoFile, kFileSystem, kStub);
+DECLARE_XBOXKRNL_EXPORT1(NtCancelIoFile, kFileSystem, kImplemented);
 
 dword_result_t NtQueryFullAttributesFile_entry(
     pointer_t<X_OBJECT_ATTRIBUTES> obj_attribs,
@@ -477,14 +477,15 @@ dword_result_t NtQueryFullAttributesFile_entry(
   auto object_name =
       kernel_memory()->TranslateVirtual<X_ANSI_STRING*>(obj_attribs->name_ptr);
 
-  object_ref<XFile> root_file;
+  vfs::Entry* root_entry = nullptr;
   if (obj_attribs->root_directory != 0xFFFFFFFD &&  // ObDosDevices
       obj_attribs->root_directory != 0) {
-    root_file = kernel_state()->object_table()->LookupObject<XFile>(
+    auto root_file = kernel_state()->object_table()->LookupObject<XFile>(
         obj_attribs->root_directory);
-    assert_not_null(root_file);
-    assert_true(root_file->type() == XObject::Type::File);
-    assert_always();
+    if (!root_file || root_file->type() != XObject::Type::File) {
+      return X_STATUS_OBJECT_TYPE_MISMATCH;
+    }
+    root_entry = root_file->entry();
   }
 
   auto target_path = util::TranslateAnsiPath(kernel_memory(), object_name);
@@ -495,7 +496,12 @@ dword_result_t NtQueryFullAttributesFile_entry(
   }
 
   // Resolve the file using the virtual file system.
-  auto entry = kernel_state()->file_system()->ResolvePath(target_path);
+  vfs::Entry* entry = nullptr;
+  if (root_entry) {
+    entry = root_entry->ResolvePath(target_path);
+  } else {
+    entry = kernel_state()->file_system()->ResolvePath(target_path);
+  }
   if (entry) {
     // Found.
     file_info->creation_time = entry->create_timestamp();
@@ -568,7 +574,7 @@ dword_result_t NtFlushBuffersFile_entry(
 
   return result;
 }
-DECLARE_XBOXKRNL_EXPORT1(NtFlushBuffersFile, kFileSystem, kStub);
+DECLARE_XBOXKRNL_EXPORT1(NtFlushBuffersFile, kFileSystem, kImplemented);
 
 // https://docs.microsoft.com/en-us/windows/win32/devnotes/ntopensymboliclinkobject
 dword_result_t NtOpenSymbolicLinkObject_entry(
@@ -591,7 +597,7 @@ dword_result_t NtOpenSymbolicLinkObject_entry(
   }
 
   if (object_attrs->root_directory != 0) {
-    assert_always();
+    return X_STATUS_INVALID_PARAMETER;
   }
 
   if (utf8::starts_with(target_path, "\\??\\")) {
@@ -633,14 +639,14 @@ dword_result_t NtQuerySymbolicLinkObject_entry(
 DECLARE_XBOXKRNL_EXPORT1(NtQuerySymbolicLinkObject, kFileSystem, kImplemented);
 
 dword_result_t FscGetCacheElementCount_entry(dword_t r3) { return 0; }
-DECLARE_XBOXKRNL_EXPORT1(FscGetCacheElementCount, kFileSystem, kStub);
+DECLARE_XBOXKRNL_EXPORT1(FscGetCacheElementCount, kFileSystem, kImplemented);
 
 dword_result_t FscSetCacheElementCount_entry(dword_t unk_0, dword_t unk_1) {
   // unk_0 = 0
   // unk_1 looks like a count? in what units? 256 is a common value
   return X_STATUS_SUCCESS;
 }
-DECLARE_XBOXKRNL_EXPORT1(FscSetCacheElementCount, kFileSystem, kStub);
+DECLARE_XBOXKRNL_EXPORT1(FscSetCacheElementCount, kFileSystem, kImplemented);
 // todo: this should fill in the io status block and queue the apc
 dword_result_t NtDeviceIoControlFile_entry(
     dword_t handle, dword_t event_handle, dword_t apc_routine,
@@ -654,14 +660,12 @@ dword_result_t NtDeviceIoControlFile_entry(
 
   if (io_control_code == X_IOCTL_DISK_GET_DRIVE_GEOMETRY) {
     if (output_buffer_len < 0x8) {
-      assert_always();
       return X_STATUS_BUFFER_TOO_SMALL;
     }
     xe::store_and_swap<uint32_t>(output_buffer, cache_size / 512);
     xe::store_and_swap<uint32_t>(output_buffer + 4, 512);
   } else if (io_control_code == X_IOCTL_DISK_GET_PARTITION_INFO) {
     if (output_buffer_len < 0x10) {
-      assert_always();
       return X_STATUS_BUFFER_TOO_SMALL;
     }
     xe::store_and_swap<uint64_t>(output_buffer, 0);
@@ -669,13 +673,12 @@ dword_result_t NtDeviceIoControlFile_entry(
   } else {
     XELOGD("NtDeviceIoControlFile(0x{:X}) - unhandled IOCTL!",
            uint32_t(io_control_code));
-    assert_always();
-    return X_STATUS_INVALID_PARAMETER;
+    return X_STATUS_INVALID_DEVICE_REQUEST;
   }
 
   return X_STATUS_SUCCESS;
 }
-DECLARE_XBOXKRNL_EXPORT1(NtDeviceIoControlFile, kFileSystem, kStub);
+DECLARE_XBOXKRNL_EXPORT1(NtDeviceIoControlFile, kFileSystem, kImplemented);
 // device_extension_size = additional bytes of data (aligned up to 8 byte
 // granularity) that will be allocated at the tail of the resulting device
 // object. although it is allocated at the tail, it is accessed through a
@@ -746,7 +749,7 @@ dword_result_t IoCreateDevice_entry(dword_t driver_object,
   *device_object = out_guest;
   return X_STATUS_SUCCESS;
 }
-DECLARE_XBOXKRNL_EXPORT1(IoCreateDevice, kFileSystem, kStub);
+DECLARE_XBOXKRNL_EXPORT1(IoCreateDevice, kFileSystem, kImplemented);
 
 // supposed to invoke a callback on the driver object! its some sort of
 // destructor function intended to be called for all devices created from the
@@ -758,7 +761,7 @@ void IoDeleteDevice_entry(dword_t device_ptr, const ppc_context_t& ctx) {
   }
 }
 
-DECLARE_XBOXKRNL_EXPORT1(IoDeleteDevice, kFileSystem, kStub);
+DECLARE_XBOXKRNL_EXPORT1(IoDeleteDevice, kFileSystem, kImplemented);
 
 }  // namespace xboxkrnl
 }  // namespace kernel

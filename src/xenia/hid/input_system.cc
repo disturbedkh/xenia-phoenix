@@ -19,6 +19,9 @@
 #ifdef XE_PLATFORM_WIN32
 #include "xenia/hid/portal/hardware_portal.h"
 #endif  // XE_PLATFORM_WIN32
+#if XE_PLATFORM_ANDROID
+#include "xenia/hid/android/android_input_driver.h"
+#endif
 
 namespace xe {
 namespace hid {
@@ -264,6 +267,19 @@ X_INPUT_VIBRATION InputSystem::ModifyVibrationLevel(
   modified_vibration.right_motor_speed = 0;
   return modified_vibration;
 }
+#if XE_PLATFORM_ANDROID
+void InputSystem::OnAndroidTouch(float norm_x, float norm_y, bool down) {
+  for (auto& driver : drivers_) {
+    auto* android_driver =
+        dynamic_cast<android::AndroidInputDriver*>(driver.get());
+    if (android_driver) {
+      android_driver->OnTouch(norm_x, norm_y, down);
+      return;
+    }
+  }
+}
+#endif
+
 std::unique_lock<xe_unlikely_mutex> InputSystem::lock() {
   return std::unique_lock<xe_unlikely_mutex>{lock_};
 }

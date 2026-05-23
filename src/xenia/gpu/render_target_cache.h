@@ -29,6 +29,8 @@
 #include "xenia/gpu/xenos.h"
 
 DECLARE_bool(depth_transfer_not_equal_test);
+DECLARE_bool(depth_resync_on_guest_edram_touch);
+DECLARE_bool(depth_resync_each_depth_draw);
 DECLARE_bool(depth_float24_round);
 DECLARE_bool(depth_float24_convert_in_pixel_shader);
 DECLARE_bool(draw_resolution_scaled_texture_offsets);
@@ -555,6 +557,9 @@ class RenderTargetCache {
       HostDepthStoreRectangleConstant& rectangle_constant_out,
       uint32_t& group_count_x_out, uint32_t& group_count_y_out) const;
 
+  void NotifyGuestDepthEdramTilesTouched(uint32_t start_tiles,
+                                        uint32_t length_tiles);
+
   // Returns mappings between ranges within the specified tile rectangle (not
   // render target texture rectangle - textures may have any pitch they need)
   // from ResolveInfo::GetCopyEdramTileSpan and render targets owning them to
@@ -629,6 +634,8 @@ class RenderTargetCache {
     // empty too.
     RenderTargetKey host_depth_render_target_unorm24;
     RenderTargetKey host_depth_render_target_float24;
+    // Guest 20e4 in EDRAM was updated without refreshing host float32 DSV.
+    bool host_depth_guest_edram_stale = false;
     OwnershipRange(uint32_t end_tiles, RenderTargetKey render_target,
                    RenderTargetKey host_depth_render_target_unorm24,
                    RenderTargetKey host_depth_render_target_float24)
@@ -660,6 +667,17 @@ class RenderTargetCache {
         // or by a depth render target of a different format.
         return false;
       }
+      if (host_depth_encoding_different && key.is_depth) {
+        if (host_depth_guest_edram_stale) {
+          return false;
+        }
+        const RenderTargetKey& host_depth_key =
+            GetHostDepthRenderTarget(key.GetDepthFormat());
+        // Host float32 sidecar tracked for a different depth surface — resync.
+        if (!host_depth_key.IsEmpty() && host_depth_key != key) {
+          return false;
+        }
+      }
       if (host_depth_encoding_different && !key.is_depth &&
           GetHostDepthRenderTarget(key.GetDepthFormat()) != key) {
         // Depth encoding is the same, but different addressing is needed.
@@ -672,7 +690,9 @@ class RenderTargetCache {
              host_depth_render_target_unorm24 ==
                  other_range.host_depth_render_target_unorm24 &&
              host_depth_render_target_float24 ==
-                 other_range.host_depth_render_target_float24;
+                 other_range.host_depth_render_target_float24 &&
+             host_depth_guest_edram_stale ==
+                 other_range.host_depth_guest_edram_stale;
     }
   };
 
@@ -743,6 +763,9 @@ class RenderTargetCache {
   // consecutive in the array.
   std::vector<Transfer>
       last_update_transfers_[1 + xenos::kMaxColorRenderTargets];
+
+  // Detect depth surface rebind (base/pitch/format) without ownership change.
+  RenderTargetKey last_update_depth_key_;
 };
 
 }  // namespace gpu

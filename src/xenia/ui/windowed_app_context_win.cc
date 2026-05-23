@@ -11,6 +11,7 @@
 
 #include <cstdlib>
 
+#include "xenia/base/logging.h"
 #include "xenia/base/platform_win.h"
 
 namespace xe {
@@ -95,10 +96,16 @@ bool Win32WindowedAppContext::Initialize() {
 }
 
 void Win32WindowedAppContext::NotifyUILoopOfPendingFunctions() {
-  while (!PostMessageW(pending_functions_hwnd_,
-                       kPendingFunctionsWindowClassMessageExecute, 0, 0)) {
+  for (int attempt = 0; attempt < 100; ++attempt) {
+    if (PostMessageW(pending_functions_hwnd_,
+                     kPendingFunctionsWindowClassMessageExecute, 0, 0)) {
+      return;
+    }
     Sleep(1);
   }
+  XELOGE(
+      "NotifyUILoopOfPendingFunctions: PostMessage failed after retries; "
+      "pending UI work may be delayed until the next message.");
 }
 
 void Win32WindowedAppContext::PlatformQuitFromUIThread() {

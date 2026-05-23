@@ -8,11 +8,14 @@
  */
 
 #include <android/log.h>
+#include <cstdio>
+#include <filesystem>
 #include <jni.h>
 #include <cstring>
 
 #include "xenia/base/filesystem.h"
 #include "xenia/base/main_android.h"
+#include "xenia/base/mapped_memory.h"
 #include "xenia/base/math.h"
 #include "xenia/base/string.h"
 
@@ -276,6 +279,171 @@ int OpenAndroidContentFileDescriptor(const std::string_view uri,
 
 bool SetAttributes(const std::filesystem::path& path, uint64_t attributes) {
   return false;
+}
+
+static std::filesystem::path AndroidPathFromContextDirMethod(
+    const char* method_name) {
+  JNIEnv* jni_env = GetAndroidThreadJniEnv();
+  jobject application_context = GetAndroidApplicationContext();
+  if (!jni_env || !application_context) {
+    return {};
+  }
+  jclass context_class = jni_env->GetObjectClass(application_context);
+  if (!context_class) {
+    return {};
+  }
+  jmethodID get_dir = jni_env->GetMethodID(context_class, method_name,
+                                           "()Ljava/io/File;");
+  jni_env->DeleteLocalRef(context_class);
+  if (!get_dir) {
+    return {};
+  }
+  jobject file_object =
+      jni_env->CallObjectMethod(application_context, get_dir);
+  if (!file_object) {
+    return {};
+  }
+  jclass file_class = jni_env->GetObjectClass(file_object);
+  jmethodID get_absolute_path =
+      jni_env->GetMethodID(file_class, "getAbsolutePath", "()Ljava/lang/String;");
+  jni_env->DeleteLocalRef(file_class);
+  if (!get_absolute_path) {
+    jni_env->DeleteLocalRef(file_object);
+    return {};
+  }
+  jstring path_string = static_cast<jstring>(
+      jni_env->CallObjectMethod(file_object, get_absolute_path));
+  jni_env->DeleteLocalRef(file_object);
+  if (!path_string) {
+    return {};
+  }
+  const char* path_utf8 = jni_env->GetStringUTFChars(path_string, nullptr);
+  std::filesystem::path result;
+  if (path_utf8) {
+    result = path_utf8;
+    jni_env->ReleaseStringUTFChars(path_string, path_utf8);
+  }
+  jni_env->DeleteLocalRef(path_string);
+  return result;
+}
+
+std::filesystem::path GetAndroidApplicationFilesDirectory() {
+  return AndroidPathFromContextDirMethod("getFilesDir");
+}
+
+std::filesystem::path GetAndroidApplicationCacheDirectory() {
+  return AndroidPathFromContextDirMethod("getCacheDir");
+}
+
+bool AndroidRequestOpenDocument(const char* mime_type) {
+  JNIEnv* jni_env = GetAndroidThreadJniEnv();
+  jobject application_context = GetAndroidApplicationContext();
+  if (!jni_env || !application_context) {
+    return false;
+  }
+  jclass intent_class = jni_env->FindClass("android/content/Intent");
+  if (!intent_class) {
+    return false;
+  }
+  jmethodID intent_init = jni_env->GetMethodID(
+      intent_class, "<init>", "(Ljava/lang/String;)V");
+  jstring action_open =
+      jni_env->NewStringUTF("android.intent.action.OPEN_DOCUMENT");
+  if (!intent_init || !action_open) {
+    jni_env->DeleteLocalRef(intent_class);
+    return false;
+  }
+  jobject intent =
+      jni_env->NewObject(intent_class, intent_init, action_open);
+  jni_env->DeleteLocalRef(action_open);
+  if (!intent) {
+    jni_env->DeleteLocalRef(intent_class);
+    return false;
+  }
+  jmethodID add_category = jni_env->GetMethodID(
+      intent_class, "addCategory", "(Ljava/lang/String;)Landroid/content/Intent;");
+  jmethodID set_type =
+      jni_env->GetMethodID(intent_class, "setType", "(Ljava/lang/String;)Landroid/content/Intent;");
+  jmethodID add_flags = jni_env->GetMethodID(
+      intent_class, "addFlags", "(I)Landroid/content/Intent;");
+  if (add_category) {
+    jstring category =
+        jni_env->NewStringUTF("android.intent.category.OPENABLE");
+    jni_env->CallObjectMethod(intent, add_category, category);
+    jni_env->DeleteLocalRef(category);
+  }
+  if (set_type && mime_type) {
+    jstring mime = jni_env->NewStringUTF(mime_type);
+    jni_env->CallObjectMethod(intent, set_type, mime);
+    jni_env->DeleteLocalRef(mime);
+  }
+  if (add_flags) {
+    jni_env->CallObjectMethod(intent, add_flags, 0x10000000);  // FLAG_ACTIVITY_NEW_TASK
+  }
+  jclass context_class = jni_env->GetObjectClass(application_context);
+  jmethodID start_activity = jni_env->GetMethodID(
+      context_class, "startActivity", "(Landroid/content/Intent;)V");
+  jni_env->DeleteLocalRef(context_class);
+  jni_env->DeleteLocalRef(intent_class);
+  if (!start_activity) {
+    jni_env->DeleteLocalRef(intent);
+    return false;
+  }
+  jni_env->CallVoidMethod(application_context, start_activity, intent);
+  jni_env->DeleteLocalRef(intent);
+  if (jni_env->ExceptionCheck()) {
+    jni_env->ExceptionClear();
+    return false;
+  }
+  return true;
+}
+
+std::filesystem::path StageAndroidLaunchPath(const std::filesystem::path& path) {
+  const std::string uri = xe::path_to_utf8(path);
+  if (!IsAndroidContentUri(uri)) {
+    return path;
+  }
+
+  auto mmap =
+      MappedMemory::OpenForAndroidContentUri(uri, MappedMemory::Mode::kRead);
+  if (!mmap || mmap->size() < 4) {
+    return {};
+  }
+
+  const uint8_t* data = mmap->data();
+  auto magic_is = [data](char a, char b, char c, char d) {
+    return data[0] == static_cast<uint8_t>(a) &&
+           data[1] == static_cast<uint8_t>(b) &&
+           data[2] == static_cast<uint8_t>(c) &&
+           data[3] == static_cast<uint8_t>(d);
+  };
+  std::string extension = ".xex";
+  if (magic_is('X', 'E', 'X', '1') || magic_is('X', 'E', 'X', '2')) {
+    extension = ".xex";
+  } else if (magic_is('X', 'S', 'F', static_cast<char>(0x1A))) {
+    extension = ".iso";
+  } else if (magic_is('C', 'O', 'N', ' ') || magic_is('L', 'I', 'V', 'E') ||
+             magic_is('P', 'I', 'R', 'S')) {
+    extension = "";
+  }
+
+  const auto dest_dir = GetAndroidApplicationCacheDirectory() / "launch";
+  std::error_code ec;
+  std::filesystem::create_directories(dest_dir, ec);
+  std::filesystem::path dest = dest_dir / ("title" + std::string(extension));
+
+  FILE* file = fopen(dest.string().c_str(), "wb");
+  if (!file) {
+    return {};
+  }
+  const size_t written =
+      fwrite(data, 1, mmap->size(), file) == mmap->size() ? mmap->size() : 0;
+  fclose(file);
+  if (written != mmap->size()) {
+    std::filesystem::remove(dest, ec);
+    return {};
+  }
+  return dest;
 }
 
 }  // namespace filesystem

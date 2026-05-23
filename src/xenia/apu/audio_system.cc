@@ -11,6 +11,7 @@
 
 #include "xenia/apu/apu_flags.h"
 #include "xenia/apu/audio_driver.h"
+#include "xenia/apu/util/apu_trace.h"
 #include "xenia/apu/xma_decoder.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/byte_stream.h"
@@ -22,6 +23,7 @@
 #include "xenia/base/threading.h"
 #include "xenia/cpu/thread_state.h"
 #include "xenia/kernel/kernel_state.h"
+#include "xenia/kernel/user_module.h"
 
 // As with normal Microsoft, there are like twelve different ways to access
 // the audio APIs. Early games use XMA*() methods almost exclusively to touch
@@ -75,6 +77,8 @@ AudioSystem::~AudioSystem() {
 }
 
 X_STATUS AudioSystem::Setup(kernel::KernelState* kernel_state) {
+  kernel_state_ = kernel_state;
+
   X_STATUS result = xma_decoder_->Setup(kernel_state);
   if (result) {
     return result;
@@ -238,6 +242,13 @@ X_STATUS AudioSystem::RegisterClient(uint32_t callback, uint32_t callback_arg,
 
 void AudioSystem::SubmitFrame(size_t index, float* samples) {
   SCOPE_profile_cpu_f("apu");
+
+  if (kernel_state_) {
+    auto module = kernel_state_->GetExecutableModule();
+    if (module) {
+      SetTelemetryTitleId(module->title_id());
+    }
+  }
 
   auto global_lock = global_critical_region_.Acquire();
   assert_true(index < kMaximumClientCount);

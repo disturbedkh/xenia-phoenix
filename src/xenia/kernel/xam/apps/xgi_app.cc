@@ -11,6 +11,7 @@
 #include "xenia/kernel/xsession.h"
 
 #include "xenia/base/logging.h"
+#include "xenia/kernel/util/stub_trace.h"
 
 namespace xe {
 namespace kernel {
@@ -375,6 +376,7 @@ X_HRESULT XgiApp::DispatchMessageSync(uint32_t message, uint32_t buffer_ptr,
       return X_E_SUCCESS;
     }
   }
+  LogKernelStubHit("xam", "XgiApp::DispatchMessage", "unimplemented message");
   XELOGE(
       "Unimplemented XGI message app={:08X}, msg={:08X}, arg1={:08X}, "
       "arg2={:08X}",

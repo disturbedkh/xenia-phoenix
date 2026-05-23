@@ -9,6 +9,8 @@
 
 #include "xenia/ui/imgui_drawer.h"
 
+#include "xenia/ui/imgui_phoenix_theme.h"
+
 #include <cfloat>
 #include <cstring>
 #include <ranges>
@@ -31,11 +33,11 @@
 #include <ShlObj_core.h>
 #endif
 
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
 #include <fontconfig/fontconfig.h>
 #endif
 
-#ifdef XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
 #include <gtk/gtk.h>
 #endif
 
@@ -100,6 +102,14 @@ void ImGuiDrawer::AddDialog(ImGuiDialog* dialog) {
   dialogs_.push_back(dialog);
 }
 
+bool ImGuiDrawer::HasDialog(const ImGuiDialog* dialog) const {
+  if (!dialog) {
+    return false;
+  }
+  return std::find(dialogs_.cbegin(), dialogs_.cend(), dialog) !=
+         dialogs_.cend();
+}
+
 void ImGuiDrawer::RemoveDialog(ImGuiDialog* dialog) {
   assert_not_null(dialog);
   auto it = std::find(dialogs_.cbegin(), dialogs_.cend(), dialog);
@@ -142,7 +152,7 @@ void ImGuiDrawer::RemoveNotification(ImGuiNotification* dialog) {
   DetachIfLastWindowRemoved();
 }
 
-#ifdef XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
 static void SetClipboardText(void* user_data, const char* text) {
   GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
   gtk_clipboard_set_text(clipboard, text, -1);
@@ -170,7 +180,7 @@ void ImGuiDrawer::Initialize() {
   InitializeFonts(font_size);
   InitializeFonts(title_font_size);
 
-#ifdef XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
   io.SetClipboardTextFn = SetClipboardText;
   io.GetClipboardTextFn = GetClipboardText;
 #endif
@@ -229,6 +239,8 @@ void ImGuiDrawer::Initialize() {
       ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
   style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.00f, 1.00f, 0.00f, 0.21f);
   style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+
+  ApplyPhoenixTheme(&style, 1.f);
 
   frame_time_tick_frequency_ = double(Clock::QueryHostTickFrequency());
   last_frame_time_ticks_ = Clock::QueryHostTickCount();
@@ -440,8 +452,8 @@ bool ImGuiDrawer::LoadJapaneseFont(ImGuiIO& io, float font_size) {
   return true;
 #endif
 
-#if XE_PLATFORM_LINUX
-  // On Linux, find and merge CJK font using fontconfig
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
+  // On Linux desktop, find and merge CJK font using fontconfig
   FcConfig* config = FcInitLoadConfigAndFonts();
   if (!config) {
     XELOGW(

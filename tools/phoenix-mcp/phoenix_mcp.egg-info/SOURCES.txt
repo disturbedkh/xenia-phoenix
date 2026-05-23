@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+phoenix_mcp/__init__.py
+phoenix_mcp/__main__.py
+phoenix_mcp/server.py
+phoenix_mcp.egg-info/PKG-INFO
+phoenix_mcp.egg-info/SOURCES.txt
+phoenix_mcp.egg-info/dependency_links.txt
+phoenix_mcp.egg-info/entry_points.txt
+phoenix_mcp.egg-info/requires.txt
+phoenix_mcp.egg-info/top_level.txt

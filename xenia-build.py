@@ -803,8 +803,11 @@ def run_cmake_configure(build_type="Release", cc=None, build_tests=False,
                 f"-DCMAKE_CXX_COMPILER={cl_exe.replace(os.sep, '/')}",
             ]
         else:
-            print(f"  WARNING: {target.upper()} cross-compiler not found. Install "
-                  f"'MSVC {target.upper()} build tools' in Visual Studio.")
+            print_error(
+                f"{target.upper()} cross-compiler not found.\n"
+                f"  Install 'MSVC {target.upper()} build tools' via Visual Studio Installer\n"
+                f"  (component: Microsoft.VisualStudio.Component.VC.Tools.ARM64).")
+            return 1
     if build_tests:
         args += ["-DXENIA_BUILD_TESTS=ON"]
     if extra_args:
@@ -932,6 +935,86 @@ def create_clion_workspace():
     return True
 
 
+def _doctor_check_clang():
+    """Returns (ok, message)."""
+    if sys.platform == "win32":
+        return True, "Windows build uses MSVC (not checked here)."
+    cc = os.environ.get("CC", "clang")
+    if not has_bin(cc):
+        return False, f"{cc} not found on PATH."
+    try:
+        out = subprocess.check_output([cc, "--version"], text=True, stderr=subprocess.STDOUT)
+        version_line = out.splitlines()[0] if out else ""
+        major = 0
+        if "version " in out:
+            ver = out.split("version ")[1].split(".")[0]
+            major = int(ver.split()[0]) if ver.split()[0].isdigit() else 0
+        if major and major < 19:
+            return False, f"{cc} reports version {major}; Clang 19+ required ({version_line})."
+        return True, version_line or f"{cc} found."
+    except Exception as exc:
+        return False, f"Failed to run {cc}: {exc}"
+
+
+def _doctor_check_bin(name, apt_hint=None):
+    if has_bin(name):
+        return True, f"{name} found."
+    msg = f"{name} not found on PATH."
+    if apt_hint:
+        msg += f" Try: sudo apt-get install {apt_hint}"
+    return False, msg
+
+
+def _doctor_check_pkg_config(module, apt_hint=None):
+    if sys.platform == "win32":
+        return True, "skipped on Windows"
+    if not has_bin("pkg-config"):
+        return False, "pkg-config not found."
+    ret = subprocess.run(
+        ["pkg-config", "--exists", module],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if ret.returncode == 0:
+        return True, f"pkg-config {module} OK."
+    msg = f"pkg-config module '{module}' missing."
+    if apt_hint:
+        msg += f" Try: sudo apt-get install {apt_hint}"
+    return False, msg
+
+
+def _doctor_check_spirv_opt():
+    spirv_opt = get_bin("spirv-opt")
+    if not spirv_opt:
+        return False, (
+            "spirv-opt not found. Install spirv-tools or LunarG Vulkan SDK "
+            "(see docs/building.md)."
+        )
+    try:
+        out = subprocess.check_output([spirv_opt, "--version"], text=True, stderr=subprocess.STDOUT)
+    except Exception as exc:
+        return False, f"spirv-opt failed: {exc}"
+    supports_canonicalize = False
+    try:
+        result = subprocess.run(
+            [spirv_opt, "--canonicalize-ids"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        stderr = result.stderr or ""
+        supports_canonicalize = "unknown" not in stderr.lower() and "unrecognized" not in stderr.lower()
+    except Exception:
+        pass
+    vulkan_sdk = os.environ.get("VULKAN_SDK", "")
+    if supports_canonicalize:
+        return True, f"{out.strip()} (supports --canonicalize-ids). VULKAN_SDK={vulkan_sdk or '(unset)'}"
+    return False, (
+        f"{out.strip()} — missing --canonicalize-ids support. "
+        "Install LunarG Vulkan SDK and set VULKAN_SDK (build may still work with a fallback)."
+    )
+
+
 def discover_commands(subparsers):
     """Looks for all commands and returns a dictionary of them.
     In the future commands could be discovered on disk.
@@ -943,6 +1026,7 @@ def discover_commands(subparsers):
       A dictionary containing name-to-Command mappings.
     """
     commands = {
+        "doctor": DoctorCommand(subparsers),
         "setup": SetupCommand(subparsers),
         "pull": PullCommand(subparsers),
         "premake": PremakeCommand(subparsers),
@@ -999,6 +1083,61 @@ class Command(object):
           Return code of the command.
         """
         return 1
+
+
+class DoctorCommand(Command):
+    """'doctor' command — verify Linux build dependencies."""
+
+    def __init__(self, subparsers, *args, **kwargs):
+        super(DoctorCommand, self).__init__(
+            subparsers,
+            name="doctor",
+            help_short="Check build dependencies (especially on Linux).",
+            help_long="Verifies toolchain, pkg-config modules, and Vulkan shader tools.",
+            *args, **kwargs)
+
+    def execute(self, args, pass_args, cwd):
+        print("Xenia build environment check\n")
+        if sys.platform == "win32":
+            print("On Windows, use Visual Studio 2022 + Vulkan SDK. Limited checks here.\n")
+        checks = []
+        if sys.platform != "win32":
+            checks.append(("clang", _doctor_check_clang()))
+            checks.append(("lld", _doctor_check_bin("ld.lld", "lld-20")))
+            checks.append(("cmake", _doctor_check_bin("cmake", "cmake")))
+            checks.append(("ninja", _doctor_check_bin("ninja", "ninja-build")))
+            checks.append(("python3", _doctor_check_bin("python3", "python3")))
+            checks.append(("pkg-config", _doctor_check_bin("pkg-config", "pkg-config")))
+            checks.append(("gtk+-x11-3.0", _doctor_check_pkg_config("gtk+-x11-3.0", "libgtk-3-dev")))
+            checks.append(("sdl2", _doctor_check_pkg_config("sdl2", "libsdl2-dev")))
+            checks.append(("xcb", _doctor_check_pkg_config("xcb", "libx11-xcb-dev")))
+            checks.append(("x11-xcb", _doctor_check_pkg_config("x11-xcb", "libx11-xcb-dev")))
+            setup_vulkan_sdk()
+            checks.append(("spirv-opt / VULKAN_SDK", _doctor_check_spirv_opt()))
+        else:
+            ok_vk = setup_vulkan_sdk()
+            checks.append(("Vulkan SDK", (ok_vk, "configured" if ok_vk else "install from https://vulkan.lunarg.com/")))
+
+        failed = 0
+        for name, (ok, detail) in checks:
+            status = "OK" if ok else "FAIL"
+            color = bcolors.OKCYAN if ok else bcolors.FAIL
+            print(f"  [{color}{status}{bcolors.ENDC}] {name}: {detail}")
+            if not ok:
+                failed += 1
+
+        if sys.platform != "win32" and failed:
+            print(
+                f"\n{bcolors.WARNING}Suggested Ubuntu 24.04 packages (match CI):{bcolors.ENDC}\n"
+                "  sudo apt-get install build-essential cmake ninja-build python3 pkg-config git \\\n"
+                "    mesa-vulkan-drivers libc++-dev libc++abi-dev libgtk-3-dev liblz4-dev \\\n"
+                "    libsdl2-dev libvulkan-dev libx11-xcb-dev libasound2-dev libfontconfig1-dev \\\n"
+                "    libfuse2 spirv-tools clang-20 lld-20 llvm-20\n"
+                "  export CC=clang-20 CXX=clang++-20\n"
+            )
+
+        print_status(ResultStatus.SUCCESS if failed == 0 else ResultStatus.FAILURE)
+        return 1 if failed else 0
 
 
 class SetupCommand(Command):

@@ -30,6 +30,12 @@ namespace xe {
 namespace cpu {
 namespace testing {
 
+// vmx128-fuzz sets this when vmx128_fuzz_rm_pass requests a fixed RN (-1 = default).
+inline int& GuestPpcFuzzRoundingMode() {
+  static int mode = -1;
+  return mode;
+}
+
 // VX-form AltiVec (primary opcode 4). `xo_low11` matches the low 11 bits used in
 // `ppc_opcode_table_gen.cc` (e.g. vadduhm = 0x040).
 inline uint32_t EncodeVxAltivec(uint32_t vd, uint32_t va, uint32_t vb,
@@ -76,12 +82,22 @@ class TestGuestPpcBlock {
   void Run(const std::vector<uint32_t>& guest_instructions,
            const std::function<void(ppc::PPCContext*)>& pre_call,
            const std::function<void(ppc::PPCContext*)>& post_call,
-           uint32_t entry_pc = 0x80000000);
+           uint32_t entry_pc = 0x80000000,
+           int rounding_mode = -1);
 
   Processor* processor() const { return processor_.get(); }
   Memory* memory() const { return memory_.get(); }
 
+  // Same estimate as the x64 scalar vrsqrtefp helper (vmx128-fuzz reference).
+  float ReferenceVrsqrtefpScalar(float x) const;
+  // Matches vrsqrtefp_vector_helper (three-zero-lane fast path + per-lane est).
+  vec128_t ReferenceVrsqrtefpVector(const vec128_t& vb) const;
+
+  // Drop cached guest module / JIT between fuzz opcode families (unwind table).
+  void ReleaseCompiledGuest();
+
  private:
+  void EnsureReferenceThreadState() const;
   void TeardownGuestIfPrepared();
 
   std::unique_ptr<Memory> memory_;

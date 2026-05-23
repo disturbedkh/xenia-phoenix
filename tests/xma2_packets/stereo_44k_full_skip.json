@@ -1,0 +1,10 @@
+{
+  "id": "stereo_44k_full_skip",
+  "mode": "structural",
+  "sample_rate_id": 2,
+  "sample_rate_hz": 44100,
+  "channels": 2,
+  "is_stereo": 1,
+  "packet_count": 1,
+  "first_frame_offset_bits": 32
+}

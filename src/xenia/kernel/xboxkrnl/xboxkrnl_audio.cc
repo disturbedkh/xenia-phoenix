@@ -7,6 +7,9 @@
  ******************************************************************************
  */
 
+#include <array>
+#include <atomic>
+
 #include "xenia/apu/audio_system.h"
 #include "xenia/emulator.h"
 #include "xenia/kernel/kernel_state.h"
@@ -19,6 +22,21 @@ DECLARE_uint32(audio_flag);
 namespace xe {
 namespace kernel {
 namespace xboxkrnl {
+namespace {
+
+constexpr size_t kVoiceCategoryCount = 32;
+
+std::array<float, kVoiceCategoryCount> MakeDefaultVoiceCategoryVolumes() {
+  std::array<float, kVoiceCategoryCount> volumes{};
+  volumes.fill(1.0f);
+  return volumes;
+}
+
+std::array<float, kVoiceCategoryCount> voice_category_volumes_ =
+    MakeDefaultVoiceCategoryVolumes();
+std::atomic<uint32_t> voice_category_change_mask_{0};
+
+}  // namespace
 
 dword_result_t XAudioGetSpeakerConfig_entry(lpdword_t config_ptr) {
   *config_ptr = cvars::audio_flag;
@@ -30,24 +48,33 @@ dword_result_t XAudioGetVoiceCategoryVolumeChangeMask_entry(
     lpunknown_t driver_ptr, lpdword_t out_ptr) {
   assert_true((driver_ptr.guest_address() & 0xFFFF0000) == 0x41550000);
 
-  xe::threading::NanoSleep(1000);
-
-  // Checking these bits to see if any voice volume changed.
-  // I think.
-  *out_ptr = 0;
+  // Return and clear pending category change bits (one bit per category).
+  *out_ptr = voice_category_change_mask_.exchange(0);
   return X_ERROR_SUCCESS;
 }
-DECLARE_XBOXKRNL_EXPORT2(XAudioGetVoiceCategoryVolumeChangeMask, kAudio, kStub,
+DECLARE_XBOXKRNL_EXPORT2(XAudioGetVoiceCategoryVolumeChangeMask, kAudio,
+                         kImplemented, kHighFrequency);
+
+dword_result_t XAudioGetVoiceCategoryVolume_entry(dword_t category,
+                                                  lpfloat_t out_ptr) {
+  const uint32_t index = static_cast<uint32_t>(category);
+  *out_ptr = index < kVoiceCategoryCount ? voice_category_volumes_[index]
+                                         : 1.0f;
+  return X_ERROR_SUCCESS;
+}
+DECLARE_XBOXKRNL_EXPORT2(XAudioGetVoiceCategoryVolume, kAudio, kImplemented,
                          kHighFrequency);
 
-dword_result_t XAudioGetVoiceCategoryVolume_entry(dword_t unk,
-                                                  lpfloat_t out_ptr) {
-  // Expects a floating point single. Volume %?
-  *out_ptr = 1.0f;
-
+dword_result_t XAudioSetVoiceCategoryVolume_entry(dword_t category,
+                                                  float_t volume) {
+  const uint32_t index = static_cast<uint32_t>(category);
+  if (index < kVoiceCategoryCount) {
+    voice_category_volumes_[index] = volume;
+    voice_category_change_mask_.fetch_or(1u << index);
+  }
   return X_ERROR_SUCCESS;
 }
-DECLARE_XBOXKRNL_EXPORT2(XAudioGetVoiceCategoryVolume, kAudio, kStub,
+DECLARE_XBOXKRNL_EXPORT2(XAudioSetVoiceCategoryVolume, kAudio, kImplemented,
                          kHighFrequency);
 
 dword_result_t XAudioEnableDucker_entry(dword_t unk) { return X_ERROR_SUCCESS; }

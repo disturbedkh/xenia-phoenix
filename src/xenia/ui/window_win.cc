@@ -967,6 +967,16 @@ void Win32Window::SetCursorAutoHideTimer() {
                         WT_EXECUTEINTIMERTHREAD | WT_EXECUTEONLYONCE);
 }
 
+void Win32Window::PostUiTask(std::function<void()> task) {
+  if (!hwnd_ || !task) {
+    return;
+  }
+  pending_ui_task_ = std::move(task);
+  if (!PostMessageW(hwnd_, kUserMessageRunPendingUiTask, 0, 0)) {
+    pending_ui_task_ = nullptr;
+  }
+}
+
 void Win32Window::AutoHideCursorTimerCallback(void* parameter,
                                               BOOLEAN timer_or_wait_fired) {
   if (!timer_or_wait_fired) {
@@ -1202,6 +1212,15 @@ LRESULT Win32Window::WndProc(HWND hWnd, UINT message, WPARAM wParam,
         }
         cursor_currently_auto_hidden_ = true;
         SetCursorIfFocusedOnClientArea(nullptr);
+      }
+      return 0;
+    } break;
+
+    case kUserMessageRunPendingUiTask: {
+      if (pending_ui_task_) {
+        std::function<void()> task = std::move(pending_ui_task_);
+        pending_ui_task_ = nullptr;
+        task();
       }
       return 0;
     } break;

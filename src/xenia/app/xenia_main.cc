@@ -14,17 +14,23 @@
 #include <string>
 #include <thread>
 
+#if !XE_PLATFORM_ANDROID
 #include "xenia/app/discord/discord_presence.h"
+#endif  // !XE_PLATFORM_ANDROID
 #include "xenia/app/emulator_window.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/debugging.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/obs/obs.h"
 #include "xenia/base/platform.h"
 #include "xenia/base/profiling.h"
 #include "xenia/base/threading.h"
 #include "xenia/config.h"
+#if !XE_PLATFORM_ANDROID
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/debug/ui/debug_window.h"
+#endif  // !XE_PLATFORM_ANDROID
 #include "xenia/emulator.h"
 #include "xenia/kernel/xam/xam_module.h"
 #include "xenia/ui/file_picker.h"
@@ -36,9 +42,12 @@
 
 // Available audio systems:
 #include "xenia/apu/nop/nop_audio_system.h"
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
 #include "xenia/apu/alsa/alsa_audio_system.h"
-#endif  // XE_PLATFORM_LINUX
+#endif
+#if XE_PLATFORM_ANDROID
+#include "xenia/apu/android/android_audio_system.h"
+#endif  // XE_PLATFORM_ANDROID
 #if !XE_PLATFORM_ANDROID
 #include "xenia/apu/sdl/sdl_audio_system.h"
 #endif  // !XE_PLATFORM_ANDROID
@@ -57,6 +66,9 @@
 
 // Available input drivers:
 #include "xenia/hid/nop/nop_hid.h"
+#if XE_PLATFORM_ANDROID
+#include "xenia/hid/android/android_hid.h"
+#endif  // XE_PLATFORM_ANDROID
 #if !XE_PLATFORM_ANDROID
 #include "xenia/hid/sdl/sdl_hid.h"
 #endif  // !XE_PLATFORM_ANDROID
@@ -69,6 +81,10 @@
 #define APU_OPTIONS "[any, nop, sdl, xaudio2]"
 #define GPU_OPTIONS "[any, d3d12, vulkan, null]"
 #define HID_OPTIONS "[any, nop, sdl, winkey, xinput]"
+#elif XE_PLATFORM_ANDROID
+#define APU_OPTIONS "[any, android, nop]"
+#define GPU_OPTIONS "[any, vulkan, null]"
+#define HID_OPTIONS "[any, android, nop]"
 #elif XE_PLATFORM_LINUX
 #define APU_OPTIONS "[any, alsa, nop, sdl]"
 #define GPU_OPTIONS "[any, vulkan, null]"
@@ -81,7 +97,12 @@
 
 DEFINE_string(apu, "any", "Audio system. Use: " APU_OPTIONS, "APU");
 DEFINE_string(gpu, "any", "Graphics system. Use: " GPU_OPTIONS, "GPU");
+#if XE_PLATFORM_WIN32
+// Default xinput on Windows: hid=any deliberately skips xinput (SDL-only path).
+DEFINE_string(hid, "xinput", "Input system. Use: " HID_OPTIONS, "HID");
+#else
 DEFINE_string(hid, "any", "Input system. Use: " HID_OPTIONS, "HID");
+#endif
 
 DEFINE_path(
     storage_root, "",
@@ -256,6 +277,7 @@ class EmulatorApp final : public xe::ui::WindowedApp {
     }
   };
 
+#if !XE_PLATFORM_ANDROID
   class DebugWindowClosedListener final : public xe::ui::WindowListener {
    public:
     explicit DebugWindowClosedListener(EmulatorApp& emulator_app)
@@ -266,6 +288,7 @@ class EmulatorApp final : public xe::ui::WindowedApp {
    private:
     EmulatorApp& emulator_app_;
   };
+#endif  // !XE_PLATFORM_ANDROID
 
   explicit EmulatorApp(xe::ui::WindowedAppContext& app_context);
 
@@ -278,13 +301,13 @@ class EmulatorApp final : public xe::ui::WindowedApp {
   void EmulatorThread();
   void ShutdownEmulatorThreadFromUIThread();
 
+#if !XE_PLATFORM_ANDROID
   DebugWindowClosedListener debug_window_closed_listener_;
+  std::unique_ptr<xe::debug::ui::DebugWindow> debug_window_;
+#endif  // !XE_PLATFORM_ANDROID
 
   std::unique_ptr<Emulator> emulator_;
   std::unique_ptr<EmulatorWindow> emulator_window_;
-
-  // Created on demand, used by the emulator.
-  std::unique_ptr<xe::debug::ui::DebugWindow> debug_window_;
 
   // Refreshing the emulator - placed after its dependencies.
   std::atomic<bool> emulator_thread_quit_requested_;
@@ -292,15 +315,21 @@ class EmulatorApp final : public xe::ui::WindowedApp {
   std::thread emulator_thread_;
 };
 
+#if !XE_PLATFORM_ANDROID
 void EmulatorApp::DebugWindowClosedListener::OnClosing(xe::ui::UIEvent& e) {
   EmulatorApp* emulator_app = &emulator_app_;
   emulator_app->emulator_->processor()->set_debug_listener(nullptr);
   emulator_app->debug_window_.reset();
 }
+#endif  // !XE_PLATFORM_ANDROID
 
 EmulatorApp::EmulatorApp(xe::ui::WindowedAppContext& app_context)
-    : xe::ui::WindowedApp(app_context, "xenia", "[Path to .iso/.xex]"),
-      debug_window_closed_listener_(*this) {
+    : xe::ui::WindowedApp(app_context, "xenia", "[Path to .iso/.xex]")
+#if !XE_PLATFORM_ANDROID
+      ,
+      debug_window_closed_listener_(*this)
+#endif
+{
   AddPositionalOption("target");
 }
 
@@ -317,9 +346,12 @@ std::unique_ptr<apu::AudioSystem> EmulatorApp::CreateAudioSystem(
 #if XE_PLATFORM_WIN32
   factory.Add<apu::xaudio2::XAudio2AudioSystem>("xaudio2");
 #endif  // XE_PLATFORM_WIN32
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
   factory.Add<apu::alsa::ALSAAudioSystem>("alsa");
-#endif  // XE_PLATFORM_LINUX
+#endif
+#if XE_PLATFORM_ANDROID
+  factory.Add<apu::android::AndroidAudioSystem>("android");
+#endif  // XE_PLATFORM_ANDROID
 #if !XE_PLATFORM_ANDROID
   factory.Add<apu::sdl::SDLAudioSystem>("sdl");
 #endif  // !XE_PLATFORM_ANDROID
@@ -450,6 +482,9 @@ std::vector<std::unique_ptr<hid::InputDriver>> EmulatorApp::CreateInputDrivers(
 #if XE_PLATFORM_WIN32
     factory.Add("xinput", xe::hid::xinput::Create);
 #endif  // XE_PLATFORM_WIN32
+#if XE_PLATFORM_ANDROID
+    factory.Add("android", xe::hid::android::Create);
+#endif  // XE_PLATFORM_ANDROID
 #if !XE_PLATFORM_ANDROID
     factory.Add("sdl", xe::hid::sdl::Create);
 #endif  // !XE_PLATFORM_ANDROID
@@ -476,6 +511,10 @@ bool EmulatorApp::OnInitialize() {
   Profiler::Initialize();
   Profiler::ThreadEnter("Main");
 
+#if !XE_PLATFORM_ANDROID
+  debug::PhoenixProbeEnsureStarted();
+#endif  // !XE_PLATFORM_ANDROID
+
   // Figure out where internal files and content should go.
   std::filesystem::path storage_root = cvars::storage_root;
   if (storage_root.empty()) {
@@ -484,7 +523,11 @@ bool EmulatorApp::OnInitialize() {
         !std::filesystem::exists(storage_root / "portable.txt")) {
       storage_root = xe::filesystem::GetUserFolder();
 #if XE_PLATFORM_ANDROID
-      // TODO(Triang3l): Point to the app's external storage "files" directory.
+      std::filesystem::path android_files =
+          xe::filesystem::GetAndroidApplicationFilesDirectory();
+      if (!android_files.empty()) {
+        storage_root = android_files;
+      }
 #else
       storage_root = storage_root / "Xenia";
 #endif
@@ -493,7 +536,10 @@ bool EmulatorApp::OnInitialize() {
   storage_root = std::filesystem::absolute(storage_root);
   XELOGI("Storage root: {}", storage_root);
 
+  obs::Init();
   config::SetupConfig(storage_root);
+  obs::ApplyPresetFromCvar();
+  obs::LogObservabilityBlock();
 
 #if XE_ARCH_AMD64 == 1
   amd64::InitFeatureFlags();
@@ -517,8 +563,13 @@ bool EmulatorApp::OnInitialize() {
   std::filesystem::path cache_root = cvars::cache_root;
   if (cache_root.empty()) {
     cache_root = storage_root / "cache_host";
-    // TODO(Triang3l): Point to the app's external storage "cache" directory on
-    // Android.
+#if XE_PLATFORM_ANDROID
+    std::filesystem::path android_cache =
+        xe::filesystem::GetAndroidApplicationCacheDirectory();
+    if (!android_cache.empty()) {
+      cache_root = android_cache;
+    }
+#endif
   } else {
     // If content root isn't an absolute path, then it should be relative to the
     // storage root.
@@ -529,10 +580,12 @@ bool EmulatorApp::OnInitialize() {
   cache_root = std::filesystem::absolute(cache_root);
   XELOGI("Host cache root: {}", cache_root);
 
+#if !XE_PLATFORM_ANDROID
   if (cvars::discord) {
     discord::DiscordPresence::Initialize();
     discord::DiscordPresence::NotPlaying();
   }
+#endif  // !XE_PLATFORM_ANDROID
 
   // Create the emulator but don't initialize so we can setup the window.
   emulator_ =
@@ -561,9 +614,11 @@ bool EmulatorApp::OnInitialize() {
 void EmulatorApp::OnDestroy() {
   ShutdownEmulatorThreadFromUIThread();
 
+#if !XE_PLATFORM_ANDROID
   if (cvars::discord) {
     discord::DiscordPresence::Shutdown();
   }
+#endif  // !XE_PLATFORM_ANDROID
 
   Profiler::Dump();
   // The profiler needs to shut down before the graphics context.
@@ -571,6 +626,7 @@ void EmulatorApp::OnDestroy() {
 
   // Write all cvar overrides to the config.
   config::SaveConfig();
+  obs::Shutdown();
 
   // TODO(DrChat): Remove this code and do a proper exit.
   XELOGI("Cheap-skate exit!");
@@ -686,8 +742,7 @@ void EmulatorApp::EmulatorThread() {
     fs->RegisterSymbolicLink("MU:", "\\MU");
   }
 
-  // Set a debug handler.
-  // This will respond to debugging requests so we can open the debug UI.
+#if !XE_PLATFORM_ANDROID
   if (cvars::debug) {
     emulator_->processor()->set_debug_listener_request_handler(
         [this](xe::cpu::Processor* processor) {
@@ -700,16 +755,18 @@ void EmulatorApp::EmulatorThread() {
             debug_window_->window()->AddListener(
                 &debug_window_closed_listener_);
           });
-          // If failed to enqueue the UI thread call, this will just be null.
           return debug_window_.get();
         });
   }
+#endif  // !XE_PLATFORM_ANDROID
 
   emulator_->on_launch.AddListener([&](auto title_id, const auto& game_title) {
+#if !XE_PLATFORM_ANDROID
     if (cvars::discord) {
       discord::DiscordPresence::PlayingTitle(
           game_title.empty() ? "Unknown Title" : std::string(game_title));
     }
+#endif  // !XE_PLATFORM_ANDROID
     app_context().CallInUIThread([this]() { emulator_window_->UpdateTitle(); });
     emulator_thread_event_->Set();
   });
@@ -726,9 +783,11 @@ void EmulatorApp::EmulatorThread() {
   });
 
   emulator_->on_terminate.AddListener([]() {
+#if !XE_PLATFORM_ANDROID
     if (cvars::discord) {
       discord::DiscordPresence::NotPlaying();
     }
+#endif  // !XE_PLATFORM_ANDROID
   });
 
   // Enable emulator input now that the emulator is properly loaded.
@@ -742,7 +801,9 @@ void EmulatorApp::EmulatorThread() {
   }
 
   if (!path.empty()) {
-    // Normalize the path and make absolute.
+#if XE_PLATFORM_ANDROID
+    path = xe::filesystem::StageAndroidLaunchPath(path);
+#endif
     auto abs_path = std::filesystem::absolute(path);
 
     result = app_context().CallInUIThread(

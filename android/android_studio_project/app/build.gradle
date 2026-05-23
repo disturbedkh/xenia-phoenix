@@ -3,75 +3,49 @@ plugins {
 }
 
 android {
-    compileSdkVersion 33
-    ndkVersion '25.0.8775105'
+    namespace 'jp.xenia.emulator'
+    compileSdk 33
+    ndkVersion '26.1.10909125'
 
     defaultConfig {
         applicationId 'jp.xenia.emulator'
-        // 24 (7.0) - Vulkan.
-        minSdkVersion 24
-        targetSdkVersion 33
+        minSdk 26
+        targetSdk 33
         versionCode 1
         versionName 'Prototype'
+
         externalNativeBuild {
-            ndkBuild {
-                arguments 'NDK_APPLICATION_MK:=../../../build/xenia.Application.mk',
-                        'PREMAKE_ANDROIDNDK_PLATFORMS:=Android-ARM64',
-                        'PREMAKE_ANDROIDNDK_PLATFORMS+=Android-x86_64',
-                        // ndk.jobs doesn't work as of Gradle 7.1.0.
-                        "-j${Runtime.runtime.availableProcessors()}",
-                        // Work around "Bad file descriptor" on Windows on NDK r22+.
-                        '--output-sync=none'
-                // For the app, don't build the executables designed for running from a terminal.
-                // To build the executables, run ndk-build manually.
+            cmake {
+                arguments '-DANDROID_STL=c++_static',
+                        '-DXENIA_BUILD_TESTS=OFF',
+                        '-DXENIA_BUILD_MISC=OFF'
                 targets 'xenia-app'
             }
         }
+
         ndk {
             abiFilters 'arm64-v8a', 'x86_64'
-            stl 'c++_static'
         }
     }
 
     buildTypes {
         release {
             externalNativeBuild {
-                ndkBuild {
-                    arguments 'PREMAKE_ANDROIDNDK_CONFIGURATIONS:=Release'
+                cmake {
+                    arguments '-DCMAKE_BUILD_TYPE=Release'
                 }
             }
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
             applicationIdSuffix '.debug'
             debuggable true
             externalNativeBuild {
-                ndkBuild {
-                    arguments 'PREMAKE_ANDROIDNDK_CONFIGURATIONS:=Debug'
+                cmake {
+                    arguments '-DCMAKE_BUILD_TYPE=Debug'
                 }
             }
-        }
-        checked {
-            applicationIdSuffix '.checked'
-            debuggable true
-            externalNativeBuild {
-                ndkBuild {
-                    arguments 'PREMAKE_ANDROIDNDK_CONFIGURATIONS:=Checked'
-                }
-            }
-        }
-    }
-
-    flavorDimensions 'distribution'
-    productFlavors {
-        github {
-            dimension 'distribution'
-            applicationIdSuffix '.github'
-        }
-        googlePlay {
-            dimension 'distribution'
-            // TODO(Triang3l): Provide a signing config for core contributors only.
         }
     }
 
@@ -81,8 +55,9 @@ android {
     }
 
     externalNativeBuild {
-        ndkBuild {
-            path file('../../../build/xenia.wks.Android.mk')
+        cmake {
+            path file('../../../CMakeLists.txt')
+            version '3.22.1'
         }
     }
 }

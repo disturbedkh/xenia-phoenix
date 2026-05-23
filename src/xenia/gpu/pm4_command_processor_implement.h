@@ -603,6 +603,7 @@ XE_COLD
 bool COMMAND_PROCESSOR::HitUnimplementedOpcode(uint32_t opcode,
                                                uint32_t count) XE_RESTRICT {
   XELOGGPU("Unimplemented GPU OPCODE: 0x{:02X}\t\tCOUNT: {}\n", opcode, count);
+  ::xe::obs_pm4_bridge::NotifyUnimplementedOpcode(opcode, count);
   assert_always();
   reader_.AdvanceRead(count * sizeof(uint32_t));
   trace_writer_.WritePacketEnd();

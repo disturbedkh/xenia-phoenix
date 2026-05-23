@@ -1,0 +1,31 @@
+# Copy to %USERPROFILE%\Documents\Xenia\xenia-canary.config.toml
+# Or place beside xenia_canary.exe with portable.txt for portable mode.
+
+[Config]
+defaults_date = 0
+
+[Logging]
+# Observability v2 preset (overridden by CLI --log_preset=develop for triage).
+log_preset = "play"
+log_level = 2
+log_mask = 0
+# Preferred alias (same semantics as log_mask):
+log_disable_mask = 0
+log_file = ""
+log_to_stdout = true
+
+# Per-channel overrides: Gpu.Edram=debug,Kernel.Stub=info
+log_channel_overrides = ""
+
+# Unified JSONL (preset sets path when title is known).
+obs_events_log = ""
+obs_guest_log = ""
+
+[CPU]
+debugprint_trap_log = false
+
+[Kernel]
+kernel_stub_hit_log = ""
+
+[Debug]
+phoenix_debug_port = 0

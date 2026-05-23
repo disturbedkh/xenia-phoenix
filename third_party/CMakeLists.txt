@@ -112,7 +112,7 @@ add_library(discord-rpc STATIC
 )
 if(XE_TARGET_X86_64)
   target_compile_definitions(discord-rpc PRIVATE RAPIDJSON_SSE42)
-elseif(XE_TARGET_ARM64)
+elseif(XE_TARGET_AARCH64)
   target_compile_definitions(discord-rpc PRIVATE RAPIDJSON_NEON)
 endif()
 target_include_directories(discord-rpc PUBLIC discord-rpc/include PRIVATE rapidjson/include)
@@ -144,10 +144,9 @@ add_library(fmt STATIC
 target_include_directories(fmt PUBLIC fmt/include)
 
 # ==============================================================================
-# glslang-spirv (not needed on macOS — no Vulkan/SPIR-V backend)
+# glslang-spirv (SPIR-V; used by Vulkan guest + UI paths on all desktop targets)
 # ==============================================================================
-if(NOT APPLE)
-  file(GLOB _glslang_spirv_cpp "glslang/SPIRV/*.cpp")
+file(GLOB _glslang_spirv_cpp "glslang/SPIRV/*.cpp")
   file(GLOB _glslang_spirv_h "glslang/SPIRV/*.h")
   file(GLOB _glslang_spirv_hpp "glslang/SPIRV/*.hpp11")
   list(FILTER _glslang_spirv_cpp EXCLUDE REGEX "GlslangToSpv\\.cpp$")
@@ -157,8 +156,7 @@ if(NOT APPLE)
     ${_glslang_spirv_hpp}
     glslang/glslang/Include/visibility.h
   )
-  target_include_directories(glslang-spirv PUBLIC glslang)
-endif()
+target_include_directories(glslang-spirv PUBLIC glslang)
 
 # ==============================================================================
 # imgui

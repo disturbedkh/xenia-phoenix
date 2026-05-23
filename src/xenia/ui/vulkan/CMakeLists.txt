@@ -16,6 +16,9 @@ if(XENIA_BUILD_MISC)
     set_target_properties(xenia-ui-window-vulkan-demo PROPERTIES WIN32_EXECUTABLE TRUE)
     target_sources(xenia-ui-window-vulkan-demo PRIVATE
       ${PROJECT_SOURCE_DIR}/src/xenia/ui/windowed_app_main_win.cc)
+  elseif(APPLE)
+    target_sources(xenia-ui-window-vulkan-demo PRIVATE
+      ${PROJECT_SOURCE_DIR}/src/xenia/ui/windowed_app_main_mac.mm)
   else()
     target_sources(xenia-ui-window-vulkan-demo PRIVATE
       ${PROJECT_SOURCE_DIR}/src/xenia/ui/windowed_app_main_posix.cc)

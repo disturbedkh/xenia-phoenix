@@ -14,5 +14,5 @@ endif()
 target_include_directories(xenia-cpu-backend-x64 PRIVATE
   ${PROJECT_SOURCE_DIR}/third_party/capstone/include
 )
-target_link_libraries(xenia-cpu-backend-x64 PUBLIC capstone fmt xenia-base xenia-cpu)
+target_link_libraries(xenia-cpu-backend-x64 PUBLIC capstone fmt xenia-base xenia-cpu xenia-obs)
 xe_target_defaults(xenia-cpu-backend-x64)

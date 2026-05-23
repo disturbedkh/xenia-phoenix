@@ -11,6 +11,7 @@
 #include "xenia/kernel/xthread.h"
 
 #include "xenia/base/logging.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/emulator.h"
 #include "xenia/xbox.h"
 
@@ -576,6 +577,7 @@ X_HRESULT XmpApp::DispatchMessageSync(uint32_t message, uint32_t buffer_ptr,
       return X_E_SUCCESS;
     }
   }
+  LogKernelStubHit("xam", "XmpApp::DispatchMessage", "unimplemented message");
   XELOGE(
       "Unimplemented XMP message app={:08X}, msg={:08X}, arg1={:08X}, "
       "arg2={:08X}",

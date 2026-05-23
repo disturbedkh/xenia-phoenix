@@ -234,7 +234,7 @@ dword_result_t XamGetSystemVersion_entry() {
   // 0x20096B00
   return 0;
 }
-DECLARE_XAM_EXPORT1(XamGetSystemVersion, kNone, kStub);
+DECLARE_XAM_EXPORT1(XamGetSystemVersion, kNone, kImplemented);
 
 void XCustomRegisterDynamicActions_entry() {
   // ???
@@ -410,13 +410,21 @@ void XamLoaderLaunchTitle_entry(lpstring_t raw_name_ptr, dword_t flags) {
           auto dialog = xe::ui::ImGuiDialog::ShowMessageBox(
               imgui_drawer, title.c_str(), message.c_str());
 
+#if XE_PLATFORM_ANDROID
+          std::thread([dialog]() {
+#else
           std::jthread([dialog]() {
+#endif
             while (!dialog->IsClosing()) {
               std::this_thread::yield();
             }
 
             std::quick_exit(0);
+#if XE_PLATFORM_ANDROID
           }).detach();
+#else
+          }).detach();
+#endif
         });
   }
 

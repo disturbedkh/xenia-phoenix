@@ -64,6 +64,8 @@ if(WIN32)
   set(XE_PLATFORM_NAME "Windows")
 elseif(APPLE)
   set(XE_PLATFORM_NAME "macOS")
+elseif(ANDROID)
+  set(XE_PLATFORM_NAME "Android")
 else()
   set(XE_PLATFORM_NAME "Linux")
 endif()
@@ -82,6 +84,18 @@ file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/scratch")
 # Python for shader compilation scripts
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+# version.h in CMAKE_BINARY_DIR (trace_writer, etc.)
+execute_process(
+  COMMAND ${Python3_EXECUTABLE}
+    ${PROJECT_SOURCE_DIR}/tools/build/generate_version_h.py
+    ${CMAKE_BINARY_DIR}
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  RESULT_VARIABLE _xe_version_h_result
+)
+if(NOT _xe_version_h_result EQUAL 0)
+  message(FATAL_ERROR "generate_version_h.py failed (${_xe_version_h_result})")
+endif()
+
 # Include helpers
 include(cmake/XeniaHelpers.cmake)
 
@@ -94,6 +108,7 @@ include_directories(
 # Third-party headers as SYSTEM to suppress warnings under -Werror
 include_directories(SYSTEM
   ${PROJECT_SOURCE_DIR}/third_party
+  ${PROJECT_SOURCE_DIR}/third_party/Vulkan-Headers/include
 )
 
 # Global defines
@@ -128,11 +143,13 @@ if(MSVC)
     _CRT_SECURE_NO_WARNINGS
     WIN32
     _WIN64=1
-    _AMD64=1
     UNICODE
     _UNICODE
     IMGUI_DISABLE_OBSOLETE_FUNCTIONS
   )
+  if(XE_TARGET_X86_64)
+    add_compile_definitions(_AMD64=1)
+  endif()
   add_link_options(
     /ignore:4006  # Ignores complaints about empty obj files
     /ignore:4221
@@ -234,6 +251,7 @@ else()
   if(APPLE)
     # macOS-specific settings
     set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "Minimum macOS version")
+    add_compile_definitions(VK_USE_PLATFORM_METAL_EXT)
     add_compile_options(
       $<$<COMPILE_LANGUAGE:CXX>:-Wno-shorten-64-to-32>
       -Wno-deprecated-declarations
@@ -244,19 +262,62 @@ else()
       "-framework CoreFoundation"
       "-framework Foundation"
       "-framework IOKit"
+      "-framework Cocoa"
+      "-framework QuartzCore"
+      "-framework Metal"
       dl
       pthread
     )
+  elseif(ANDROID)
+    # Android NDK (Clang). API 26+ (C++20 <ranges>, AAudio); Vulkan on API 24+ devices.
+    if(XE_TARGET_X86_64)
+      add_compile_options(-mavx)
+    endif()
+    add_compile_options(-fvisibility=hidden)
+    add_compile_options(
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-switch>
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-attributes>
+    )
+    # libc++ hides C++20 headers (e.g. <ranges>) below API 26 unless disabled.
+    add_compile_definitions(_LIBCPP_DISABLE_AVAILABILITY)
+    link_libraries(android log dl)
+    # Per-configuration flags (no LTO on Android — NDK + thin LTO is fragile in CI).
+    add_compile_definitions(
+      $<$<CONFIG:Checked>:DEBUG>
+      $<$<CONFIG:Debug>:DEBUG>
+      $<$<CONFIG:Debug>:_NO_DEBUG_HEAP=1>
+      $<$<CONFIG:Release>:NDEBUG>
+      $<$<CONFIG:Release>:_NO_DEBUG_HEAP=1>
+    )
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # GTK3 via pkg-config
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19")
+        message(FATAL_ERROR
+          "Clang 19 or newer is required on Linux (found ${CMAKE_CXX_COMPILER_VERSION}). "
+          "Install clang-20 and lld-20, or set CC/CXX to a newer toolchain.")
+      endif()
+    endif()
+
+    # GTK3 + X11 stack via pkg-config
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-x11-3.0)
-    include_directories(${GTK3_INCLUDE_DIRS})
+    pkg_check_modules(XCB REQUIRED xcb)
+    pkg_check_modules(X11_XCB REQUIRED x11-xcb)
+    find_package(X11 REQUIRED)
+    include_directories(
+      ${GTK3_INCLUDE_DIRS}
+      ${XCB_INCLUDE_DIRS}
+      ${X11_XCB_INCLUDE_DIRS}
+      ${X11_INCLUDE_DIR}
+    )
     link_directories(${GTK3_LIBRARY_DIRS})
     add_compile_options(${GTK3_CFLAGS_OTHER})
 
-    # Global Linux libraries
-    link_libraries(stdc++fs dl lz4 pthread rt)
+    # Global Linux libraries (X11 used by xenia-ui and xenia-app)
+    link_libraries(
+      stdc++fs dl lz4 pthread rt
+      ${X11_LIBRARIES} ${XCB_LIBRARIES} ${X11_XCB_LIBRARIES}
+    )
 
     # Link groups for executables (resolves circular deps)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--start-group")
@@ -291,17 +352,20 @@ else()
   )
   add_compile_options($<$<CONFIG:Release>:-O3>)
   # Link-time optimization (use lld and llvm-ar/ranlib to avoid system
-  # linker/archiver LTO plugin version mismatch with clang's bitcode)
-  add_compile_options($<$<CONFIG:Release>:-flto=thin>)
-  add_link_options($<$<CONFIG:Release>:-flto=thin>)
-  add_link_options($<$<CONFIG:Release>:-fuse-ld=lld>)
-  find_program(LLVM_AR NAMES llvm-ar)
-  find_program(LLVM_RANLIB NAMES llvm-ranlib)
-  if(LLVM_AR)
-    set(CMAKE_AR "${LLVM_AR}" CACHE FILEPATH "" FORCE)
-  endif()
-  if(LLVM_RANLIB)
-    set(CMAKE_RANLIB "${LLVM_RANLIB}" CACHE FILEPATH "" FORCE)
+  # linker/archiver LTO plugin version mismatch with clang's bitcode).
+  # Skip on Android — NDK thin LTO is fragile in CI.
+  if(NOT ANDROID)
+    add_compile_options($<$<CONFIG:Release>:-flto=thin>)
+    add_link_options($<$<CONFIG:Release>:-flto=thin>)
+    add_link_options($<$<CONFIG:Release>:-fuse-ld=lld>)
+    find_program(LLVM_AR NAMES llvm-ar)
+    find_program(LLVM_RANLIB NAMES llvm-ranlib)
+    if(LLVM_AR)
+      set(CMAKE_AR "${LLVM_AR}" CACHE FILEPATH "" FORCE)
+    endif()
+    if(LLVM_RANLIB)
+      set(CMAKE_RANLIB "${LLVM_RANLIB}" CACHE FILEPATH "" FORCE)
+    endif()
   endif()
   # No symbols in release on non-Windows
   string(REPLACE "-g" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")

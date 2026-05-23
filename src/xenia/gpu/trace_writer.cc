@@ -18,6 +18,8 @@
 #include "xenia/base/assert.h"
 #include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/obs/obs.h"
+#include "xenia/base/obs/obs_trace_sidecar.h"
 #include "xenia/base/string.h"
 #include "xenia/gpu/registers.h"
 #include "xenia/gpu/xenos.h"
@@ -44,6 +46,9 @@ bool TraceWriter::Open(const std::filesystem::path& path, uint32_t title_id) {
     return false;
   }
 
+  trace_path_ = canonical_path;
+  obs_seq_begin_ = obs::CurrentEventSeq() + 1;
+
   // Write header first. Must be at the top of the file.
   TraceHeader header;
   header.version = kTraceFormatVersion;
@@ -69,6 +74,14 @@ void TraceWriter::Close() {
     fflush(file_);
     fclose(file_);
     file_ = nullptr;
+
+    if (!trace_path_.empty()) {
+      obs::WriteTraceObsSidecar(trace_path_, obs_seq_begin_,
+                                obs::CurrentEventSeq(),
+                                obs::CurrentFrame());
+      trace_path_.clear();
+      obs_seq_begin_ = 0;
+    }
   }
 }
 

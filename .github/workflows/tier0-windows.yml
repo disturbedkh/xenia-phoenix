@@ -1,3 +1,5 @@
+# Full Tier0 gate (same steps as tier0-differential + full parallel build).
+# First-green: run manually after landing tier0-differential on main.
 name: Tier0 Windows (manual)
 
 on:
@@ -18,14 +20,56 @@ jobs:
       - name: Build Release
         run: cmake --build build --config Release --parallel
 
+      - name: Build GPU trace-dump (D3D12)
+        run: cmake --build build --config Release --target xenia-gpu-d3d12-trace-dump
+
       - name: Run CPU tests
         shell: pwsh
         run: |
           Set-Location build/bin/Windows
           ./xenia-cpu-tests.exe
 
+      # PR/CI: 50k smoke only. Release/roadmap gate = local 1M sweep via
+      # tools/tier0/run_vmx128_full_sweep.ps1 → commit docs/vmx128_fuzz_report.{json,md}
       - name: Run vmx128-fuzz (smoke)
         shell: pwsh
         run: |
           Set-Location build/bin/Windows
-          ./vmx128-fuzz.exe --vmx128_fuzz_iters=500
+          ./vmx128-fuzz.exe --vmx128_fuzz_iters=50000 --vmx128_fuzz_report_out=vmx128_fuzz_report.json
+
+      - name: Run xma2-diff (fixture smoke)
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows
+          ./xma2-diff.exe --xma2_diff_fixtures_dir=../../../tests/xma2_packets --xma2_diff_report_out=../../../tests/xma2_packets/golden/last_report.json
+
+      - name: GPU trace replay (synthetic corpus, D3D12 RTV/ROV)
+        shell: pwsh
+        run: |
+          python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12
+
+      - name: Aggregate kernel stub fixture JSONL
+        shell: pwsh
+        run: |
+          python tools/tier0/aggregate_stub_hits.py tests/kernel_stub/stub_hits_fixture.jsonl --out tests/kernel_stub/stub_hit_summary.json
+
+      - name: phoenixctl obs unit tests
+        run: |
+          pip install -e tools/phoenixctl[dev]
+          python -m pytest tools/phoenixctl/tests -q
+
+      - name: xenia-obs preset test
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows/Release
+          if (Test-Path ./xenia-obs-preset-test.exe) { ./xenia-obs-preset-test.exe }
+
+      - name: Upload vmx128-fuzz artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmx128-fuzz-report
+          path: |
+            build/bin/Windows/vmx128_fuzz_report.json
+            build/bin/Windows/vmx128_divergences.jsonl
+          if-no-files-found: ignore

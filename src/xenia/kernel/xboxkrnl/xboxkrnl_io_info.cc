@@ -8,6 +8,7 @@
  */
 
 #include "xenia/base/logging.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/info/file.h"
 #include "xenia/kernel/info/volume.h"
 #include "xenia/kernel/kernel_state.h"
@@ -95,6 +96,7 @@ dword_result_t NtQueryInformationFile_entry(
       // SW that uses this seems to use the output as a way of uniquely
       // identifying a file for sorting/lookup so we can just give it an
       // arbitrary 4 byte integer most of the time
+      LogKernelStubHit("xboxkrnl", "XFileSectorInformation", "stub");
       XELOGW("Stub XFileSectorInformation!");
       auto info = info_ptr.as<uint32_t*>();
       size_t fname_hash = xe::memory::hash_combine(82589933LL, file->path());
@@ -258,6 +260,8 @@ dword_result_t NtSetInformationFile_entry(
       break;
     }
     case XFileAllocationInformation: {
+      LogKernelStubHit("xboxkrnl", "XFileAllocationInformation",
+                       "ignoring alloc");
       XELOGW("NtSetInformationFile ignoring alloc");
       out_length = 8;
       break;
@@ -315,6 +319,8 @@ uint32_t GetQueryVolumeInfoMinimumLength(uint32_t info_class) {
       return sizeof(X_FILE_FS_ATTRIBUTE_INFORMATION);
     // TODO(gibbed): structures to get the size of.
     default:
+      LogKernelStubHit("xboxkrnl", "NtQueryVolumeInfoClass",
+                       "unimplemented info class");
       XELOGW("Unimplemented Info Class: 0x{:08x}", info_class);
       return 0;
   }
@@ -384,6 +390,7 @@ dword_result_t NtQueryVolumeInformationFile_entry(
     case XFileFsDeviceInformation: {
       auto info = info_ptr.as<X_FILE_FS_DEVICE_INFORMATION*>();
       auto file_device = file->device();
+      LogKernelStubHit("xboxkrnl", "XFileFsDeviceInformation", "stub");
       XELOGW("Stub XFileFsDeviceInformation!");
       info->device_type =
           FILE_DEVICE_UNKNOWN;  // 415608D8 checks for FILE_DEVICE_EHSTOR;

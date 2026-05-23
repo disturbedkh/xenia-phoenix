@@ -362,6 +362,25 @@ X_STATUS Emulator::TerminateTitle() {
   return X_STATUS_SUCCESS;
 }
 
+X_STATUS Emulator::RecreateGraphicsSystem() {
+  if (is_title_open()) {
+    XELOGW(
+        "RecreateGraphicsSystem: close the current title before reloading the "
+        "GPU backend.");
+    return X_STATUS_UNSUCCESSFUL;
+  }
+  if (!graphics_system_) {
+    return X_STATUS_UNSUCCESSFUL;
+  }
+  XELOGI("RecreateGraphicsSystem: shutting down graphics system...");
+  graphics_system_->Shutdown();
+  graphics_system_.reset();
+  XELOGW(
+      "RecreateGraphicsSystem: full GPU reload requires restarting "
+      "xenia_canary after changing draw_resolution_scale or gpu backend.");
+  return X_STATUS_NOT_IMPLEMENTED;
+}
+
 const std::unique_ptr<vfs::Device> Emulator::CreateVfsDevice(
     const std::filesystem::path& path, const std::string_view mount_path) {
   // Must check if the type has changed e.g. XamSwapDisc

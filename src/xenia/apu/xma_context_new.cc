@@ -8,9 +8,12 @@
 */
 
 #include "xenia/apu/xma_context_new.h"
+#include "xenia/apu/util/apu_trace.h"
 #include "xenia/apu/xma_helpers.h"
 
+#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/platform.h"
 #include "xenia/base/profiling.h"
 
@@ -58,12 +61,16 @@ int XmaContextNew::Setup(uint32_t id, Memory* memory, uint32_t guest_ptr) {
   av_codec_ = avcodec_find_decoder(AV_CODEC_ID_XMAFRAMES);
   if (!av_codec_) {
     XELOGE("XmaContext {}: Codec not found", id);
+    obs::Invariant("XmaCodecNotFound", obs::ChannelId::kApuXma, true,
+                   fmt::format("id={}", id));
     return 1;
   }
 
   av_context_ = avcodec_alloc_context3(av_codec_);
   if (!av_context_) {
     XELOGE("XmaContext {}: Couldn't allocate context", id);
+    obs::Invariant("XmaAllocContextFail", obs::ChannelId::kApuXma, true,
+                   fmt::format("id={}", id));
     return 1;
   }
 
@@ -74,6 +81,8 @@ int XmaContextNew::Setup(uint32_t id, Memory* memory, uint32_t guest_ptr) {
   av_frame_ = av_frame_alloc();
   if (!av_frame_) {
     XELOGE("XmaContext {}: Couldn't allocate frame", id);
+    obs::Invariant("XmaAllocFrameFail", obs::ChannelId::kApuXma, true,
+                   fmt::format("id={}", id));
     return 1;
   }
 
@@ -425,6 +434,10 @@ void XmaContextNew::Decode(XMA_CONTEXT_DATA* data) {
   if (packet_index == -1) {
     XELOGE("XmaContext {}: Invalid packet index. Input read offset: {}", id(),
            data->input_buffer_read_offset);
+    const uint32_t read_offset = data->input_buffer_read_offset;
+    obs::Invariant("XmaInvalidPacketIndex", obs::ChannelId::kApuXma, true,
+                   fmt::format("id={} offset={}", id(), read_offset));
+    LogXmaDivergence(id(), "Decode", "invalid packet index");
     return;
   }
 
@@ -523,6 +536,9 @@ void XmaContextNew::Decode(XMA_CONTEXT_DATA* data) {
 
   if (bits_to_copy == 0) {
     XELOGE("XmaContext {}: There is no bits to copy!", id());
+    obs::Invariant("XmaNoBitsToCopy", obs::ChannelId::kApuXma, true,
+                   fmt::format("id={}", id()));
+    LogXmaDivergence(id(), "Decode", "no bits to copy");
     SwapInputBuffer(data);
     return;
   }
@@ -863,12 +879,10 @@ const kPacketInfo XmaContextNew::GetPacketInfo(uint8_t* packet,
 
 int16_t XmaContextNew::GetPacketNumber(size_t size, size_t bit_offset) {
   if (bit_offset < kBitsPerPacketHeader) {
-    assert_always();
     return -1;
   }
 
   if (bit_offset >= (size << 3)) {
-    assert_always();
     return -1;
   }
 
@@ -926,6 +940,7 @@ bool XmaContextNew::DecodePacket(AVCodecContext* av_context,
     av_strerror(ret, errbuf, sizeof(errbuf));
     XELOGE("XmaContext {}: Error sending packet for decoding: {} ({})", id(),
            errbuf, ret);
+    LogXmaDivergence(id(), "DecodePacket", "send_packet failed");
     return false;
   }
   ret = avcodec_receive_frame(av_context, av_frame);
@@ -938,6 +953,7 @@ bool XmaContextNew::DecodePacket(AVCodecContext* av_context,
     char errbuf[AV_ERROR_MAX_STRING_SIZE];
     av_strerror(ret, errbuf, sizeof(errbuf));
     XELOGE("XmaContext {}: Error during decoding: {} ({})", id(), errbuf, ret);
+    LogXmaDivergence(id(), "DecodePacket", "receive_frame failed");
     return false;
   }
   return true;

@@ -105,7 +105,7 @@ void XNotifyPositionUI_entry(dword_t position) {
   kernel_state()->notification_position_ = position;
   // Ignored.
 }
-DECLARE_XAM_EXPORT1(XNotifyPositionUI, kNone, kStub);
+DECLARE_XAM_EXPORT1(XNotifyPositionUI, kNone, kImplemented);
 
 dword_result_t XNotifyBroadcast_entry(dword_t notification, dword_t data) {
   kernel_state()->BroadcastNotification(notification, data);

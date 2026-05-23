@@ -10,6 +10,7 @@
 #include "xenia/ui/vulkan/spirv_tools_context.h"
 
 #include <cstdlib>
+#include <filesystem>
 
 #include "xenia/base/logging.h"
 #include "xenia/base/platform.h"
@@ -26,22 +27,34 @@ namespace vulkan {
 
 bool SpirvToolsContext::Initialize(unsigned int spirv_version) {
   const char* vulkan_sdk_env = std::getenv("VULKAN_SDK");
+#if XE_PLATFORM_LINUX
+  if (vulkan_sdk_env) {
+    std::filesystem::path vulkan_sdk_path(vulkan_sdk_env);
+    library_ = dlopen((vulkan_sdk_path / "lib/libSPIRV-Tools-shared.so").c_str(),
+                      RTLD_NOW | RTLD_LOCAL);
+    if (!library_) {
+      library_ = dlopen(
+          (vulkan_sdk_path / "bin/libSPIRV-Tools-shared.so").c_str(),
+          RTLD_NOW | RTLD_LOCAL);
+    }
+  }
+  if (!library_) {
+    library_ = dlopen("libSPIRV-Tools-shared.so", RTLD_NOW | RTLD_LOCAL);
+  }
+  if (!library_) {
+    XELOGE(
+        "SPIRV-Tools: Failed to load libSPIRV-Tools-shared.so. Set VULKAN_SDK "
+        "to the LunarG SDK or install libspirv-tools (see docs/building.md).");
+    Shutdown();
+    return false;
+  }
+#elif XE_PLATFORM_WIN32
   if (!vulkan_sdk_env) {
     XELOGE("SPIRV-Tools: Failed to get the VULKAN_SDK environment variable");
     Shutdown();
     return false;
   }
   std::filesystem::path vulkan_sdk_path(vulkan_sdk_env);
-#if XE_PLATFORM_LINUX
-  library_ = dlopen((vulkan_sdk_path / "bin/libSPIRV-Tools-shared.so").c_str(),
-                    RTLD_NOW | RTLD_LOCAL);
-  if (!library_) {
-    XELOGE(
-        "SPIRV-Tools: Failed to load $VULKAN_SDK/bin/libSPIRV-Tools-shared.so");
-    Shutdown();
-    return false;
-  }
-#elif XE_PLATFORM_WIN32
   library_ = LoadLibraryW(
       (vulkan_sdk_path / "Bin/SPIRV-Tools-shared.dll").wstring().c_str());
   if (!library_) {

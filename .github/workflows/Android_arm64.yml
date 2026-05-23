@@ -1,0 +1,57 @@
+name: Android arm64
+
+on:
+  workflow_call:
+  push:
+    branches: [canary_experimental, main]
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'third_party/**'
+      - 'CMakeLists.txt'
+      - 'android/**'
+      - '.github/workflows/Android_arm64.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'third_party/**'
+      - 'CMakeLists.txt'
+      - 'android/**'
+      - '.github/workflows/Android_arm64.yml'
+
+jobs:
+  ndk-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y spirv-tools glslang-tools ninja-build cmake python3
+
+      - name: Install NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26c
+          add-to-path: true
+
+      - name: Configure CMake (Android arm64)
+        run: |
+          cmake -S . -B build-android-arm64 \
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DXENIA_BUILD_TESTS=OFF \
+            -DXENIA_BUILD_MISC=OFF
+
+      - name: Build xenia-app
+        run: cmake --build build-android-arm64 --target xenia-app -j"$(nproc)"
+
+      - name: Upload libxenia-app.so
+        uses: actions/upload-artifact@v4
+        with:
+          name: xenia-app-android-arm64
+          path: build-android-arm64/bin/Android/libxenia-app.so

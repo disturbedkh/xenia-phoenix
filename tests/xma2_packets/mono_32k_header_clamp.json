@@ -1,0 +1,11 @@
+{
+  "id": "mono_32k_header_clamp",
+  "mode": "structural",
+  "sample_rate_id": 1,
+  "sample_rate_hz": 32000,
+  "channels": 1,
+  "is_stereo": 0,
+  "packet_count": 1,
+  "read_offset_bits": 0,
+  "first_frame_offset_bits": 32
+}

@@ -34,7 +34,7 @@
 #elif defined(__ANDROID__)
 #define XE_PLATFORM_ANDROID 1
 #define XE_PLATFORM_LINUX 1
-#elif defined(__gnu_linux__)
+#elif defined(__gnu_linux__) || defined(__linux__)
 #define XE_PLATFORM_GNU_LINUX 1
 #define XE_PLATFORM_LINUX 1
 #else

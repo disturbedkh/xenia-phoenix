@@ -1,0 +1,33 @@
+{
+  "files": [
+    "g:\\Xenia-Xenia Canary\\Xenia-Phoenix\\xenia-phoenix-src\\tests\\kernel_stub\\stub_hits_fixture.jsonl"
+  ],
+  "total_lines": 3,
+  "unique_keys": 3,
+  "hits": [
+    {
+      "module": "phoenix",
+      "export": "KernelState::tier0_stub_log_smoke",
+      "count": 1,
+      "detail_samples": [
+        "fixture"
+      ]
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "NtAllocateVirtualMemory_X_MEM_RESET",
+      "count": 1,
+      "detail_samples": [
+        "legacy_sample"
+      ]
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XeKeysGetKey",
+      "count": 1,
+      "detail_samples": [
+        "00001234"
+      ]
+    }
+  ]
+}

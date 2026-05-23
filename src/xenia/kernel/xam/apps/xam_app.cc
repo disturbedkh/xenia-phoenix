@@ -10,6 +10,7 @@
 #include "xenia/kernel/xam/apps/xam_app.h"
 
 #include "xenia/base/logging.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/xam/xam_content_device.h"
 #include "xenia/kernel/xenumerator.h"
@@ -170,6 +171,7 @@ X_HRESULT XamApp::DispatchMessageSync(uint32_t message, uint32_t buffer_ptr,
       return X_E_SUCCESS;
     }
   }
+  LogKernelStubHit("xam", "XamApp::DispatchMessage", "unimplemented message");
   XELOGE(
       "Unimplemented XAM message app={:08X}, msg={:08X}, arg1={:08X}, "
       "arg2={:08X}",

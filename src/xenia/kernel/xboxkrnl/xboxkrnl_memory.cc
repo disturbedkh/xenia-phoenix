@@ -151,10 +151,22 @@ dword_result_t NtAllocateVirtualMemory_entry(lpdword_t base_addr_ptr,
     allocation_type |= kMemoryAllocationCommit;
   }
   if (alloc_type & X_MEM_RESET) {
-    LogKernelStubHit("xboxkrnl", "NtAllocateVirtualMemory_X_MEM_RESET",
-                     "X_MEM_RESET");
-    XELOGE("X_MEM_RESET not implemented");
-    assert_always();
+    if (adjusted_base == 0) {
+      return X_STATUS_INVALID_PARAMETER;
+    }
+    auto reset_heap = kernel_memory()->LookupHeap(adjusted_base);
+    if (!reset_heap || reset_heap->heap_type() != HeapType::kGuestVirtual) {
+      return X_STATUS_INVALID_PARAMETER;
+    }
+    HeapAllocationInfo reset_info = {};
+    if (!reset_heap->QueryRegionInfo(adjusted_base, &reset_info) ||
+        !(reset_info.state & kMemoryAllocationCommit)) {
+      return X_STATUS_INVALID_PARAMETER;
+    }
+    kernel_memory()->Zero(adjusted_base, adjusted_size);
+    *base_addr_ptr = adjusted_base;
+    *region_size_ptr = adjusted_size;
+    return X_STATUS_SUCCESS;
   }
   uint32_t protect = FromXdkProtectFlags(protect_bits);
   uint32_t address = 0;

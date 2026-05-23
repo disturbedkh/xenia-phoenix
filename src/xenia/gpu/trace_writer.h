@@ -69,6 +69,8 @@ class TraceWriter {
   std::set<uint64_t> cached_memory_reads_;
   uint8_t* membase_;
   FILE* file_;
+  std::filesystem::path trace_path_;
+  uint64_t obs_seq_begin_ = 0;
 
   bool compress_output_ = true;
   size_t compression_threshold_ = 1024;  // Min. number of bytes to compress.

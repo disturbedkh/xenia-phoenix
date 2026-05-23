@@ -1,0 +1,3 @@
+{"module":"phoenix","export":"KernelState::tier0_stub_log_smoke","detail":"fixture"}
+{"module":"xboxkrnl","export":"NtAllocateVirtualMemory_X_MEM_RESET","detail":"legacy_sample"}
+{"module":"xboxkrnl","export":"XeKeysGetKey","detail":"00001234","title_id":"4D5307D1","lr":"82001000"}

@@ -142,6 +142,13 @@ void AndroidShutdown();
 bool IsAndroidContentUri(const std::string_view source);
 int OpenAndroidContentFileDescriptor(const std::string_view uri,
                                      const char* mode);
+std::filesystem::path GetAndroidApplicationFilesDirectory();
+std::filesystem::path GetAndroidApplicationCacheDirectory();
+// Starts ACTION_OPEN_DOCUMENT; selected content URI is returned via Java
+// onActivityResult into the next launch Bundle (see WindowedAppActivity).
+bool AndroidRequestOpenDocument(const char* mime_type);
+// Copies content:// URIs into cache; returns path unchanged for normal files.
+std::filesystem::path StageAndroidLaunchPath(const std::filesystem::path& path);
 #endif  // XE_PLATFORM_ANDROID
 
 }  // namespace filesystem

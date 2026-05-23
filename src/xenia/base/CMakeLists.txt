@@ -1,3 +1,5 @@
+add_subdirectory(obs)
+
 add_library(xenia-base STATIC)
 xe_platform_sources(xenia-base ${CMAKE_CURRENT_SOURCE_DIR})
 # Exclude console_app_main and main_init files

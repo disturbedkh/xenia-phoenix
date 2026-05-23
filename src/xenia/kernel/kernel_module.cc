@@ -96,6 +96,8 @@ uint32_t KernelModule::GetProcAddressByOrdinal(uint16_t ordinal) {
     if (export_entry->variable_ptr) {
       return export_entry->variable_ptr;
     } else {
+      LogKernelStubHit(name(), export_entry->name,
+                       "GetProcAddressByOrdinal variable export");
       XELOGW(
           "ERROR: var export referenced GetProcAddressByOrdinal({:04X}({})) is "
           "not implemented",
@@ -129,6 +131,8 @@ uint32_t KernelModule::GetProcAddressByOrdinal(uint16_t ordinal) {
       return guest_addr;
     } else {
       // Not implemented.
+      LogKernelStubHit(name(), export_entry->name,
+                       "GetProcAddressByOrdinal function export");
       XELOGW(
           "ERROR: fn export referenced GetProcAddressByOrdinal({:04X}({})) is "
           "not implemented",

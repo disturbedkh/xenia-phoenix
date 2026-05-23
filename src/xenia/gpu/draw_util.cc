@@ -11,6 +11,7 @@
 
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/obs/obs_invariant.h"
 #include "xenia/base/math.h"
 #include "xenia/base/memory.h"
 #include "xenia/gpu/gpu_flags.h"
@@ -794,6 +795,8 @@ void AddMemExportRanges(const RegisterFile& regs, const Shader& shader,
     if (format_info.type != FormatType::kResolvable) {
       XELOGE("Unsupported memexport format {}",
              FormatInfo::GetName(format_info.format));
+      OBS_INVARIANT("MemexportFormatUnsupported", obs::ChannelId::kGpuPipeline,
+                    true, "fmt={}", FormatInfo::GetName(format_info.format));
       // Translated shaders shouldn't be performing exports with an unknown
       // format, the draw can still be performed.
       continue;

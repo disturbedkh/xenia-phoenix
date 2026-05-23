@@ -65,6 +65,72 @@ Value* CalculateEA_0(PPCHIRBuilder& f, uint32_t ra, uint32_t rb);
   (i.VX128_R.VA128l | (i.VX128_R.VA128h << 5) | (i.VX128_R.VA128H << 6))
 #define VX128_R_VB128 (i.VX128_R.VB128l | (i.VX128_R.VB128h << 5))
 
+// AltiVec helpers (semantics aligned with QEMU `int_helper.c` for Cell/VMX).
+static Value* AltiSatI16FromI32(PPCHIRBuilder& f, Value* t) {
+  Value* hi = f.LoadConstantInt32(32767);
+  Value* lo = f.LoadConstantInt32(-32768);
+  Value* u = f.Select(f.CompareSLT(t, lo), lo, t);
+  return f.Truncate(f.Select(f.CompareSGT(u, hi), hi, u), INT16_TYPE);
+}
+
+static Value* AltiSatI32FromI64(PPCHIRBuilder& f, Value* t64) {
+  Value* hi = f.LoadConstantInt64(static_cast<int64_t>(INT32_MAX));
+  Value* lo = f.LoadConstantInt64(static_cast<int64_t>(INT32_MIN));
+  Value* u = f.Select(f.CompareSLT(t64, lo), lo, t64);
+  return f.Truncate(f.Select(f.CompareSGT(u, hi), hi, u), INT32_TYPE);
+}
+
+static Value* AltiSatU32FromU64(PPCHIRBuilder& f, Value* t64) {
+  Value* hi = f.LoadConstantInt64(int64_t(4294967295LL));
+  Value* u = f.Select(f.CompareUGT(t64, hi), hi, t64);
+  return f.Truncate(u, INT32_TYPE);
+}
+
+// Unpack 16-bit 1555 pixel format to 8b:8b:8b:8b (QEMU `helper_vupk*hpx`).
+static Value* Unpack5655To8888(PPCHIRBuilder& f, Value* e32) {
+  Value* a_bit = f.And(f.Shr(e32, int8_t(15)), f.LoadConstantInt32(1));
+  Value* alpha = f.Sub(f.Shl(a_bit, int8_t(8)), a_bit);
+  Value* r = f.And(f.Shr(e32, int8_t(10)), f.LoadConstantInt32(0x1F));
+  Value* g = f.And(f.Shr(e32, int8_t(5)), f.LoadConstantInt32(0x1F));
+  Value* b = f.And(e32, f.LoadConstantInt32(0x1F));
+  return f.Or(
+      f.Shl(alpha, int8_t(24)),
+      f.Or(f.Shl(r, int8_t(16)), f.Or(f.Shl(g, int8_t(8)), b)));
+}
+
+static Value* VupkPxHalfToWord(PPCHIRBuilder& f, Value* vb, uint8_t half_idx) {
+  Value* raw =
+      f.And(f.SignExtend(f.Extract(vb, half_idx, INT16_TYPE), INT32_TYPE),
+            f.LoadConstantInt32(0xFFFF));
+  return Unpack5655To8888(f, raw);
+}
+
+// Per 32-bit word: merge high/low halfwords from VA/VB (matches instr_vmrghh.s).
+static Value* MergeHalfwordsPerWord(PPCHIRBuilder& f, Value* va, Value* vb,
+                                    bool high_half) {
+  Value* acc = f.LoadZeroVec128();
+  Value* mask16 = f.LoadConstantInt32(0xFFFF);
+  for (uint32_t w = 0; w < 4; ++w) {
+    Value* aw = f.Extract(va, w, INT32_TYPE);
+    Value* bw = f.Extract(vb, w, INT32_TYPE);
+    Value* ah = high_half ? f.And(f.Shr(aw, f.LoadConstantInt32(16)), mask16)
+                          : f.And(aw, mask16);
+    Value* bh = high_half ? f.And(f.Shr(bw, f.LoadConstantInt32(16)), mask16)
+                          : f.And(bw, mask16);
+    Value* out = f.Or(f.Shl(ah, f.LoadConstantInt32(16)), bh);
+    acc = f.Insert(acc, w, out);
+  }
+  return acc;
+}
+
+static Value* SignExtendWordHalf(PPCHIRBuilder& f, Value* word,
+                                 bool high_half) {
+  Value* mask16 = f.LoadConstantInt32(0xFFFF);
+  Value* half = high_half ? f.And(f.Shr(word, f.LoadConstantInt32(16)), mask16)
+                          : f.And(word, mask16);
+  return f.SignExtend(f.Truncate(half, INT16_TYPE), INT64_TYPE);
+}
+
 unsigned int xerotl(unsigned int value, unsigned int shift) {
   assert_true(shift < 32);
   return shift == 0 ? value : ((value << shift) | (value >> (32 - shift)));
@@ -803,10 +869,14 @@ int InstrEmit_vmaddfp(PPCHIRBuilder& f, const InstrData& i) {
   return InstrEmit_vmaddfp_(f, i.VXA.VD, i.VXA.VA, i.VXA.VB, i.VXA.VC);
 }
 int InstrEmit_vmaddfp128(PPCHIRBuilder& f, const InstrData& i) {
-  // (VD) <- ((VA) * (VB)) + (VD)
-  // NOTE: this resuses VD and swaps the arg order!
-  return InstrEmit_vmaddfp_(f, VX128_VD128, VX128_VA128, VX128_VD128,
-                            VX128_VB128);
+  // (VD) <- ((VA) * (VD)) + (VB) — same semantics as vmaddcfp128; do not route
+  // through InstrEmit_vmaddfp_ when VC aliases VD (HIR load/store ordering).
+  Value* a = f.VectorDenormFlush(f.LoadVR(VX128_VA128));
+  Value* b = f.VectorDenormFlush(f.LoadVR(VX128_VB128));
+  Value* d = f.VectorDenormFlush(f.LoadVR(VX128_VD128));
+  Value* v = f.MulAdd(a, d, b);
+  f.StoreVR(VX128_VD128, v);
+  return 0;
 }
 
 int InstrEmit_vmaddcfp128(PPCHIRBuilder& f, const InstrData& i) {
@@ -881,13 +951,65 @@ int InstrEmit_vmaxuw(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vmhaddshs(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t lane = 0; lane < 8; ++lane) {
+    Value* ah = f.Extract(va, lane, INT16_TYPE);
+    Value* bh = f.Extract(vb, lane, INT16_TYPE);
+    Value* ch = f.Extract(vc, lane, INT16_TYPE);
+    Value* prod =
+        f.Mul(f.SignExtend(ah, INT32_TYPE), f.SignExtend(bh, INT32_TYPE));
+    Value* t = f.Add(f.Sha(prod, int8_t(15)), f.SignExtend(ch, INT32_TYPE));
+    Value* out = AltiSatI16FromI32(f, t);
+    acc = f.Insert(acc, lane, out);
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmhraddshs(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  Value* rnd = f.LoadConstantInt32(0x4000);
+  for (uint32_t lane = 0; lane < 8; ++lane) {
+    Value* ah = f.Extract(va, lane, INT16_TYPE);
+    Value* bh = f.Extract(vb, lane, INT16_TYPE);
+    Value* ch = f.Extract(vc, lane, INT16_TYPE);
+    Value* prod =
+        f.Mul(f.SignExtend(ah, INT32_TYPE), f.SignExtend(bh, INT32_TYPE));
+    Value* prod_r = f.Add(prod, rnd);
+    Value* t = f.Add(f.Sha(prod_r, int8_t(15)), f.SignExtend(ch, INT32_TYPE));
+    Value* out = AltiSatI16FromI32(f, t);
+    acc = f.Insert(acc, lane, out);
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
+}
+
+int InstrEmit_vmladduhm(PPCHIRBuilder& f, const InstrData& i) {
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t lane = 0; lane < 8; ++lane) {
+    Value* ah = f.Extract(va, lane, INT16_TYPE);
+    Value* bh = f.Extract(vb, lane, INT16_TYPE);
+    Value* ch = f.Extract(vc, lane, INT16_TYPE);
+    Value* au =
+        f.And(f.SignExtend(ah, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+    Value* bu =
+        f.And(f.SignExtend(bh, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+    Value* prod = f.Mul(au, bu);
+    Value* sum = f.Add(prod, f.SignExtend(ch, INT32_TYPE));
+    Value* out = f.Truncate(sum, INT16_TYPE);
+    acc = f.Insert(acc, lane, out);
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vminfp_(PPCHIRBuilder& f, uint32_t vd, uint32_t va, uint32_t vb) {
@@ -948,11 +1070,6 @@ int InstrEmit_vminuw(PPCHIRBuilder& f, const InstrData& i) {
   return 0;
 }
 
-int InstrEmit_vmladduhm(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
-}
-
 int InstrEmit_vmrghb(PPCHIRBuilder& f, const InstrData& i) {
   // (VD.b[i]) = (VA.b[i])
   // (VD.b[i+1]) = (VB.b[i+1])
@@ -966,11 +1083,7 @@ int InstrEmit_vmrghb(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vmrghh(PPCHIRBuilder& f, const InstrData& i) {
-  // (VD.w[i]) = (VA.w[i])
-  // (VD.w[i+1]) = (VB.w[i+1])
-  // ...
-  Value* v = f.Permute(f.LoadConstantVec128(vec128s(0, 8, 1, 9, 2, 10, 3, 11)),
-                       f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), INT16_TYPE);
+  Value* v = MergeHalfwordsPerWord(f, f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), true);
   f.StoreVR(i.VX.VD, v);
   return 0;
 }
@@ -1006,12 +1119,7 @@ int InstrEmit_vmrglb(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vmrglh(PPCHIRBuilder& f, const InstrData& i) {
-  // (VD.w[i]) = (VA.w[i])
-  // (VD.w[i+1]) = (VB.w[i+1])
-  // ...
-  Value* v =
-      f.Permute(f.LoadConstantVec128(vec128s(4, 12, 5, 13, 6, 14, 7, 15)),
-                f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), INT16_TYPE);
+  Value* v = MergeHalfwordsPerWord(f, f.LoadVR(i.VX.VA), f.LoadVR(i.VX.VB), false);
   f.StoreVR(i.VX.VD, v);
   return 0;
 }
@@ -1035,33 +1143,146 @@ int InstrEmit_vmrglw128(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vmsummbm(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 4; ++j) {
+      const uint8_t be = uint8_t(4 * W + j);
+      Value* ab = f.Extract(va, be, INT8_TYPE);
+      Value* bb = f.Extract(vb, be, INT8_TYPE);
+      Value* au = f.SignExtend(ab, INT64_TYPE);
+      Value* bu = f.SignExtend(
+          f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF)),
+          INT64_TYPE);
+      sum = f.Add(sum, f.Mul(au, bu));
+    }
+    acc = f.Insert(acc, W, f.Truncate(sum, INT32_TYPE));
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmsumshm(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 2; ++j) {
+      const uint8_t h = uint8_t(2 * W + j);
+      Value* ah = f.Extract(va, h, INT16_TYPE);
+      Value* bh = f.Extract(vb, h, INT16_TYPE);
+      Value* pr =
+          f.Mul(f.SignExtend(ah, INT32_TYPE), f.SignExtend(bh, INT32_TYPE));
+      sum = f.Add(sum, f.SignExtend(pr, INT64_TYPE));
+    }
+    acc = f.Insert(acc, W, f.Truncate(sum, INT32_TYPE));
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmsumshs(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.SignExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 2; ++j) {
+      const uint8_t h = uint8_t(2 * W + j);
+      Value* ah = f.Extract(va, h, INT16_TYPE);
+      Value* bh = f.Extract(vb, h, INT16_TYPE);
+      Value* pr =
+          f.Mul(f.SignExtend(ah, INT32_TYPE), f.SignExtend(bh, INT32_TYPE));
+      sum = f.Add(sum, f.SignExtend(pr, INT64_TYPE));
+    }
+    acc = f.Insert(acc, W, AltiSatI32FromI64(f, sum));
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmsumubm(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 4; ++j) {
+      const uint8_t be = uint8_t(4 * W + j);
+      Value* ab = f.Extract(va, be, INT8_TYPE);
+      Value* bb = f.Extract(vb, be, INT8_TYPE);
+      Value* au =
+          f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
+      Value* bu =
+          f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF));
+      Value* pr = f.Mul(au, bu);
+      sum = f.Add(sum, f.ZeroExtend(pr, INT64_TYPE));
+    }
+    acc = f.Insert(acc, W, f.Truncate(sum, INT32_TYPE));
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmsumuhm(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 2; ++j) {
+      const uint8_t h = uint8_t(2 * W + j);
+      Value* ah = f.Extract(va, h, INT16_TYPE);
+      Value* bh = f.Extract(vb, h, INT16_TYPE);
+      Value* au =
+          f.And(f.SignExtend(ah, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+      Value* bu =
+          f.And(f.SignExtend(bh, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+      Value* pr = f.Mul(au, bu);
+      sum = f.Add(sum, f.ZeroExtend(pr, INT64_TYPE));
+    }
+    acc = f.Insert(acc, W, f.Truncate(sum, INT32_TYPE));
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmsumuhs(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VXA.VA);
+  Value* vb = f.LoadVR(i.VXA.VB);
+  Value* vc = f.LoadVR(i.VXA.VC);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.ZeroExtend(f.Extract(vc, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 2; ++j) {
+      const uint8_t h = uint8_t(2 * W + j);
+      Value* ah = f.Extract(va, h, INT16_TYPE);
+      Value* bh = f.Extract(vb, h, INT16_TYPE);
+      Value* au =
+          f.And(f.SignExtend(ah, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+      Value* bu =
+          f.And(f.SignExtend(bh, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+      Value* pr = f.Mul(au, bu);
+      sum = f.Add(sum, f.ZeroExtend(pr, INT64_TYPE));
+    }
+    acc = f.Insert(acc, W, AltiSatU32FromU64(f, sum));
+  }
+  f.StoreVR(i.VXA.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmsum3fp128(PPCHIRBuilder& f, const InstrData& i) {
@@ -1084,43 +1305,143 @@ int InstrEmit_vmsum4fp128(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vmulesb(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t H = 0; H < 8; ++H) {
+    const uint8_t bi = uint8_t(2 * H);
+    Value* ab = f.Extract(va, bi, INT8_TYPE);
+    Value* bb = f.Extract(vb, bi, INT8_TYPE);
+    Value* pr =
+        f.Mul(f.SignExtend(ab, INT32_TYPE), f.SignExtend(bb, INT32_TYPE));
+    acc = f.Insert(acc, uint64_t(H), f.Truncate(pr, INT16_TYPE));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmulesh(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    const uint8_t hi = uint8_t(2 * W);
+    Value* ah = f.Extract(va, hi, INT16_TYPE);
+    Value* bh = f.Extract(vb, hi, INT16_TYPE);
+    Value* pr =
+        f.Mul(f.SignExtend(ah, INT32_TYPE), f.SignExtend(bh, INT32_TYPE));
+    acc = f.Insert(acc, uint64_t(W), pr);
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmuleub(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t H = 0; H < 8; ++H) {
+    const uint8_t bi = uint8_t(2 * H);
+    Value* ab = f.Extract(va, bi, INT8_TYPE);
+    Value* bb = f.Extract(vb, bi, INT8_TYPE);
+    Value* au =
+        f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* bu =
+        f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* pr = f.Mul(au, bu);
+    acc = f.Insert(acc, uint64_t(H), f.Truncate(pr, INT16_TYPE));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmuleuh(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    const uint8_t hi = uint8_t(2 * W);
+    Value* ah = f.Extract(va, hi, INT16_TYPE);
+    Value* bh = f.Extract(vb, hi, INT16_TYPE);
+    Value* au =
+        f.And(f.SignExtend(ah, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+    Value* bu =
+        f.And(f.SignExtend(bh, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+    Value* pr = f.Mul(au, bu);
+    acc = f.Insert(acc, uint64_t(W), pr);
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmulosb(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t H = 0; H < 8; ++H) {
+    const uint8_t bi = uint8_t(2 * H + 1);
+    Value* ab = f.Extract(va, bi, INT8_TYPE);
+    Value* bb = f.Extract(vb, bi, INT8_TYPE);
+    Value* pr =
+        f.Mul(f.SignExtend(ab, INT32_TYPE), f.SignExtend(bb, INT32_TYPE));
+    acc = f.Insert(acc, uint64_t(H), f.Truncate(pr, INT16_TYPE));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmulosh(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    const uint8_t hi = uint8_t(2 * W + 1);
+    Value* ah = f.Extract(va, hi, INT16_TYPE);
+    Value* bh = f.Extract(vb, hi, INT16_TYPE);
+    Value* pr =
+        f.Mul(f.SignExtend(ah, INT32_TYPE), f.SignExtend(bh, INT32_TYPE));
+    acc = f.Insert(acc, uint64_t(W), pr);
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmuloub(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t H = 0; H < 8; ++H) {
+    const uint8_t bi = uint8_t(2 * H + 1);
+    Value* ab = f.Extract(va, bi, INT8_TYPE);
+    Value* bb = f.Extract(vb, bi, INT8_TYPE);
+    Value* au =
+        f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* bu =
+        f.And(f.SignExtend(bb, INT32_TYPE), f.LoadConstantInt32(0xFF));
+    Value* pr = f.Mul(au, bu);
+    acc = f.Insert(acc, uint64_t(H), f.Truncate(pr, INT16_TYPE));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmulouh(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    const uint8_t hi = uint8_t(2 * W + 1);
+    Value* ah = f.Extract(va, hi, INT16_TYPE);
+    Value* bh = f.Extract(vb, hi, INT16_TYPE);
+    Value* au =
+        f.And(f.SignExtend(ah, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+    Value* bu =
+        f.And(f.SignExtend(bh, INT32_TYPE), f.LoadConstantInt32(0xFFFF));
+    Value* pr = f.Mul(au, bu);
+    acc = f.Insert(acc, uint64_t(W), pr);
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vmulfp128(PPCHIRBuilder& f, const InstrData& i) {
@@ -1146,8 +1467,7 @@ int InstrEmit_vnmsubfp_(PPCHIRBuilder& f, uint32_t vd, uint32_t va, uint32_t vb,
   Value* a = f.VectorDenormFlush(f.LoadVR(va));
   Value* b = f.VectorDenormFlush(f.LoadVR(vb));
   Value* c = f.VectorDenormFlush(f.LoadVR(vc));
-
-  Value* v = f.Neg(f.MulSub(a, c, b));
+  Value* v = f.MulAdd(f.Neg(a), c, b);
   f.StoreVR(vd, v);
   return 0;
 }
@@ -1155,8 +1475,13 @@ int InstrEmit_vnmsubfp(PPCHIRBuilder& f, const InstrData& i) {
   return InstrEmit_vnmsubfp_(f, i.VXA.VD, i.VXA.VA, i.VXA.VB, i.VXA.VC);
 }
 int InstrEmit_vnmsubfp128(PPCHIRBuilder& f, const InstrData& i) {
-  return InstrEmit_vnmsubfp_(f, VX128_VD128, VX128_VA128, VX128_VD128,
-                             VX128_VB128);
+  // (VD) <- -(((VA) * (VB)) - (VD)); VD aliases VC.
+  Value* a = f.VectorDenormFlush(f.LoadVR(VX128_VA128));
+  Value* b = f.VectorDenormFlush(f.LoadVR(VX128_VB128));
+  Value* d = f.VectorDenormFlush(f.LoadVR(VX128_VD128));
+  Value* v = f.MulAdd(f.Neg(a), b, d);
+  f.StoreVR(VX128_VD128, v);
+  return 0;
 }
 
 int InstrEmit_vnor_(PPCHIRBuilder& f, uint32_t vd, uint32_t va, uint32_t vb) {
@@ -1321,7 +1646,7 @@ int InstrEmit_vrlimi128(PPCHIRBuilder& f, const InstrData& i) {
   blend_mask |= (((blend_mask_src >> 2) & 0x1) ? 1 : 5) << 8;
   blend_mask |= (((blend_mask_src >> 1) & 0x1) ? 2 : 6) << 16;
   blend_mask |= (((blend_mask_src >> 0) & 0x1) ? 3 : 7) << 24;
-  uint32_t rotate = i.VX128_4.z;
+  const uint32_t rotate = i.VX128_4.z & 3u;
   // This is just a fancy permute.
   // X Y Z W, rotated left by 2 = Z W X Y
   // Then mask select the results into the dest.
@@ -1329,7 +1654,7 @@ int InstrEmit_vrlimi128(PPCHIRBuilder& f, const InstrData& i) {
   Value* v;
   if (rotate) {
     // TODO(benvanik): constants need conversion.
-    uint32_t swizzle_mask;
+    uint32_t swizzle_mask = SWIZZLE_XYZW_TO_XYZW;
     switch (rotate) {
       case 1:
         // X Y Z W -> Y Z W X
@@ -1344,8 +1669,7 @@ int InstrEmit_vrlimi128(PPCHIRBuilder& f, const InstrData& i) {
         swizzle_mask = SWIZZLE_XYZW_TO_WXYZ;
         break;
       default:
-        XEINSTRNOTIMPLEMENTED();
-        return 1;
+        break;
     }
     v = f.Swizzle(f.LoadVR(vb), FLOAT32_TYPE, swizzle_mask);
   } else {
@@ -1769,28 +2093,90 @@ int InstrEmit_vsubuws(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vsumsws(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  const uint8_t upper = 3;
+  Value* sum =
+      f.SignExtend(f.Extract(vb, upper, INT32_TYPE), INT64_TYPE);
+  for (uint32_t E = 0; E < 4; ++E) {
+    sum = f.Add(sum, f.SignExtend(f.Extract(va, E, INT32_TYPE), INT64_TYPE));
+  }
+  Value* acc = f.LoadZeroVec128();
+  acc = f.Insert(acc, upper, AltiSatI32FromI64(f, sum));
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vsum2sws(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  const uint32_t upper = 1;
+  for (uint32_t grp = 0; grp < 2; ++grp) {
+    const uint8_t bw = uint8_t(upper + grp * 2);
+    Value* sum =
+        f.SignExtend(f.Extract(vb, bw, INT32_TYPE), INT64_TYPE);
+    Value* aw = f.Extract(va, grp * 2, INT32_TYPE);
+    sum = f.Add(sum, SignExtendWordHalf(f, aw, true));
+    sum = f.Add(sum, SignExtendWordHalf(f, aw, false));
+    acc = f.Insert(acc, bw, AltiSatI32FromI64(f, sum));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vsum4sbs(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.SignExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 4; ++j) {
+      const uint8_t be = uint8_t(4 * W + j);
+      Value* ab = f.Extract(va, be, INT8_TYPE);
+      sum = f.Add(sum, f.SignExtend(ab, INT64_TYPE));
+    }
+    acc = f.Insert(acc, W, AltiSatI32FromI64(f, sum));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vsum4shs(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.SignExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
+    Value* aw = f.Extract(va, W, INT32_TYPE);
+    sum = f.Add(sum, SignExtendWordHalf(f, aw, true));
+    sum = f.Add(sum, SignExtendWordHalf(f, aw, false));
+    acc = f.Insert(acc, W, AltiSatI32FromI64(f, sum));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vsum4ubs(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* va = f.LoadVR(i.VX.VA);
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t W = 0; W < 4; ++W) {
+    Value* sum =
+        f.ZeroExtend(f.Extract(vb, W, INT32_TYPE), INT64_TYPE);
+    for (uint32_t j = 0; j < 4; ++j) {
+      const uint8_t be = uint8_t(4 * W + j);
+      Value* ab = f.Extract(va, be, INT8_TYPE);
+      Value* au =
+          f.And(f.SignExtend(ab, INT32_TYPE), f.LoadConstantInt32(0xFF));
+      sum = f.Add(sum, f.ZeroExtend(au, INT64_TYPE));
+    }
+    acc = f.Insert(acc, W, AltiSatU32FromU64(f, sum));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 static Value* vkpkx_in_low(PPCHIRBuilder& f, Value* input) {
@@ -2000,13 +2386,28 @@ int InstrEmit_vpkuwus128(PPCHIRBuilder& f, const InstrData& i) {
 }
 
 int InstrEmit_vupkhpx(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t wi = 0; wi < 4; ++wi) {
+    Value* word = f.Extract(vb, wi, INT32_TYPE);
+    Value* px =
+        f.And(f.Shr(word, f.LoadConstantInt32(16)), f.LoadConstantInt32(0xFFFF));
+    acc = f.Insert(acc, wi, Unpack5655To8888(f, px));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vupklpx(PPCHIRBuilder& f, const InstrData& i) {
-  XEINSTRNOTIMPLEMENTED();
-  return 1;
+  Value* vb = f.LoadVR(i.VX.VB);
+  Value* acc = f.LoadZeroVec128();
+  for (uint32_t wi = 0; wi < 4; ++wi) {
+    Value* word = f.Extract(vb, wi, INT32_TYPE);
+    Value* px = f.And(word, f.LoadConstantInt32(0xFFFF));
+    acc = f.Insert(acc, wi, Unpack5655To8888(f, px));
+  }
+  f.StoreVR(i.VX.VD, acc);
+  return 0;
 }
 
 int InstrEmit_vupkhsh_(PPCHIRBuilder& f, uint32_t vd, uint32_t vb) {

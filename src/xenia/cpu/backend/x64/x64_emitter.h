@@ -301,6 +301,11 @@ class X64Emitter : public Xbyak::CodeGenerator {
     return (feature_flags_ & feature_flag) == feature_flag;
   }
 
+#if XE_ARCH_AMD64
+  // Matches fused mul-add lowering gate (see `kX64EmitFMA` + `MUL_ADD_V128`).
+  static bool HasFMA();
+#endif
+
   Xbyak::Label& AddToTail(TailEmitCallback callback, uint32_t alignment = 0);
   Xbyak::Label& NewCachedLabel();
 

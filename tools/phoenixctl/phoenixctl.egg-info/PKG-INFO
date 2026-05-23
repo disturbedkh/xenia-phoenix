@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: phoenixctl
+Version: 1.0.0
+Summary: Phoenix CLI for Xenia telemetry, launch, and Tier 0 gates
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pyyaml>=6.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+
+# phoenixctl
+
+Phoenix CLI for telemetry launch, tail, triage, and Tier 0 gates.
+
+**Documentation:** [`Xenia-Phoenix/metacache/dev/55_cursor_live_probe.md`](../../../metacache/dev/55_cursor_live_probe.md) and [`56_phoenixctl_reference.md`](../../../metacache/dev/56_phoenixctl_reference.md).
+
+```powershell
+cd xenia-phoenix-src
+pip install -e tools/phoenixctl
+phoenixctl preflight
+```

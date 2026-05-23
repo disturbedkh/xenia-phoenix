@@ -16,6 +16,7 @@
 #include "xenia/base/assert.h"
 #include "xenia/base/byte_order.h"
 #include "xenia/base/logging.h"
+#include "xenia/debug/phoenix_probe.h"
 #include "xenia/base/math.h"
 #include "xenia/base/profiling.h"
 #include "xenia/emulator.h"
@@ -34,6 +35,7 @@
 #include "xenia/kernel/user_module.h"
 #include "xenia/ui/vulkan/vulkan_presenter.h"
 #include "xenia/ui/vulkan/vulkan_util.h"
+#include "xenia/base/obs/obs_pm4_bridge.h"
 
 DECLARE_bool(clear_memory_page_state);
 
@@ -2458,6 +2460,7 @@ bool VulkanCommandProcessor::IssueDraw(xenos::PrimitiveType prim_type,
     current_pipeline = pipeline->pipeline.load(std::memory_order_acquire);
     if (current_pipeline == VK_NULL_HANDLE) {
       // Still not ready - something is wrong.
+      debug::PhoenixProbeNotifyPipelineSkip();
       return false;
     }
   }

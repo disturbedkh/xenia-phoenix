@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "xenia/base/bit_map.h"
+#include "xenia/base/vec128.h"
 #include "xenia/base/cvar.h"
 #include "xenia/cpu/backend/backend.h"
 
@@ -152,6 +153,10 @@ class X64Backend : public Backend {
   }
   bool Initialize(Processor* processor) override;
 
+  // Host-callable entry to the same thunk used by OPCODE_RSQRT V128.
+  // guest_ctx must be a ppc::PPCContext* (RSI in emitted guest code).
+  vec128_t InvokeVrsqrtefpVector(const vec128_t& in, void* guest_ctx) const;
+
   void CommitExecutableRange(uint32_t guest_low, uint32_t guest_high) override;
 
   std::unique_ptr<Assembler> CreateAssembler() override;
@@ -214,7 +219,9 @@ class X64Backend : public Backend {
   void* reserved_store_32_helper = nullptr;
   void* reserved_store_64_helper = nullptr;
   void* vrsqrtefp_vector_helper = nullptr;
+  void* vrsqrtefp_vector_invoke_helper_ = nullptr;
   void* vrsqrtefp_scalar_helper = nullptr;
+  void* vrsqrtefp_scalar_invoke_helper_ = nullptr;
   void* frsqrtefp_helper = nullptr;
 
  private:

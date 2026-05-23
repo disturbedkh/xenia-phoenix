@@ -127,9 +127,14 @@ bool TraceDump::Load(const std::filesystem::path& trace_file_path) {
 
 int TraceDump::Run() {
   BeginHostCapture();
+  const auto* frame = player_->current_frame();
+  if (!frame || frame->commands.empty()) {
+    XELOGE("Trace has no frames or commands to replay");
+    EndHostCapture();
+    return 5;
+  }
   player_->SeekFrame(0);
-  player_->SeekCommand(
-      static_cast<int>(player_->current_frame()->commands.size() - 1));
+  player_->SeekCommand(static_cast<int>(frame->commands.size() - 1));
   player_->WaitOnPlayback();
   EndHostCapture();
 

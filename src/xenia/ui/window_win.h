@@ -10,6 +10,7 @@
 #ifndef XENIA_UI_WINDOW_WIN_H_
 #define XENIA_UI_WINDOW_WIN_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -38,6 +39,9 @@ class Win32Window : public Window {
   // closed.
   HWND hwnd() const { return hwnd_; }
 
+  // Runs task on the window message thread after the current message returns.
+  void PostUiTask(std::function<void()> task);
+
   uint32_t GetMediumDpi() const override;
 
  protected:
@@ -65,6 +69,7 @@ class Win32Window : public Window {
  private:
   enum : UINT {
     kUserMessageAutoHideCursor = WM_USER,
+    kUserMessageRunPendingUiTask = WM_USER + 1,
   };
 
   BOOL AdjustWindowRectangle(RECT& rect, DWORD style, BOOL menu, DWORD ex_style,
@@ -153,6 +158,8 @@ class Win32Window : public Window {
   bool cursor_currently_auto_hidden_ = false;
 
   HDEVNOTIFY usb_device_notify_ = nullptr;
+
+  std::function<void()> pending_ui_task_;
 };
 
 class Win32MenuItem : public MenuItem {

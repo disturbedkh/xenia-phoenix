@@ -27,6 +27,7 @@
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/ui/d3d12/d3d12_presenter.h"
 #include "xenia/ui/d3d12/d3d12_util.h"
+#include "xenia/base/obs/obs_pm4_bridge.h"
 
 DEFINE_bool(d3d12_bindless, true,
             "Use bindless resources where available - may improve performance, "
@@ -2598,14 +2599,18 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
   }
 
   if (cvars::async_shader_compilation) {
-    if (pipeline_cache_->GetD3D12PipelineByHandle(pipeline_handle) == nullptr) {
-      XELOGI(
-          "Skipping draw - pipeline not ready: VS {:016X} mod {:016X}, PS "
-          "{:016X} mod {:016X}",
-          vertex_shader->ucode_data_hash(), vertex_shader_modification.value,
-          pixel_shader ? pixel_shader->ucode_data_hash() : 0,
-          pixel_shader_modification.value);
-      return true;
+    if (pipeline_cache_->GetD3D12PipelineByHandle(pipeline_handle) ==
+        nullptr) {
+      if (pipeline_cache_->EnsureD3D12PipelineReady(pipeline_handle) ==
+          nullptr) {
+        XELOGE(
+            "Draw failed - pipeline creation failed: VS {:016X} mod {:016X}, "
+            "PS {:016X} mod {:016X}",
+            vertex_shader->ucode_data_hash(), vertex_shader_modification.value,
+            pixel_shader ? pixel_shader->ucode_data_hash() : 0,
+            pixel_shader_modification.value);
+        return false;
+      }
     }
     // Re-fetch root signature now that pipeline is ready.
     root_signature = pipeline_cache_->GetRootSignatureByHandle(pipeline_handle);

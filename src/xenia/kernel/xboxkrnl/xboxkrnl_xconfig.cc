@@ -9,6 +9,7 @@
 
 #include "xenia/kernel/xboxkrnl/xboxkrnl_xconfig.h"
 #include "xenia/base/logging.h"
+#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/kernel/xboxkrnl/xboxkrnl_private.h"
@@ -54,6 +55,7 @@ DEFINE_uint32(
     "XConfig");
 
 DECLARE_bool(widescreen);
+DECLARE_uint32(audio_flag);
 DECLARE_bool(use_50Hz_mode);
 DECLARE_int32(video_standard);
 DECLARE_uint32(internal_display_resolution);
@@ -94,6 +96,8 @@ X_STATUS xeExGetXConfigSetting(X_CONFIG_CATEGORY category, uint16_t setting,
           }
           break;
         default:
+          LogKernelStubHit("xboxkrnl", "XConfigSecuredSetting",
+                           "unimplemented secured setting");
           XELOGW(
               "An unimplemented setting 0x{:04X} in XCONFIG SECURED CATEGORY",
               static_cast<uint16_t>(setting));
@@ -152,6 +156,8 @@ X_STATUS xeExGetXConfigSetting(X_CONFIG_CATEGORY category, uint16_t setting,
             xe::store_and_swap<int32_t>(
                 value, XHDTVResolution.at(cvars::internal_display_resolution));
           } else {
+            LogKernelStubHit("xboxkrnl", "XConfigAvComponentResolution",
+                             "resolution not supported");
             XELOGW("Resolution not supported for AV Component");
             xe::store_and_swap<int32_t>(value, 0);
           }
@@ -164,6 +170,8 @@ X_STATUS xeExGetXConfigSetting(X_CONFIG_CATEGORY category, uint16_t setting,
             xe::store_and_swap<int32_t>(
                 value, XVGAResolution.at(cvars::internal_display_resolution));
           } else {
+            LogKernelStubHit("xboxkrnl", "XConfigVgaResolution",
+                             "resolution not supported");
             XELOGW("Resolution not supported for VGA");
             xe::store_and_swap<int32_t>(value, 0);
           }
@@ -242,6 +250,8 @@ X_STATUS xeExGetXConfigSetting(X_CONFIG_CATEGORY category, uint16_t setting,
           xe::store_and_swap<uint32_t>(value, X_BLACK_LEVEL::LevelNormal);
           break;
         default:
+          LogKernelStubHit("xboxkrnl", "XConfigUserSetting",
+                           "unimplemented user setting");
           XELOGW("An unimplemented setting 0x{:04X} in XCONFIG USER CATEGORY",
                  static_cast<uint16_t>(setting));
           assert_unhandled_case(setting);
@@ -277,6 +287,8 @@ X_STATUS xeExGetXConfigSetting(X_CONFIG_CATEGORY category, uint16_t setting,
       }
       break;
     default:
+      LogKernelStubHit("xboxkrnl", "XConfigCategory",
+                       "unimplemented xconfig category");
       XELOGW("An unimplemented category 0x{:04X}",
              static_cast<uint16_t>(category));
       assert_unhandled_case(category);
@@ -325,6 +337,22 @@ dword_result_t ExSetXConfigSetting_entry(word_t category, word_t setting,
       Handles settings the only have a single flag/value like
      XCONFIG_USER_VIDEO_FLAGS to swap
   */
+  if (category == XCONFIG_USER_CATEGORY && buffer_ptr && buffer_size >= 4) {
+    switch (setting) {
+      case XCONFIG_USER_VIDEO_FLAGS:
+        cvars::widescreen =
+            (xe::load_and_swap<uint32_t>(buffer_ptr) & X_VIDEO_FLAGS::Widescreen) != 0;
+        break;
+      case XCONFIG_USER_AUDIO_FLAGS:
+        cvars::audio_flag = xe::load_and_swap<uint32_t>(buffer_ptr);
+        break;
+      case XCONFIG_USER_LANGUAGE:
+        cvars::user_language = xe::load_and_swap<uint32_t>(buffer_ptr);
+        break;
+      default:
+        break;
+    }
+  }
   XELOGI("ExSetXConfigSetting: category: 0X{:04x}, setting: 0X{:04x}",
          static_cast<uint16_t>(category), static_cast<uint16_t>(setting));
   return X_STATUS_SUCCESS;

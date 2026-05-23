@@ -1,0 +1,26 @@
+# Optional: Checked build + cpu-tests (assert paths). Manual only — slower than PR tier0.
+name: Tier0 Checked (Windows)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  checked-cpu-tests:
+    name: Checked xenia-cpu-tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake --preset vs -DXENIA_BUILD_TESTS=ON
+
+      - name: Build Checked xenia-cpu-tests
+        run: cmake --build build --config Checked --parallel --target xenia-cpu-tests
+
+      - name: Run xenia-cpu-tests (Checked)
+        shell: pwsh
+        run: |
+          Set-Location build/bin/Windows/Checked
+          ./xenia-cpu-tests.exe

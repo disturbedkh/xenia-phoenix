@@ -1,0 +1,836 @@
+{
+  "generated_by": "tools/tier0/gen_kernel_stub_inventory.py",
+  "count": 166,
+  "exports": [
+    {
+      "module": "xam",
+      "export": "XamAvatarInitialize",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarShutdown",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetManifestLocalUser",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetManifestsByXuid",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetAssetsResultSize",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetAssets",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarSetCustomAsset",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarSetManifest",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetMetadataRandom",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetMetadataSignedOutProfileCount",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetMetadataSignedOutProfile",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarManifestGetBodyType",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetInstrumentation",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetAssetIcon",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGetAssetBinary",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarSetMocks",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarLoadAnimation",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarGenerateMipMaps",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarBeginEnumAssets",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarEnumAssets",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarEndEnumAssets",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarWearNow",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamAvatarReinstallAwardedAsset",
+      "file": "src/xenia/kernel/xam/xam_avatar.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentGetLicenseMask",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentOpenFile",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentFlush",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamLoaderGetMediaInfoEx",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamLoaderGetMediaInfo",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentLaunchImageFromFileInternal",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentLaunchImage",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentLaunchImageInternal",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentLaunchImageInternalEx",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentGetDeviceVolumePath",
+      "file": "src/xenia/kernel/xam/xam_content.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamContentAggregateCreateEnumerator",
+      "file": "src/xenia/kernel/xam/xam_content_aggregate.cc"
+    },
+    {
+      "module": "xam",
+      "export": "EnumerateMediaObjects",
+      "file": "src/xenia/kernel/xam/xam_enum.cc"
+    },
+    {
+      "module": "xam",
+      "export": "EnumerateMediaObjects_",
+      "file": "src/xenia/kernel/xam/xam_enum.cc"
+    },
+    {
+      "module": "xam",
+      "export": "EnumerateMediaObjects_0",
+      "file": "src/xenia/kernel/xam/xam_enum.cc"
+    },
+    {
+      "module": "xam",
+      "export": "EnumerateMediaObjects_1",
+      "file": "src/xenia/kernel/xam/xam_enum.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamFeatureEnabled",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamGetStagingMode",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XCustomRegisterDynamicActions",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XGetAVPack",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XGetGameRegion",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamQueryLiveHiveW",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "Refresh",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XampWebInstrumentationSetProfileCounts",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamDoesOmniNeedConfiguration",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamFirstRunExperienceShouldRun",
+      "file": "src/xenia/kernel/xam/xam_info.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XAutomationpUnbindController",
+      "file": "src/xenia/kernel/xam/xam_input.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamResetInactivity",
+      "file": "src/xenia/kernel/xam/xam_input.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamEnableInactivityProcessing",
+      "file": "src/xenia/kernel/xam/xam_input.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserGetDeviceContext",
+      "file": "src/xenia/kernel/xam/xam_input.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamMediaVerificationCreate",
+      "file": "src/xenia/kernel/xam/xam_media.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamMediaVerificationClose",
+      "file": "src/xenia/kernel/xam/xam_media.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamMediaVerificationVerify",
+      "file": "src/xenia/kernel/xam/xam_media.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamMediaVerificationFailedBlocks",
+      "file": "src/xenia/kernel/xam/xam_media.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamMediaVerificationInject",
+      "file": "src/xenia/kernel/xam/xam_media.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_WSARecvFrom",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetGetTitleXnAddr",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetGetDebugXnAddr",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetXnAddrToMachineId",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetInAddrToString",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetXnAddrToInAddr",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetInAddrToXnAddr",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetSetSystemLinkPort",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetGetEthernetLinkStatus",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetDnsLookup",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetDnsRelease",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetQosServiceLookup",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetQosRelease",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetQosListen",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetCreateKey",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetRegisterKey",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "NetDll_XNetUnregisterKey",
+      "file": "src/xenia/kernel/xam/xam_net.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XNotifyDelayUI",
+      "file": "src/xenia/kernel/xam/xam_notify.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XNotifyBroadcast",
+      "file": "src/xenia/kernel/xam/xam_notify.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiGetDeviceStatus",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserNuiGetUserIndex",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserNuiGetUserIndexForBind",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiGetDepthCalibration",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiSkeletonGetBestSkeletonIndex",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiCameraTiltGetStatus",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiCameraElevationGetAngle",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiCameraGetTiltControllerType",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiCameraSetFlags",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamIsNuiAutomationEnabled",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamIsNatalPlaybackEnabled",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamShowNuiTroubleshooterUI",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamShowNuiGuideUI",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiIdentityEnrollForSignIn",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiIdentityAbort",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserNuiEnableBiometric",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamNuiPlayerEngagementUpdate",
+      "file": "src/xenia/kernel/xam/xam_nui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamPartyGetUserList",
+      "file": "src/xenia/kernel/xam/xam_party.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamPartySendGameInvites",
+      "file": "src/xenia/kernel/xam/xam_party.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamPartySetCustomData",
+      "file": "src/xenia/kernel/xam/xam_party.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamPartyGetBandwidth",
+      "file": "src/xenia/kernel/xam/xam_party.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamProfileClose",
+      "file": "src/xenia/kernel/xam/xam_profile.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamTaskShouldExit",
+      "file": "src/xenia/kernel/xam/xam_task.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamShowPartyUI",
+      "file": "src/xenia/kernel/xam/xam_ui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamShowCommunitySessionsUI",
+      "file": "src/xenia/kernel/xam/xam_ui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamShowAchievementsUI",
+      "file": "src/xenia/kernel/xam/xam_ui.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserContentRestrictionGetFlags",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserContentRestrictionGetRating",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserContentRestrictionCheckAccess",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserCreateTitlesPlayedEnumerator",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamReadTileToTexture",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamWriteGamerTile",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamSessionCreateHandle",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamSessionRefObjByHandle",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserIsUnsafeProgrammingAllowed",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamUserGetSubscriptionType",
+      "file": "src/xenia/kernel/xam/xam_user.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XGetVideoCapabilities",
+      "file": "src/xenia/kernel/xam/xam_video.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamVoiceIsActiveProcess",
+      "file": "src/xenia/kernel/xam/xam_voice.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamVoiceCreate",
+      "file": "src/xenia/kernel/xam/xam_voice.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamVoiceClose",
+      "file": "src/xenia/kernel/xam/xam_voice.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamVoiceHeadsetPresent",
+      "file": "src/xenia/kernel/xam/xam_voice.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamVoiceSubmitPacket",
+      "file": "src/xenia/kernel/xam/xam_voice.cc"
+    },
+    {
+      "module": "xam",
+      "export": "XamVoiceGetMicArrayStatus",
+      "file": "src/xenia/kernel/xam/xam_voice.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmIsDebuggerPresent",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmSendNotificationString",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmRegisterCommandProcessor",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmRegisterCommandProcessorEx",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmCaptureStackBackTrace",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmWalkLoadedModules",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmCloseLoadedModules",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmFindPdbSignature",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmGetXbeInfo",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmGetConsoleDebugMemoryStatus",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmGetSystemInfo",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmOpenNotificationSession",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmNotify",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmStartProfiling",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmStopProfiling",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmSetProfilingOptions",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmSetDumpMode",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmQueryTitleMemoryStatistics",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "DmIsFastCAPEnabled",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "__CAP_Start_Profiling",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "__CAP_End_Profiling",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "__CAP_Enter_Function",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xbdm",
+      "export": "__CAP_Exit_Function",
+      "file": "src/xenia/kernel/xbdm/xbdm_misc.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XAudioGetVoiceCategoryVolume",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_audio.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XAudioEnableDucker",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_audio.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XeCryptBnQwBeSigVerify",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_crypt.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XeCryptBnDwLePkcs1Verify",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_crypt.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XeCryptRandom",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_crypt.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XeCryptRotSumSha",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_crypt.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "DbgBreakPoint",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_debug.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "RtlRaiseException",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_debug.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "KeBugCheckEx",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_debug.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "HalReturnToFirmware",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_hal.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "HalSendSMCMessage",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_hal.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "HalOpenCloseODDTray",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_hal.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "HidReadKeys",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_hid.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "KeGetImagePageTableEntry",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_memory.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "KeLockL2",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_memory.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "KeUnlockL2",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_memory.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "KeEnableFpuExceptions",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_misc.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XUsbcamCreate",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_usbcam.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "XUsbcamGetState",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_usbcam.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "VdSetDisplayModeOverride",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_video.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "VdShutdownEngines",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_video.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "VdEnableDisableClockGating",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_video.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "ExSetXConfigSetting",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_xconfig.cc"
+    },
+    {
+      "module": "xboxkrnl",
+      "export": "ExReadModifyWriteXConfigSettingUlong",
+      "file": "src/xenia/kernel/xboxkrnl/xboxkrnl_xconfig.cc"
+    }
+  ]
+}

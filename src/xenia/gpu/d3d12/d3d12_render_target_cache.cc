@@ -10,9 +10,14 @@
 #include "xenia/gpu/d3d12/d3d12_render_target_cache.h"
 
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 
+#include "xenia/base/obs/obs_invariant.h"
+#include "xenia/debug/phoenix_probe.h"
+
 #include "third_party/dxbc/DXBCChecksum.h"
+#include "third_party/fmt/include/fmt/format.h"
 #include "third_party/fmt/include/fmt/xchar.h"
 
 #include "xenia/base/assert.h"
@@ -270,6 +275,8 @@ bool D3D12RenderTargetCache::Initialize() {
           &edram_buffer_desc, edram_buffer_state_, nullptr,
           IID_PPV_ARGS(&edram_buffer_)))) {
     XELOGE("D3D12RenderTargetCache: Failed to create the EDRAM buffer");
+    OBS_INVARIANT("EdramBufferAllocFail", obs::ChannelId::kGpuEdram, true,
+                  "create_edram_buffer_failed");
     Shutdown();
     return false;
   }
@@ -502,6 +509,8 @@ bool D3D12RenderTargetCache::Initialize() {
       XELOGW(
           "2x MSAA is not supported, emulated via top-left and bottom-right "
           "samples of 4x MSAA");
+      OBS_INVARIANT("Msaa2xFallback", obs::ChannelId::kGpuPipeline, true,
+                    "2x_msaa_emulated_via_4x");
     }
 
     descriptor_pool_color_ =
@@ -1839,6 +1848,14 @@ RenderTargetCache::RenderTarget* D3D12RenderTargetCache::CreateRenderTarget(
   if (resource_desc.Format == DXGI_FORMAT_UNKNOWN) {
     XELOGE("D3D12RenderTargetCache: Unknown {} render target format {}",
            key.is_depth ? "depth" : "color", key.resource_format);
+    {
+      const uint32_t resource_format =
+          static_cast<uint32_t>(key.resource_format);
+      obs::Invariant(
+          "RtFormatUnknown", obs::ChannelId::kGpuEdram, true,
+          ::fmt::format("{} fmt={}", key.is_depth ? "depth" : "color",
+                        resource_format));
+    }
     return nullptr;
   }
   if (key.msaa_samples == xenos::MsaaSamples::k2X && !msaa_2x_supported()) {
@@ -2005,7 +2022,8 @@ void D3D12RenderTargetCache::TransitionEdramBuffer(
 }
 
 void D3D12RenderTargetCache::MarkEdramBufferModified(
-    EdramBufferModificationStatus modification_status) {
+    EdramBufferModificationStatus modification_status,
+    bool guest_depth_may_have_changed) {
   assert_true(modification_status !=
               EdramBufferModificationStatus::kUnmodified);
   assert_true(edram_buffer_state_ == D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -2016,6 +2034,9 @@ void D3D12RenderTargetCache::MarkEdramBufferModified(
   // as ROV.
   edram_buffer_modification_status_ =
       std::max(edram_buffer_modification_status_, modification_status);
+  if (guest_depth_may_have_changed) {
+    NotifyGuestDepthEdramTilesTouched(0, xenos::kEdramTileCount);
+  }
 }
 
 void D3D12RenderTargetCache::CommitEdramBufferUAVWrites(
@@ -4604,7 +4625,13 @@ void D3D12RenderTargetCache::PerformTransfersAndResolveClears(
             offsetof(HostDepthStoreConstants, rectangle) / sizeof(uint32_t));
         command_processor_.SubmitBarriers();
         command_list.D3DDispatch(group_count_x, group_count_y, 1);
-        MarkEdramBufferModified();
+        {
+          char detail[64];
+          std::snprintf(detail, sizeof(detail), "msaa=%u", uint32_t(dest_rt_key.msaa_samples));
+          debug::PhoenixProbeNotifyHostDepthStore(detail);
+          obs::Invariant("HostDepthStore", obs::ChannelId::kGpuEdram, true, detail);
+        }
+        MarkEdramBufferModified(EdramBufferModificationStatus::kAsUAV, false);
       }
     }
     break;
@@ -6622,7 +6649,7 @@ void D3D12RenderTargetCache::DumpRenderTargets(uint32_t dump_base,
               << uint32_t(!format_is_64bpp),
           dispatch.height_tiles * draw_resolution_scale_y(), 1);
     }
-    MarkEdramBufferModified();
+    MarkEdramBufferModified(EdramBufferModificationStatus::kAsUAV, false);
   }
 }
 

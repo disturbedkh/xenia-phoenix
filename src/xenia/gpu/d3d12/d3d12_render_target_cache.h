@@ -158,7 +158,8 @@ class D3D12RenderTargetCache final : public RenderTargetCache {
   void TransitionEdramBuffer(D3D12_RESOURCE_STATES new_state);
   void MarkEdramBufferModified(
       EdramBufferModificationStatus modification_status =
-          EdramBufferModificationStatus::kAsUAV);
+          EdramBufferModificationStatus::kAsUAV,
+      bool guest_depth_may_have_changed = true);
   void CommitEdramBufferUAVWrites(EdramBufferModificationStatus commit_status =
                                       EdramBufferModificationStatus::kAsROV);
 
