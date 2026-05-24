@@ -1,5 +1,7 @@
 # Building
 
+**Phoenix:** canonical Windows commands and vcvars requirements are in [../../wiki/Building.md](../../wiki/Building.md) and [../../metacache/dev/10_build_commands.md](../../metacache/dev/10_build_commands.md).
+
 You must have a 64-bit machine for building and running the project. Always
 run your system updater before building and make sure you have the latest
 drivers.

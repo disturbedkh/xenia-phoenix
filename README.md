@@ -1,75 +1,70 @@
-<p align="center">
-    <a href="https://github.com/xenia-canary/xenia-canary/tree/canary_experimental/assets/icon">
-        <img height="256px" src="https://raw.githubusercontent.com/xenia-canary/xenia/master/assets/icon/256.png" />
-    </a>
-</p>
+# Xenia Phoenix — Xbox 360 Emulator (build tree)
 
-<h1 align="center">Xenia Canary - Xbox 360 Emulator</h1>
+This directory is the **canonical C++ build tree** for [Xenia Phoenix](../README.md): a fork focused on native-accuracy Xbox 360 emulation and retiring per-game patch debt.
 
-Xenia Canary is an experimental fork of the Xenia emulator. For more information, see the
-[Xenia Canary wiki](https://github.com/xenia-canary/xenia-canary/wiki).
+**Human docs:** [../wiki/Home.md](../wiki/Home.md) · **Project README:** [../README.md](../README.md)
 
-Come chat with us about **emulator-related topics** on [Discord](https://discord.gg/Q9mxZf9).
-For developer chat join `#dev` but stay on topic. Lurking is not only fine, but encouraged!
-Please check the [FAQ](https://github.com/xenia-canary/xenia-canary/wiki/FAQ) page before asking questions.
-We've got jobs/lives/etc, so don't expect instant answers.
+**Repository:** [github.com/disturbedkh/xenia-phoenix](https://github.com/disturbedkh/xenia-phoenix) (`canary_experimental` branch)
 
-Discussing illegal activities will get you banned.
+## Relationship to Xenia Canary
+
+Phoenix is forked from [xenia-canary/xenia-canary](https://github.com/xenia-canary/xenia-canary) (`canary_experimental`). It keeps Canary's broad platform coverage while prioritizing **measurable accuracy** (VMX128 differential tests, GPU trace replay, kernel stub tracing, patch categorization) over boot-and-patch compatibility.
+
+- **Upstream remote:** `upstream` → xenia-canary (rebase / merge base)
+- **Origin remote:** `origin` → disturbedkh/xenia-phoenix (Phoenix work)
+- Generic emulator background (options, community): [Canary wiki](https://github.com/xenia-canary/xenia-canary/wiki) — reference only; Phoenix workflow docs live in [../wiki/](../wiki/)
 
 ## Status
 
-Buildbot | Status | Releases
--------- | ------ | --------
-Canary (🪟, 🐧) | [![CI](https://github.com/xenia-canary/xenia-canary/actions/workflows/Orchestrator.yml/badge.svg?branch=canary_experimental)](https://github.com/xenia-canary/xenia-canary/actions/workflows/Orchestrator.yml/badge.svg?branch=canary_experimental) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/cd506034fd8148309a45034925648499)](https://app.codacy.com/gh/xenia-canary/xenia-canary/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) | [Latest](https://github.com/xenia-canary/xenia-canary/releases/latest) ◦ [All](https://github.com/xenia-canary/xenia-canary/releases) ◦ [Old](https://github.com/xenia-canary/xenia-canary-releases/releases)
+| Area | State |
+|------|--------|
+| Tier 0 differential CI | Green on x64 Windows — see [docs/TIER0_README.md](docs/TIER0_README.md) |
+| Tier 1-PC | Complete (2026-05-16) |
+| Tier 1-Gameplay | In progress — [../wiki/Tier-Model.md](../wiki/Tier-Model.md) |
 
-### Experimental Netplay
+CI workflows: `tier0-differential.yml` (PR), `tier0-windows.yml` (manual), `vmx128-1m-weekly.yml`. See [../wiki/Testing-and-CI.md](../wiki/Testing-and-CI.md).
 
-Buildbot | Status | Releases
--------- | ------ | --------
-Windows | [![Codacy Badge](https://app.codacy.com/project/badge/Grade/d814c4b6aa444dcc9c1631e0224b2739)](https://app.codacy.com/gh/AdrianCassar/xenia-canary/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) | [Latest](https://github.com/AdrianCassar/xenia-canary/releases/latest)
+## Quick links
 
-## Quickstart
+| Topic | Document |
+|-------|----------|
+| **Tier 0 pipeline** | [docs/TIER0_README.md](docs/TIER0_README.md) |
+| **Build (Phoenix)** | [../wiki/Building.md](../wiki/Building.md) · [docs/TIER0_BUILD.md](docs/TIER0_BUILD.md) |
+| **Build (general)** | [docs/building.md](docs/building.md) |
+| **Style** | [docs/style_guide.md](docs/style_guide.md) |
+| **Patch debt** | [docs/patch_debt_dashboard.md](docs/patch_debt_dashboard.md) · [../wiki/Patch-Debt.md](../wiki/Patch-Debt.md) |
+| **Contributing** | [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) · [../wiki/Contributing.md](../wiki/Contributing.md) |
 
-See the [Quickstart](https://github.com/xenia-canary/xenia-canary/wiki/Quickstart) page.
+## Phoenix tools
 
-## FAQ
-
-See the [frequently asked questions](https://github.com/xenia-canary/xenia-canary/wiki/FAQ) page.
-
-## Game Compatibility
-
-See the [Game compatibility list](https://github.com/xenia-canary/game-compatibility/issues)
-for currently tracked games, and feel free to contribute your own updates,
-screenshots, and information there following the [existing conventions](https://github.com/xenia-canary/game-compatibility/blob/canary/README.md).
+| Tool | Purpose |
+|------|---------|
+| [tools/tier0/](tools/tier0/) | Bootstrap, patch categorizer, smoke capture, VMX128/GPU scripts |
+| [tools/phoenixctl/](tools/phoenixctl/) | CLI — launch, tail telemetry, triage, Tier 0 gates |
+| [tools/phoenix-mcp/](tools/phoenix-mcp/) | Cursor MCP server for live probe workflows |
+| [tools/vmx128_fuzz/](tools/vmx128_fuzz/) | VMX128 differential fuzzer |
+| [tools/gpu_replay_ci/](tools/gpu_replay_ci/) | GPU trace replay CI |
 
 ## Building
 
-See [building.md](docs/building.md) for setup and information about the
-`xb` script. When writing code, check the [style guide](docs/style_guide.md)
-and be sure to run clang-format!
+Phoenix Windows builds **must** run inside MSVC `vcvars64`. See [../wiki/Building.md](../wiki/Building.md) for the canonical recipe.
 
-## Contributors Wanted!
+```powershell
+# Example — set $src to this directory
+$vcvars = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+cmd /c "`"$vcvars`" && cd /d `"$src`" && set VULKAN_SDK=C:\VulkanSDK\1.4.350.0 && python xenia-build.py build"
+```
 
-Have some spare time, know advanced C++, and want to write an emulator?
-Contribute! There's a ton of work that needs to be done, a lot of which
-is wide open greenfield fun.
+## Contributing
 
-**For general rules and guidelines please see [CONTRIBUTING.md](.github/CONTRIBUTING.md).**
+Read [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for style and content rules.
 
-Fixes and optimizations are always welcome (please!), but in addition to
-that there are some major work areas still untouched:
+**Phoenix-specific:**
 
-* Help work through [missing functionality/bugs in games](https://github.com/xenia-canary/xenia-canary/labels/compat)
-* Reduce the size of Xenia's [huge log files](https://github.com/xenia-canary/xenia-canary/issues/1526)
-* Skilled with Linux? A strong contributor is needed to [help with porting](https://github.com/xenia-canary/xenia-canary/labels/platform-linux)
-
-See more projects [good for contributors](https://github.com/xenia-canary/xenia-canary/labels/good%20first%20issue). It's a good idea to ask on Discord and check the issues page before beginning work on
-something.
+- Do not add category-C/D patches when an emulator fix is possible — see [../wiki/Patch-Debt.md](../wiki/Patch-Debt.md).
+- PRs should pass Tier 0 gates; use [docs/TIER0_PR_TEMPLATE.md](docs/TIER0_PR_TEMPLATE.md) for descriptions.
+- Run `xb format` (or equivalent) before commit.
 
 ## Disclaimer
 
-The goal of this project is to experiment, research, and educate on the topic
-of emulation of modern devices and operating systems. **It is not for enabling
-illegal activity**. All information is obtained via reverse engineering of
-legally purchased devices and games and information made public on the internet
-(you'd be surprised what's indexed on Google...).
+The goal of this project is to experiment, research, and educate on emulation of modern devices and operating systems. **It is not for enabling illegal activity.** All information is obtained via reverse engineering of legally purchased devices and games and information made public on the internet.
