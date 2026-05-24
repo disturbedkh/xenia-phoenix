@@ -11,6 +11,8 @@
 
 #include <system_error>
 
+#include "xenia/base/string_util.h"
+
 namespace xe {
 namespace filesystem {
 
@@ -49,7 +51,7 @@ std::vector<FileInfo> ListDirectories(const std::filesystem::path& path) {
                  return file.type == FileInfo::Type::kDirectory;
                });
 
-  return std::move(directories);
+  return directories;
 }
 
 std::vector<FileInfo> FilterByName(const std::vector<FileInfo>& files,
@@ -61,7 +63,37 @@ std::vector<FileInfo> FilterByName(const std::vector<FileInfo>& files,
       [pattern](const FileInfo& file) {
         return std::regex_match(file.name.filename().string(), pattern);
       });
-  return std::move(filtered_entries);
+  return filtered_entries;
+}
+
+std::vector<FileInfo> FindFileWithName(const std::filesystem::path& path,
+                                       std::string_view name, bool recursive) {
+  if (!std::filesystem::exists(path)) {
+    return {};
+  }
+
+  if (!std::filesystem::is_directory(path)) {
+    return {};
+  }
+
+  if (!recursive) {
+    return FilterByName(ListFiles(path), std::regex(std::string(name)));
+  }
+
+  const std::string file_name = xe::utf8::lower_ascii(name);
+
+  std::vector<FileInfo> filtered_entries = {};
+  for (const auto& entry :
+       std::filesystem::recursive_directory_iterator(path)) {
+    if (entry.is_regular_file() && xe::utf8::lower_ascii(xe::path_to_utf8(
+                                       entry.path().filename())) == file_name) {
+      auto file_info = GetInfo(entry.path());
+      if (file_info) {
+        filtered_entries.push_back(std::move(file_info.value()));
+      }
+    }
+  }
+  return filtered_entries;
 }
 
 }  // namespace filesystem
