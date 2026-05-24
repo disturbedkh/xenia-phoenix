@@ -51,3 +51,15 @@ Tool: `tools/tier0/list_smoke_patches.py --title-id …` against `docs/patch_deb
 Phoenix the fork: do we re-brand the binary name (`xenia-phoenix.exe`), or keep `xenia.exe` and only change the about box? Pirate-distribution risk vs. user confusion.
 
 Decision: keep `xenia_canary.exe` for now. Re-branding is a Tier 1 exit cosmetic.
+
+## Q8. vmx128-fuzz 50k full-registry AV (OQ-vmx128-50k-av)
+
+**Opened:** 2026-05-23 (Tier S follow-ups triage).
+
+**Symptom:** `vmx128-fuzz.exe --vmx128_fuzz_iters=50000 --vmx128_fuzz_seed=3735928559 --vmx128_fuzz_rm_pass=rn` from `build/bin/Windows/Release` cwd crashes immediately with no opcode output. Reproduces on `canary_experimental` baseline before Tier S follow-ups. Per-opcode filters (`vadd*`, `vupk*`) pass 50k.
+
+**Hypothesis:** Local full-registry run accumulates unwind-table / processor state across opcodes differently than CI's per-opcode isolation or CI runner environment. Not a Tier S GPU/kernel regression.
+
+**Next steps:** Compare CI `tier0-differential.yml` invocation vs local; bisect last opcode if logging can be made crash-safe; confirm whether `TestGuestPpcBlock::ReleaseCompiledGuest()` per opcode is skipped on full-registry path.
+
+**Gate policy:** Per-opcode 50k smoke (`vadd*` + `vupk*`) + CI 50k workflow; full-registry local AV tracked here, not blocking merge.

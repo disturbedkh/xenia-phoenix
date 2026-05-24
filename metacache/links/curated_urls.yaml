@@ -10,7 +10,12 @@ architecture:
   - url: https://free60.org/System-Software/Formats/STFS/
     topic: STFS packages
 repos:
+  - url: https://github.com/disturbedkh/xenia-phoenix
+    topic: Xenia Phoenix (canonical fork)
   - url: https://github.com/xenia-canary/xenia-canary
     topic: Xenia Canary upstream
   - url: https://github.com/xenia-canary/xenia-canary/wiki
-    topic: Canary wiki (options, patches)
+    topic: Canary wiki (reference only — options, legacy patches)
+docs:
+  - path: wiki/Home.md
+    topic: Phoenix human wiki (version-controlled)

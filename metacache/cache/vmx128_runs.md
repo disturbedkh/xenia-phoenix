@@ -1,11 +1,28 @@
 ---
-last_verified: 2026-05-16
-verified_by: session-20
+last_verified: 2026-05-23
+verified_by: tier-s-followups
 ---
 
 # vmx128-fuzz run cache
 
 Append-only log of local differential runs (seed **3735928559** / `0xDEADBEEF` unless noted). Update this file after every vmx128-fuzz or sign-off sweep.
+
+## Tier S follow-ups triage (2026-05-23)
+
+| Field | Value |
+|-------|--------|
+| Binary | `build/bin/Windows/Release/vmx128-fuzz.exe` @ `466804473` |
+| CWD | `build/bin/Windows/Release` (matches CI `tier0-differential.yml`) |
+| Iters/op | 50,000 |
+| Seed | 3735928559 |
+| `vmx128_fuzz_rm_pass` | `rn` |
+| Full registry | **AV** — immediate crash, **no opcode logged** before fault |
+| Filter `vadd*` | **Green** (12 opcodes × 50k) |
+| Filter `vupk*` | **Green** (2 opcodes × 50k) |
+
+**Hypothesis:** Pre-existing harness issue on `canary_experimental` baseline (not Tier S regression). Likely unwind-table / fresh-processor teardown when iterating the full opcode registry locally; per-opcode runs isolate each opcode in a fresh `TestGuestPpcBlock` (see `main.cc` sort order). CI 50k workflow still provides smoke coverage.
+
+**Ticket:** [50_open_questions.md](../plan/50_open_questions.md) § OQ-vmx128-50k-av.
 
 ## Latest run (2026-05-16, Session 20 sign-off **GREEN**)
 

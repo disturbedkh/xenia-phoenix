@@ -575,4 +575,72 @@ cmd /c "`"$vcvars`" && cd /d `"G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix
 
 **Code:** `XamGetSystemVersion` promoted to `kImplemented`; inventory **166** stubs.
 
+## Session — Edge Tier A+B MVP (2026-05-23)
+
+**Scope:** Cherry-pick 14 Edge commits (Tier A diagnostic stack + Tier B NetDll/POSIX prep) per [edge_tier_ab_queue.md](../plan/edge_tier_ab_queue.md). A4 ZPD (`944e395c3`) held.
+
+**Branches:** `sync/edge-tier-a-2026-05-23` → FF `canary_experimental`; `sync/edge-tier-b-2026-05-23` → FF `canary_experimental`. **HEAD:** `02f2c540c`.
+
+**Edge picks (chronological)**
+
+| Edge | Phoenix | Note |
+|------|---------|------|
+| `435bea911` … `50a630c03` (A3) | `e81ad7079` … `76731fd97` | SIGBUS/threading/cvar conflicts resolved |
+| `6f410ebfc` … `bf2f984f7` (A2) | `200fd637c` … `663225709` | SubmissionSummary manual port (`7be6ecf54`) |
+| `96effa1eb` (A1) | `ba4616de2` | Display dialog port; `b46ee11f9` build fixup |
+| `ace49597b`, `0672a6872` (B2) | `f23bc62c4`, `55d147623` | Clean; no-op Windows |
+| `250fb40dc`, `ba490f79e` (B1) | `03eaec9b2`, `57b56c07c`, `02f2c540c` | No asio in Phoenix; native `WSAEventSelect` stub; EPQ-28 WSAE map deferred |
+
+**Gates:** Release `xenia-app` + `xenia-cpu-tests` **green** on both branches (800/250).
+
+**WIP:** `git stash pop` — settings UI refactor (`wip-settings-ui-pre-tier-ab`); conflict resolved; GPU trace in `display_settings_panel.cc`.
+
+**Docs:** `edge_tier_ab_queue.md` (new); `edge_port_queue.md`, `20_tier_roadmap.md` updated.
+
+---
+
+## Session — Tier A+B follow-ups + Edge Tier S (2026-05-23)
+
+**Scope:** Net fixup (EPQ-28/31), Tier S MVP (19 Edge picks / 7 clusters), metacache audit. Plan: `tier-ab-followups`.
+
+**Net fixup:** `2ac905f80` — Phoenix-native `errno`→WSAE switch in `XSocket::GetLastWSAError()`; `MaybeSignalSelectedEvent()` wired into Recv/Send/Connect/Accept (poll-on-op, no asio).
+
+**Tier S branch:** `sync/edge-tier-s-2026-05-23` from `2ac905f80` → FF `canary_experimental`. **HEAD:** `74fe77ce0`.
+
+**Landed picks (Phoenix commits):** `9f9b53a5e`, `0b800bae7` (S1 JIT trace); `dcce43dc0` (S3 xtimer); `28f204871`, `e86c78bcd` (S7 APU); `be9dff97d` (S4 XObject); `5d0616618`, `3d439f40d`, `74fe77ce0` (S6 partial: kEarlyHint drop, FenceAcquisition typo, texture upload barrier).
+
+**Empty skips (already in Phoenix):** S2 `fdbaaaba2`; S3 `331ddf79b`, `cdb88d0b3`; S5 `cb5ad9a11`, `b15fcc73e`; S6 `562aa0dd9`, `02a259129`.
+
+**Blocked:** S5 `731b19d86` (float24 PS enums/RTC); S6 `29b03f9ea` (readback barriers — command processor diff), `d1a4cf163` (dynamic rendering — EPQ-S4-watch `944e395c3`).
+
+**Gates @ `74fe77ce0`:** Release build **green**; cpu-tests **800/250**; GPU format-validate **exit 0** (11 traces, slot_j tail warnings); vmx128 50k full registry **AV** (pre-existing on `canary_experimental` baseline — per-opcode 50k OK).
+
+**WIP:** `wip-settings-ui-pre-tier-s` stashed mechanically; restored post-merge (13 modified + 11 untracked settings UI sources).
+
+**Docs:** `edge_tier_s_queue.md` (new); `edge_tier_ab_queue.md`, `edge_port_queue.md` (EPQ-28/30 landed, EPQ-S4-watch), `20_tier_roadmap.md` updated.
+
+---
+
+## Session — Tier S follow-ups (2026-05-23)
+
+**Scope:** Close blocked Tier S picks (S5 float24 PS, S6 readback barriers), reclassify `d1a4cf163` N/A, gate, FF merge. Plan: `tier_s_follow-ups`.
+
+**Branch:** `sync/edge-tier-s-followups-2026-05-23` from `74fe77ce0` → FF `canary_experimental`. **HEAD:** `466804473`.
+
+**Landed (Phoenix commits):**
+
+| Edge | Phoenix | Note |
+|------|---------|------|
+| `731b19d86` (S5) | `e6e54bf8a`, `466804473` | SPIR-V `kFloat24Truncating`/`kFloat24Rounding`, RTC accessor, pipeline cache substitute PS; compat aliases for `DepthLess` + `Sample` |
+| `29b03f9ea` (S6) | `e6e54bf8a` | Memexport + resolve readback `PushBufferMemoryBarrier` before copy; scaled-resolve site **N/A** on Phoenix |
+| `d1a4cf163` (S6) | — | **N/A** — Phoenix uses `RenderPassKey` / `vkRenderPass`, not VK_KHR_dynamic_rendering |
+
+**vmx128 triage:** Full registry 50k **AV** (pre-existing); `vadd*` + `vupk*` 50k **green**. See [cache/vmx128_runs.md](vmx128_runs.md).
+
+**Gates @ `466804473`:** Release build **green**; cpu-tests **800/250**; GPU format-validate + strict **exit 0**; vmx128 per-opcode 50k **green**; stub-trace 30s **not run** (no local roster game path).
+
+**WIP:** `wip-settings-ui-pre-tier-s-followups` stashed mechanically; restored post-merge (13 modified + 11 untracked settings UI sources).
+
+**Docs:** `edge_tier_s_queue.md`, `edge_port_queue.md`, `20_tier_roadmap.md`, `vmx128_runs.md`, `50_open_questions.md` updated.
+
 ---

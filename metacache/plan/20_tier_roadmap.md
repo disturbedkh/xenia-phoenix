@@ -1,6 +1,6 @@
 # Tier roadmap
 
-The plan, ordered. Phoenix is currently at **Tier 1-Gameplay** (Windows). **Canary sync:** upstream `09dbe2c` landed 2026-05-23 ([canary_resync_queue.md](canary_resync_queue.md)); Phoenix HEAD `bc8e455ac`.
+The plan, ordered. Phoenix is currently at **Tier 1-Gameplay** (Windows). **Canary sync:** upstream `09dbe2c` landed 2026-05-23 ([canary_resync_queue.md](canary_resync_queue.md)). **Edge Tier A+B:** landed 2026-05-23 ([edge_tier_ab_queue.md](edge_tier_ab_queue.md)). **Edge Tier S (partial):** landed 2026-05-23 ([edge_tier_s_queue.md](edge_tier_s_queue.md)); Phoenix HEAD `74fe77ce0`.
 
 ## Tier 0 — PC-only differential CI (DONE in canary fork)
 
@@ -70,7 +70,7 @@ Tier 1 is broken into four phases. Each phase has a specific, measurable accurac
 3. **CI:** `tier0-windows.yml` runs format validation on traces.
 4. **RE:** [re/20_xenos_gpu.md](../re/20_xenos_gpu.md) updated.
 
-**1.2 stretch (ongoing):** legal retail captures per CORPUS matrix; trace-backed `d3d12_render_target_cache.cc` fixes when drift appears; resolve TODO count toward ≤3.
+**1.2 stretch (ongoing):** legal retail captures per CORPUS matrix; trace-backed `d3d12_render_target_cache.cc` fixes when drift appears; resolve TODO count toward ≤3. **2026-05-23:** Tier A GPU trace button (Edge `96effa1eb` / Phoenix `ba4616de2`); Vulkan `depth_float24_convert_in_pixel_shader` cvar available (default **off**, `466804473`) — opt-in stretch tool for retail capture drift diagnosis when D24FS8 + z_enable; see [edge_tier_s_queue.md](edge_tier_s_queue.md).
 
 **BF2 (`454107DB`):** **parked** — [bf2_gpu_roadmap.md](bf2_gpu_roadmap.md) § Parked. Active Tier 1-Gameplay: smoke roster + [edge_port_queue.md](edge_port_queue.md) + C-patch backlog ([62_gameplay_execution.md](62_gameplay_execution.md)).
 
@@ -157,7 +157,7 @@ Inventory: [linux_compat_gap_analysis.md](linux_compat_gap_analysis.md). Machine
 | **2.2** | Release build green (Docker + CI) | [x] 2026-05-16; CI reconfirmed 2026-05-23 ([run 26341449305](https://github.com/disturbedkh/xenia-phoenix/actions/runs/26341449305) — x86 Release/Debug/Checked) |
 | **2.3** | Build matrix (Debug/Checked), `.gitattributes`, CI `doctor`, optional [Dockerfile](../../xenia-phoenix-src/tools/docker/Dockerfile) | [x] |
 | **2.4** | Automated verify: [linux-verify.sh](../../xenia-phoenix-src/tools/docker/linux-verify.sh), cpu-tests, AppImage smoke | [x] |
-| **2.5** | Runtime sign-off — [linux_runtime_checklist.md](../../xenia-phoenix-src/docs/linux_runtime_checklist.md) (GTK, Vulkan, audio, HID) | [ ] manual |
+| **2.5** | Runtime sign-off — [linux_runtime_checklist.md](../../xenia-phoenix-src/docs/linux_runtime_checklist.md) (GTK, Vulkan, audio, HID) | [ ] manual; **kernel prep landed** 2026-05-23 — Edge Tier B2 (`ace49597b`, `0672a6872`): POSIX XThread release + timer APC without guest TLS ([edge_tier_ab_queue.md](edge_tier_ab_queue.md)) |
 | **2.6** | Smoke-title QA — [60_smoke_titles.md](60_smoke_titles.md) Linux column; stub parity vs Windows | [ ] manual |
 | **2.7** | Packaging — [linux_packaging.md](../../xenia-phoenix-src/docs/linux_packaging.md); AppImage on clean Ubuntu VM | [ ] partial (CI smoke [x]) |
 

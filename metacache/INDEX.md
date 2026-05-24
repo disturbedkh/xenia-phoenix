@@ -80,6 +80,7 @@ Port analyses: `plan/linux_compat_*`, `android_compat_*`, `arm64_compat_*`, `mac
 
 ## Source-of-truth links
 
+- **Human wiki:** [wiki/Home.md](../wiki/Home.md)
 - **Build + develop:** [xenia-phoenix-src/](../xenia-phoenix-src/)
 - Tier 0: `xenia-phoenix-src/docs/TIER0_README.md`
 - Telemetry playbook: `xenia-phoenix-src/telemetry/README.md`

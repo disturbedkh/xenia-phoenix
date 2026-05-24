@@ -2,7 +2,7 @@
 
 **Purpose:** Harvest low-risk fixes from [Xenia-Edge](../../Xenia-Edge/) into `xenia-phoenix-src` without disturbing Phoenix Tier 1-PC wins (vmx128, U-GPU instrumentation, `apu_trace`, stub logging, upload continue).
 
-**Audit method:** Commit log scan + cherry-pick trial on `sync/edge-port-a-2026-05-23` (2026-05-23). Edge HEAD `6e02a106`; Phoenix HEAD `bc8e455ac`. Prior audit: 2026-05-17 @ Edge `6101f13`.
+**Audit method:** Commit log scan + cherry-pick trial on `sync/edge-port-a-2026-05-23` (2026-05-23). Edge HEAD `6e02a106c`; Phoenix HEAD `466804473` (`canary_experimental`, Tier A+B + Tier S + follow-ups landed 2026-05-23). Prior audit: 2026-05-17 @ Edge `6101f13`.
 
 **Scope:** `src/xenia/{apu,gpu,kernel,hid,base,cpu/ppc}` — excludes `cpu/backend/x64`, `cpu/backend/a64`, build/CI.
 
@@ -51,15 +51,15 @@
 | EPQ-25 | `cebbdb6` | `XeCryptHmacShaInit/Update/Final` | Already present | **A** | skip (empty pick) | |
 | EPQ-26 | `6181160` | XEX swap prefix fix | Already present via canary sync | **A** | skip (empty pick) | |
 | EPQ-27 | `3811fbf` | Posix relaunch dangling `argv` | Phoenix lacks posix relaunch block | **B** | queue | Land with Linux return-to-UI work |
-| EPQ-28 | `250fb40` | `AsioErrorToWSAError` in `xsocket.cc` | Different xsocket architecture | **B** | queue | Networked-title smoke prerequisite |
+| EPQ-28 | `250fb40` | `AsioErrorToWSAError` in `xsocket.cc` | Native-handle xsocket; no asio dep | **A** | **landed** 2026-05-23 | `2ac905f80` Phoenix-native errno→WSAE switch (no asio) — [edge_tier_ab_queue.md](edge_tier_ab_queue.md) |
 | EPQ-29 | `0a82080` | Bake `gamecontrollerdb.txt` into exe | Missing `embed_bundle.py` infra | **B** | queue | Needs build-system port |
-| EPQ-30 | `b975095` + `c2f7fc4` | JIT ITrace/DTrace/FTrace + x64 codegen fix | Pairs with Phoenix `xe::obs` | **B** | queue | Long-term observability |
-| EPQ-31 | `ba490f79` | `NetDll_WSAEventSelect` via asio | Not in Phoenix | **B** | queue | Online smoke |
+| EPQ-30 | `b975095` + `c2f7fc4` | JIT ITrace/DTrace/FTrace + x64 codegen fix | Pairs with Phoenix `xe::obs` | **A** | **landed** 2026-05-23 | Tier S S1 — `9f9b53a5e`, `0b800bae7` — [edge_tier_s_queue.md](edge_tier_s_queue.md) |
+| EPQ-31 | `ba490f79` | `NetDll_WSAEventSelect` via asio | Phoenix native stub (no asio sockets) | **B** | **landed (partial)** 2026-05-23 | Tier B stub + `2ac905f80` poll-on-op signal; full async_wait Phase 2.5 |
 | EPQ-32 | `45d770a7` + `5d4a90b3` + `1f4bb500` | HID keyboard merge + XInput removal + SDL JoystickType | Multi-commit unit | **B** | queue | WoA / desktop QA |
 | EPQ-33 | `882cd7e9` | Game library storage separate from dash GPD | Overlaps launcher icon-cache WIP | **B** | queue | Human review vs stashed WIP |
 | EPQ-34 | `4b1b62f7` | Startup profile creation + game import flow | UX feature | **B** | queue | Design review |
 | EPQ-35 | `71dcd500` + `a1de6bd4` + `6e9c4973` | Volume / back-button / per-game FPS limit UI | Coherent trio | **B** | queue | UX bundle |
-| EPQ-36 | `96effa1e` | ImGui GPU trace button | Pairs with tier0 replay | **B** | queue | Developer UX |
+| EPQ-36 | `96effa1e` | ImGui GPU trace button | Tier A port to Display / settings panel | **A** | **landed** 2026-05-23 | Tier A — [edge_tier_ab_queue.md](edge_tier_ab_queue.md) |
 | EPQ-37 | `b575c684` | XMA RexGlue / AC6_recomp derivation | Partially covered by canary `09dbe2c` | **D** | triage | Compare after smoke XMA JSONL |
 | EPQ-38 | Metal + MoltenVK + macOS CI (~20 commits) | Full macOS Vulkan/Metal stack | EPQ-09 defer | **B** | defer | Phase 4.4a |
 
@@ -73,6 +73,15 @@
 | EDGE-PORT-A-4 | 2026-05-23 | `audio_system.{cc,h}` ClientSlot default-init |
 | EDGE-PORT-A-5 | 2026-05-23 | `xboxkrnl_memory.cc` NtFree/Protect null-check |
 | EDGE-PORT-A-6 | 2026-05-23 | GPU trace-writer guest addresses (`command_processor`, D3D12/Vulkan/null) |
+| EDGE-TIER-A | 2026-05-23 | 10 Edge picks: Vulkan diagnostics, base robustness, GPU trace UI — [edge_tier_ab_queue.md](edge_tier_ab_queue.md) |
+| EDGE-TIER-B | 2026-05-23 | POSIX XThread/timer APC prep + NetDll `WSAEventSelect` (partial EPQ-28/31) — [edge_tier_ab_queue.md](edge_tier_ab_queue.md) |
+| EDGE-TIER-S | 2026-05-23 | Tier S complete + follow-ups: S1 JIT trace, S3 xtimer, S4 XObject, S7 APU pair, S5 float24 PS (`731b19d86`), S6 readback barriers (partial) + `d1a4cf163` N/A — [edge_tier_s_queue.md](edge_tier_s_queue.md) |
+
+## Held (watch / blocked)
+
+| ID | Edge | Reason |
+|----|------|--------|
+| EPQ-S4-watch | `944e395c3` | Intrusive ZPD refactor; revisit after Tier S settles and FSI counter use is exercised by Tier 1.2 retail captures |
 
 ## Next B items (after smoke §2)
 
