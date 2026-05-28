@@ -221,6 +221,14 @@ std::unique_ptr<EmulatorWindow> EmulatorWindow::Create(
 }
 
 EmulatorWindow::~EmulatorWindow() {
+  // Stop the hotkey listener and wait for it to exit; it touches members of
+  // this window and Thread::reset() does not join.
+  hotkeys_listener_running_ = false;
+  if (Gamepad_HotKeys_Listener) {
+    xe::threading::Wait(Gamepad_HotKeys_Listener.get(), false);
+    Gamepad_HotKeys_Listener.reset();
+  }
+
   // Notify the ImGui drawer that the immediate drawer is being destroyed.
   ShutdownGraphicsSystemPresenterPainting();
 }
@@ -291,6 +299,7 @@ void EmulatorWindow::OnEmulatorInitialized() {
 
   // Create a thread to listen for controller hotkeys.
   if (cvars::controller_hotkeys) {
+    hotkeys_listener_running_ = true;
     Gamepad_HotKeys_Listener =
         threading::Thread::Create({}, [&] { GamepadHotKeys(); });
     Gamepad_HotKeys_Listener->set_name("Gamepad HotKeys Listener");
@@ -2216,7 +2225,7 @@ void EmulatorWindow::GamepadHotKeys() {
   auto input_sys = emulator_->input_system();
 
   if (input_sys) {
-    while (true) {
+    while (hotkeys_listener_running_) {
       // Collect controller states while holding the lock
       std::array<std::pair<bool, X_INPUT_STATE>, XUserMaxUserCount>
           controller_states;

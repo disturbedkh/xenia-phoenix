@@ -64,6 +64,7 @@ class EmulatorWindow {
       uint32_t height);
 
   std::unique_ptr<xe::threading::Thread> Gamepad_HotKeys_Listener;
+  std::atomic<bool> hotkeys_listener_running_ = {false};
 
   int32_t selected_title_index = -1;
 
