@@ -51,9 +51,19 @@ cd /src
 git config --global --add safe.directory /src
 sed -i 's/\r$//' xenia-build.py tools/docker/linux-verify.sh 2>/dev/null || true
 
+# Arch-aware stale-cache check (build dir resolves to Build/Linux/<x64|ARM64>
+# from the container's native arch, so this also covers emulated arm64 runs).
+BUILD_DIR=$(python3 tools/build/xenia_paths.py build-dir --os Linux 2>/dev/null || echo "Build/Linux/x64")
+if [ -f "$BUILD_DIR/CMakeCache.txt" ]; then
+  if grep -qiE '(CMAKE_HOME_DIRECTORY:INTERNAL=)?[gG]:/' "$BUILD_DIR/CMakeCache.txt" 2>/dev/null; then
+    echo "Removing $BUILD_DIR (Windows CMake cache)..."
+    rm -rf "$BUILD_DIR"
+  fi
+fi
+# Legacy cache cleanup
 if [ -f build/CMakeCache.txt ]; then
   if grep -qiE '(CMAKE_HOME_DIRECTORY:INTERNAL=)?[gG]:/' build/CMakeCache.txt 2>/dev/null; then
-    echo "Removing build/ (Windows CMake cache)..."
+    echo "Removing build/ (legacy Windows CMake cache)..."
     rm -rf build
   fi
 fi
@@ -86,7 +96,7 @@ python3 xenia-build.py doctor 2>&1 | tee -a "$LOG"
 python3 xenia-build.py build --config="${CONFIG}" 2>&1 | tee -a "$LOG"
 build_status=${PIPESTATUS[0]}
 
-binary="/src/build/bin/Linux/${CONFIG_TITLE}/xenia_canary"
+binary="$(python3 /src/tools/build/xenia_paths.py bin --config "${CONFIG_TITLE}" --os Linux)/xenia_canary"
 if [ "$build_status" -ne 0 ]; then
   echo "Build FAILED (status=$build_status)" >&2
   exit "${build_status:-1}"

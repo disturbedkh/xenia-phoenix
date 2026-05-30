@@ -2,14 +2,14 @@
 #
 # Prerequisites:
 # - Build with -DXENIA_BUILD_MISC=ON (produces xenia-gpu-d3d12-trace-dump and
-#   xenia-gpu-vulkan-trace-dump under build/bin/Windows).
+#   xenia-gpu-vulkan-trace-dump under Build/Windows/x64/<Config>).
 # - Place one or more `.xtr` captures under tests/gpu_traces/ (see README).
 #
 # Usage:
-#   python tools/gpu_replay_ci/run.py --build-dir build --backend d3d12
-#   python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12
+#   python tools/gpu_replay_ci/run.py --build-dir Build/Windows/x64 --backend d3d12
+#   python tools/gpu_replay_ci/run.py --build-dir Build/Windows/x64 --cross-path d3d12
 #   # Exploratory: do not fail on RTV/ROV tree mismatch
-#   python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12 --allow-rtv-rov-drift
+#   python tools/gpu_replay_ci/run.py --build-dir Build/Windows/x64 --cross-path d3d12 --allow-rtv-rov-drift
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def run_dump(bin_path: Path, trace: Path, out_dir: Path, extra_args: list[str]) 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Replay GPU traces and diff dump trees.")
     ap.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[2])
-    ap.add_argument("--build-dir", type=Path, default=Path("build"))
+    ap.add_argument("--build-dir", type=Path, default=Path("Build/Windows/x64"))
     ap.add_argument("--traces-dir", type=Path, default=None)
     ap.add_argument("--golden-dir", type=Path, default=None)
     ap.add_argument(
@@ -78,7 +78,7 @@ def main() -> int:
     traces_dir = args.traces_dir or (repo / "tests" / "gpu_traces")
     golden_root = args.golden_dir or (repo / "tests" / "gpu_traces" / "golden")
 
-    plat_bin = args.build_dir / "bin" / "Windows"
+    plat_bin = args.build_dir
     if args.backend == "d3d12":
         exe_name = "xenia-gpu-d3d12-trace-dump.exe"
     else:

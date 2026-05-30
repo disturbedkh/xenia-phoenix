@@ -37,6 +37,19 @@ def _run_ps1(script: Path, args: list[str], repo: Path) -> subprocess.CompletedP
     )
 
 
+def _default_xenia_exe(config: str) -> str:
+    repo = find_repo_root()
+    proc = subprocess.run(
+        [sys.executable, str(repo / "tools" / "build" / "xenia_paths.py"),
+         "bin", "--config", config],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return str(Path(proc.stdout.strip()) / "xenia_canary.exe")
+
+
 def preflight(config: str = "Release") -> tuple[int, str]:
     repo = find_repo_root()
     script = repo / "tools" / "tier0" / "smoke_session_ready.ps1"
@@ -68,7 +81,7 @@ def launch_smoke(
         "-TelemetryDir",
         telemetry_dir,
         "-XeniaExe",
-        f"build/bin/Windows/{config}/xenia_canary.exe".replace("/", "\\"),
+        _default_xenia_exe(config),
     ]
     proc = _run_ps1(script, args, repo)
     result = {
@@ -175,7 +188,7 @@ def launch_triage(
             pid=pid or 0,
             mode="triage",
             game_path=game_path,
-            xenia_exe=rel_exe or "build/bin/Windows/Debug/xenia_canary.exe",
+            xenia_exe=rel_exe or _default_xenia_exe("Debug"),
         )
 
     guard = verify_instrumented_launch(

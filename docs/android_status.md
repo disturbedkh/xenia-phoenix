@@ -13,7 +13,7 @@ Last updated: 2026-05-16.
 - Tree: `xenia-phoenix-src/`
 - CI: [.github/workflows/Android_arm64.yml](../.github/workflows/Android_arm64.yml) (NDK r26c, `android-26`)
 - Docker parity: `tools/docker/android-ndk-build.sh`
-- Output: `build-android-arm64/bin/Android/libxenia-app.so`
+- Output: `Build/Android/Release/libxenia-app.so`
 - Studio: `android/android_studio_project/` (`minSdk 26`, `ndkVersion 26.1.10909125`)
 
 Blockers log: [android_build_blockers.md](android_build_blockers.md)

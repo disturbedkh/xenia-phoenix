@@ -11,7 +11,7 @@ using System.Windows.Forms;
 
 namespace shader_playground {
   public partial class Editor : Form {
-    string compilerPath_ = @"..\..\..\..\..\build\bin\Windows\Debug\xenia-gpu-shader-compiler.exe";
+    string compilerPath_ = @"..\..\..\..\..\Build\Windows\x64\Debug\xenia-gpu-shader-compiler.exe";
 
     FileSystemWatcher compilerWatcher_;
     bool pendingTimer_ = false;

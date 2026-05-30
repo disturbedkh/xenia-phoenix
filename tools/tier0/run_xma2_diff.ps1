@@ -3,10 +3,8 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
 
-$exe = "build\bin\Windows\Release\xma2-diff.exe"
-if (-not (Test-Path $exe)) {
-    $exe = "build\bin\Windows\xma2-diff.exe"
-}
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$exe = Join-Path (Get-XeniaBinDir -Config Release) "xma2-diff.exe"
 if (-not (Test-Path $exe)) {
     Write-Error "Build xma2-diff first (cmake -DXENIA_BUILD_MISC=ON)"
 }

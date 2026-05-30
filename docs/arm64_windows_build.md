@@ -16,9 +16,9 @@ For **cross-compile from x64**, the ARM64 build tools component is required on t
 
 | Host | Target | Output dir |
 |------|--------|------------|
-| x64 | ARM64 (cross) | `build-arm64/` |
-| ARM64 | ARM64 (native) | `build/` |
-| ARM64 | x64 (cross) | `build-x64/` |
+| x64 | ARM64 (cross) | `Build/Windows/ARM64/` |
+| ARM64 | ARM64 (native) | `Build/Windows/ARM64/` |
+| ARM64 | x64 (cross) | `Build/Windows/x64/` |
 
 ## Commands
 
@@ -35,7 +35,7 @@ python xenia-build.py build --target-arch arm64 --config=release --target=xenia-
 python xenia-build.py build --target-arch arm64 --config=release --build-tests --cmake-define XENIA_BUILD_MISC=ON
 ```
 
-Binary (Release): `build-arm64\bin\Windows\Release\xenia_canary.exe` (cross from x64).
+Binary (Release): `Build\Windows\ARM64\Release\xenia_canary.exe` (cross from x64).
 
 ## Runtime
 

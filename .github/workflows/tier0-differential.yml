@@ -19,33 +19,30 @@ jobs:
 
       - name: Build Release (tests, vmx128-fuzz, xma2-diff, trace-dump)
         run: |
-          cmake --build build --config Release --parallel `
+          cmake --build Build/Windows/x64/vs --config Release --parallel `
             --target xenia-cpu-tests vmx128-fuzz xma2-diff xenia-gpu-d3d12-trace-dump
 
       - name: Run xenia-cpu-tests
         shell: pwsh
         run: |
-          Set-Location build/bin/Windows/Release
+          Set-Location Build/Windows/x64/Release
           ./xenia-cpu-tests.exe
 
       - name: Run vmx128-fuzz (50k smoke)
         shell: pwsh
         run: |
-          Set-Location build/bin/Windows/Release
+          Set-Location Build/Windows/x64/Release
           ./vmx128-fuzz.exe --vmx128_fuzz_iters=50000 --vmx128_fuzz_seed=3735928559 `
             --vmx128_fuzz_report_out=vmx128_fuzz_report_ci.json
 
       - name: Run xma2-diff (fixtures)
         shell: pwsh
-        run: |
-          Set-Location build/bin/Windows/Release
-          ./xma2-diff.exe --xma2_diff_fixtures_dir=../../../tests/xma2_packets `
-            --xma2_diff_report_out=../../../tests/xma2_packets/golden/last_report.json
+        run: ./tools/tier0/run_xma2_diff.ps1
 
       - name: GPU trace replay (synthetic corpus, D3D12 RTV/ROV)
         shell: pwsh
         run: |
-          python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12
+          python tools/gpu_replay_ci/run.py --build-dir Build/Windows/x64 --cross-path d3d12
 
       - name: Aggregate kernel stub fixture JSONL
         shell: pwsh
@@ -64,6 +61,6 @@ jobs:
         with:
           name: vmx128-fuzz-report-pr
           path: |
-            build/bin/Windows/Release/vmx128_fuzz_report_ci.json
-            build/bin/Windows/Release/vmx128_divergences.jsonl
+            Build/Windows/x64/Release/vmx128_fuzz_report_ci.json
+            Build/Windows/x64/Release/vmx128_divergences.jsonl
           if-no-files-found: ignore

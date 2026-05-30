@@ -18,15 +18,15 @@ jobs:
           cmake --preset vs -DXENIA_BUILD_TESTS=ON -DXENIA_BUILD_MISC=ON
 
       - name: Build Release
-        run: cmake --build build --config Release --parallel
+        run: cmake --build Build/Windows/x64/vs --config Release --parallel
 
       - name: Build GPU trace-dump (D3D12)
-        run: cmake --build build --config Release --target xenia-gpu-d3d12-trace-dump
+        run: cmake --build Build/Windows/x64/vs --config Release --target xenia-gpu-d3d12-trace-dump
 
       - name: Run CPU tests
         shell: pwsh
         run: |
-          Set-Location build/bin/Windows
+          Set-Location Build/Windows/x64/Release
           ./xenia-cpu-tests.exe
 
       # PR/CI: 50k smoke only. Release/roadmap gate = local 1M sweep via
@@ -34,19 +34,17 @@ jobs:
       - name: Run vmx128-fuzz (smoke)
         shell: pwsh
         run: |
-          Set-Location build/bin/Windows
+          Set-Location Build/Windows/x64/Release
           ./vmx128-fuzz.exe --vmx128_fuzz_iters=50000 --vmx128_fuzz_report_out=vmx128_fuzz_report.json
 
       - name: Run xma2-diff (fixture smoke)
         shell: pwsh
-        run: |
-          Set-Location build/bin/Windows
-          ./xma2-diff.exe --xma2_diff_fixtures_dir=../../../tests/xma2_packets --xma2_diff_report_out=../../../tests/xma2_packets/golden/last_report.json
+        run: ./tools/tier0/run_xma2_diff.ps1
 
       - name: GPU trace replay (synthetic corpus, D3D12 RTV/ROV)
         shell: pwsh
         run: |
-          python tools/gpu_replay_ci/run.py --build-dir build --cross-path d3d12
+          python tools/gpu_replay_ci/run.py --build-dir Build/Windows/x64 --cross-path d3d12
 
       - name: Aggregate kernel stub fixture JSONL
         shell: pwsh
@@ -61,7 +59,7 @@ jobs:
       - name: xenia-obs preset test
         shell: pwsh
         run: |
-          Set-Location build/bin/Windows/Release
+          Set-Location Build/Windows/x64/Release
           if (Test-Path ./xenia-obs-preset-test.exe) { ./xenia-obs-preset-test.exe }
 
       - name: Upload vmx128-fuzz artifacts
@@ -70,6 +68,6 @@ jobs:
         with:
           name: vmx128-fuzz-report
           path: |
-            build/bin/Windows/vmx128_fuzz_report.json
-            build/bin/Windows/vmx128_divergences.jsonl
+            Build/Windows/x64/Release/vmx128_fuzz_report.json
+            Build/Windows/x64/Release/vmx128_divergences.jsonl
           if-no-files-found: ignore

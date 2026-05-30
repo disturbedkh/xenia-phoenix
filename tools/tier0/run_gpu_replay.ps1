@@ -11,7 +11,7 @@
 #>
 param(
   [string]$SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
-  [string]$BuildDir = "build",
+  [string]$BuildDir = "Build/Windows/x64",
   [switch]$AllowDrift
 )
 
@@ -29,7 +29,8 @@ if (-not (Test-Path $vcvars)) {
 python tools/gpu_replay_ci/validate_traces.py --traces-dir tests/gpu_traces
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$exe = Join-Path $SourceRoot "$BuildDir\bin\Windows\Release\xenia-gpu-d3d12-trace-dump.exe"
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$exe = Join-Path (Get-XeniaBinDir -Config Release) "xenia-gpu-d3d12-trace-dump.exe"
 if (-not (Test-Path $exe)) {
   Write-Host "Building xenia-gpu-d3d12-trace-dump (Release)..."
   $buildCmd = "`"$vcvars`" && cmake --build `"$BuildDir`" --config Release --target xenia-gpu-d3d12-trace-dump -j 8"

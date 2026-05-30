@@ -63,9 +63,9 @@ Tracked work for [issue #549](https://github.com/xenia-canary/xenia-canary/issue
 # Inside Ubuntu 24.04 container after build
 export GDK_BACKEND=x11
 apt-get install -y xvfb libsdl2-2.0-0 libgtk-3-0 libvulkan1 mesa-vulkan-drivers libasound2t64
-xvfb-run -a script -qefc "./build/bin/Linux/Release/xenia_canary --help" /dev/null
+xvfb-run -a script -qefc "./Build/Linux/x64/Release/xenia_canary --help" /dev/null
 ```
 
-**2026-05-16 log excerpt (success):** `Build OK: /src/build/bin/Linux/Release/xenia_canary (16546056 bytes)`
+**2026-05-16 log excerpt (success):** `Build OK: /src/Build/Linux/x64/Release/xenia_canary (16546056 bytes)`
 
 Log files (when captured): `linux_build_release.log`, `linux_build_debug.log`, `linux_build_checked.log`.

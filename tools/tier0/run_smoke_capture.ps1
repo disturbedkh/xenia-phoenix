@@ -4,7 +4,7 @@ param(
     [string]$TitleId,
     [Parameter(Mandatory = $true)]
     [string]$GamePath,
-    [string]$XeniaExe = "build\bin\Windows\Release\xenia_canary.exe",
+    [string]$XeniaExe = "",
     [int]$DurationSec = 300,
     [string]$TelemetryDir = "telemetry",
     [string]$LogFile = "",
@@ -15,6 +15,10 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+if (-not $XeniaExe) {
+    $XeniaExe = Join-Path (Get-XeniaBinDir -Config Release) "xenia_canary.exe"
+}
 
 $tid = $TitleId.ToLower().Replace("0x", "")
 $stubLog = Join-Path $TelemetryDir "${tid}_stubs.jsonl"

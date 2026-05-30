@@ -1,51 +1,65 @@
 {
   "backend": "d3d12",
-  "note": "format_validate_only (synthetic slot fixtures; retail traces are local via InstallCorpus)",
-  "cross_path": "none",
-  "corpus_count": 10,
-  "rtv_rov_drift": false,
-  "drift_traces": [],
-  "total_diff_files": 0,
+  "cross_path": "d3d12",
+  "allow_rtv_rov_drift": false,
   "traces": [
     {
+      "file": "454107DB_6004.xtr",
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
+    },
+    {
       "file": "phoenix_slot_a_depth_resolve_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_b_msaa_color_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_c_msaa_depth_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_d_tiled_color_resolve_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_e_predicated_viewport_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_f_memexport_stress_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_g_depth_only_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_h_gamma_ramp_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_i_bin_mask_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     },
     {
       "file": "phoenix_slot_j_generic_clear_min.xtr",
-      "format_ok": true
+      "cross_path_rtv_rov_diff_files": [],
+      "trace_dump_exit_code": 3221225477
     }
-  ]
+  ],
+  "drift_traces": [],
+  "total_diff_files": 0,
+  "rtv_rov_drift": false
 }

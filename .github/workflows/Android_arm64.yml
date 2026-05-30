@@ -37,21 +37,11 @@ jobs:
           ndk-version: r26c
           add-to-path: true
 
-      - name: Configure CMake (Android arm64)
-        run: |
-          cmake -S . -B build-android-arm64 \
-            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-26 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DXENIA_BUILD_TESTS=OFF \
-            -DXENIA_BUILD_MISC=OFF
-
-      - name: Build xenia-app
-        run: cmake --build build-android-arm64 --target xenia-app -j"$(nproc)"
+      - name: Build xenia-app (Android arm64)
+        run: python3 xenia-build.py build --target-os android --config=release --target app
 
       - name: Upload libxenia-app.so
         uses: actions/upload-artifact@v4
         with:
           name: xenia-app-android-arm64
-          path: build-android-arm64/bin/Android/libxenia-app.so
+          path: Build/Android/Release/libxenia-app.so

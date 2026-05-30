@@ -132,7 +132,7 @@ git submodule update --init --depth=1 $(grep -oP '(?<=path = ).+' .gitmodules | 
 
 ./xenia-build.py doctor
 ./xenia-build.py build --config=release
-./build/bin/Linux/Release/xenia_canary --help
+./Build/Linux/x64/Release/xenia_canary --help
 ```
 
 Optional launcher:
@@ -173,14 +173,14 @@ Experimental. Requires Vulkan 1.0+ on device. See [android_status.md](android_st
 
 ```sh
 export ANDROID_NDK_ROOT=/path/to/ndk/25.2.9519653
-cmake -S . -B build-android-arm64 \
+cmake -S . -B Build/Android \
   -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI=arm64-v8a \
   -DANDROID_PLATFORM=android-24 \
   -DCMAKE_BUILD_TYPE=Release \
   -DXENIA_BUILD_TESTS=OFF \
   -DXENIA_BUILD_MISC=OFF
-cmake --build build-android-arm64 --target xenia-app -j$(nproc)
+cmake --build Build/Windows/x64/vs-android-arm64 --target xenia-app -j$(nproc)
 ```
 
 Produces `libxenia-app.so` (loads from the APK). CI: [.github/workflows/Android_arm64.yml](../.github/workflows/Android_arm64.yml).

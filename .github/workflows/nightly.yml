@@ -1,0 +1,56 @@
+# Nightly, non-blocking gates. NOT referenced by Orchestrator, so it never
+# gates a PR. Runs the expensive tier-1 checks: Checked/ASan cpu-tests and
+# changed-files clang-tidy. Trigger manually from a feature branch (set
+# tidy_base) for a meaningful clang-tidy diff.
+name: Nightly (non-blocking)
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 07:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      tidy_base:
+        description: 'Base ref for clang-tidy changed-files diff'
+        required: false
+        default: 'origin/canary_experimental'
+        type: string
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checked:
+    name: Checked / ASan cpu-tests
+    uses: ./.github/workflows/tier0-checked.yml
+
+  tidy:
+    name: clang-tidy (changed files)
+    runs-on: ubuntu-24.04
+    env:
+      LLVM_VERSION: 20
+      UBUNTU_BASE: noble
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup toolchain
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          sudo apt-add-repository "deb http://apt.llvm.org/${{ env.UBUNTU_BASE }}/ llvm-toolchain-${{ env.UBUNTU_BASE }}-${{ env.LLVM_VERSION }} main"
+          sudo apt-get -y update
+          sudo apt-get -y install clang-${{ env.LLVM_VERSION }} clang-tidy-${{ env.LLVM_VERSION }} lld-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }} ninja-build cmake spirv-tools libgtk-3-dev libsdl2-dev libvulkan-dev libx11-xcb-dev libasound2-dev libfontconfig1-dev liblz4-dev pkg-config python3
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ env.LLVM_VERSION }} 200
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${{ env.LLVM_VERSION }} 200
+          sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-${{ env.LLVM_VERSION }} 200
+
+      - name: clang-tidy (changed files vs base)
+        env:
+          CC: clang-${{ env.LLVM_VERSION }}
+          CXX: clang++-${{ env.LLVM_VERSION }}
+        run: |
+          BASE="${{ github.event.inputs.tidy_base || 'origin/canary_experimental' }}"
+          git fetch origin canary_experimental:refs/remotes/origin/canary_experimental || true
+          python3 xenia-build.py tidy --changed --base "$BASE"

@@ -9,9 +9,10 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
 
-$releaseExe = "build\bin\Windows\Release\xenia_canary.exe"
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$releaseExe = Join-Path (Get-XeniaBinDir -Config Release) "xenia_canary.exe"
 if (-not (Test-Path $releaseExe)) {
-    Write-Host "Build Release first: cmake --build build --config Release --target xenia-app" -ForegroundColor Red
+    Write-Host "Build Release first: python xenia-build.py build --config=release --target=xenia-app" -ForegroundColor Red
     exit 1
 }
 

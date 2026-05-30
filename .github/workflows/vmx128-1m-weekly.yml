@@ -19,7 +19,7 @@ jobs:
       - name: Configure and build vmx128-fuzz
         run: |
           cmake --preset vs -DXENIA_BUILD_TESTS=ON -DXENIA_BUILD_MISC=ON
-          cmake --build build --config Release --parallel --target xenia-cpu-backend-x64 vmx128-fuzz
+          cmake --build Build/Windows/x64/vs --config Release --parallel --target xenia-cpu-backend-x64 vmx128-fuzz
 
       - name: Run full sweep (1M rn + 1M rm=all)
         shell: pwsh

@@ -1,15 +1,13 @@
 # Phase 1.1: local 1M/opcode vmx128-fuzz sweep + markdown stub from JSON.
-# Expects `xenia-phoenix-src/build/bin/Windows/Release/vmx128-fuzz.exe` after `cmake --preset vs` + Release build.
+# Expects vmx128-fuzz.exe under Build/Windows/x64/Release after `cmake --preset vs` + Release build.
 
 $ErrorActionPreference = "Stop"
 
 $XeniaSrc = Split-Path (Split-Path $PSScriptRoot)
-$FuzzExe = Join-Path $XeniaSrc "build/bin/Windows/Release/vmx128-fuzz.exe"
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$FuzzExe = Join-Path (Get-XeniaBinDir -Config Release) "vmx128-fuzz.exe"
 if (-not (Test-Path $FuzzExe)) {
-  $FuzzExe = Join-Path $XeniaSrc "build/bin/Windows/vmx128-fuzz.exe"
-}
-if (-not (Test-Path $FuzzExe)) {
-  Write-Error "vmx128-fuzz.exe not found under build/bin/Windows (configure + build Release first)."
+  Write-Error "vmx128-fuzz.exe not found at $FuzzExe (configure + build Release first)."
 }
 
 # Reproducible sign-off seed (0xDEADBEEF).

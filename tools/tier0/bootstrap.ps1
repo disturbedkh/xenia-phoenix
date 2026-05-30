@@ -53,10 +53,12 @@ Write-Host "CMake configure preset=$Preset $extra"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "CMake build config=$Configuration"
-& cmake --build build --config $Configuration --parallel
+$buildDir = if ($Preset -eq "vs") { "Build/Windows/x64/vs" } else { "Build/Windows/x64" }
+& cmake --build $buildDir --config $Configuration --parallel
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$binDir = Join-Path $SourceRoot "build\bin\Windows"
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$binDir = Get-XeniaBinDir -Config $Configuration
 Write-Host "Binaries: $binDir"
 
 if ($RunCpuTests) {
