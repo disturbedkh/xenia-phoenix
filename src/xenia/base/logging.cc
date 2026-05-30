@@ -39,9 +39,11 @@
 #if XE_PLATFORM_ANDROID
 #include <android/log.h>
 #elif XE_PLATFORM_WIN32
-// For MessageBox and crash sidecars:
+// For MessageBox and crash sidecars (platform_win.h must precede Psapi.h):
+// clang-format off
 #include "xenia/base/platform_win.h"
 #include <Psapi.h>
+// clang-format on
 #endif  // XE_PLATFORM
 
 #include "third_party/fmt/include/fmt/format.h"
