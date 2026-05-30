@@ -842,6 +842,11 @@ if(WIN32)
   target_compile_definitions(libcurl PRIVATE
     BUILDING_LIBCURL HTTP_ONLY USE_SCHANNEL USE_WINDOWS_SSPI
   )
+elseif(ANDROID)
+  # Android NDK build: HTTP-only libcurl (no OpenSSL in CI toolchain).
+  target_compile_definitions(libcurl PRIVATE
+    BUILDING_LIBCURL HTTP_ONLY CURL_DISABLE_SSL
+  )
 else()
   find_package(OpenSSL REQUIRED)
   target_link_libraries(libcurl PRIVATE OpenSSL::SSL OpenSSL::Crypto)
