@@ -42,6 +42,7 @@ set_target_properties(vmx128-fuzz PROPERTIES FOLDER "tools")
 add_executable(xma2-diff
   ${CMAKE_CURRENT_SOURCE_DIR}/xma2_diff/main.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/xma2_diff/xma2_test_harness.cc
+  ${CMAKE_SOURCE_DIR}/third_party/crypto/sha256.cpp
 )
 if(WIN32)
   target_sources(xma2-diff PRIVATE

@@ -826,33 +826,28 @@ target_link_libraries(libavformat PRIVATE libavutil libavcodec)
 ffmpeg_common(libavformat)
 
 # ==============================================================================
-# libcurl (netplay REST API client)
+# libcurl (netplay REST API client) — upstream CMake generates curl_config.h
 # ==============================================================================
-file(GLOB_RECURSE CURL_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcurl/lib/**.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcurl/lib/**.h"
-)
-add_library(libcurl STATIC ${CURL_SOURCES})
-target_include_directories(libcurl PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/libcurl/lib
-  ${CMAKE_CURRENT_SOURCE_DIR}/libcurl/include
-)
+set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(CURL_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
+set(HTTP_ONLY ON CACHE BOOL "" FORCE)
+set(CURL_USE_LIBPSL OFF CACHE BOOL "" FORCE)
+set(USE_LIBIDN2 OFF CACHE BOOL "" FORCE)
+set(CURL_USE_LIBSSH2 OFF CACHE BOOL "" FORCE)
+set(CURL_USE_LIBSSH OFF CACHE BOOL "" FORCE)
+set(ENABLE_ARES OFF CACHE BOOL "" FORCE)
 if(WIN32)
-  target_link_libraries(libcurl PRIVATE crypt32 secur32)
-  target_compile_definitions(libcurl PRIVATE
-    BUILDING_LIBCURL HTTP_ONLY USE_SCHANNEL USE_WINDOWS_SSPI
-  )
+  set(CURL_USE_SCHANNEL ON CACHE BOOL "" FORCE)
 elseif(ANDROID)
-  # Android NDK build: HTTP-only libcurl (no OpenSSL in CI toolchain).
-  target_compile_definitions(libcurl PRIVATE
-    BUILDING_LIBCURL HTTP_ONLY CURL_DISABLE_SSL
-  )
+  set(CURL_ENABLE_SSL OFF CACHE BOOL "" FORCE)
 else()
-  find_package(OpenSSL REQUIRED)
-  target_link_libraries(libcurl PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-  target_compile_definitions(libcurl PRIVATE
-    BUILDING_LIBCURL HTTP_ONLY
-  )
+  set(CURL_USE_OPENSSL ON CACHE BOOL "" FORCE)
+endif()
+add_subdirectory(libcurl EXCLUDE_FROM_ALL)
+if(NOT TARGET libcurl AND TARGET libcurl_static)
+  add_library(libcurl ALIAS libcurl_static)
 endif()
 
 # ==============================================================================

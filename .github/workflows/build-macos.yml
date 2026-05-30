@@ -22,15 +22,12 @@ jobs:
       - name: Install Vulkan SDK
         run: |
           if [ ! -d "$HOME/vulkan-sdk" ]; then
-            curl -fSL -o /tmp/vulkan-sdk.dmg \
-              https://sdk.lunarg.com/sdk/download/latest/mac/vulkan-sdk.dmg
-            file /tmp/vulkan-sdk.dmg
-            hdiutil attach /tmp/vulkan-sdk.dmg
-            cp -R /Volumes/VulkanSDK/*/InstallVulkan.app /tmp/InstallVulkan.app
-            hdiutil detach /Volumes/VulkanSDK/* || true
-            /tmp/InstallVulkan.app/Contents/MacOS/InstallVulkan \
-              --accept-licenses --default-answer --confirm-command install \
-              --root "$HOME/vulkan-sdk"
+            brew install --cask vulkan-sdk
+            INSTALL_ROOT="$(find /Applications/VulkanSDK -maxdepth 1 -mindepth 1 -type d | head -n1)"
+            if [ -n "$INSTALL_ROOT" ]; then
+              mkdir -p "$HOME/vulkan-sdk"
+              cp -R "$INSTALL_ROOT" "$HOME/vulkan-sdk/"
+            fi
           fi
           VULKAN_SDK="$(find "$HOME/vulkan-sdk" -maxdepth 2 -name macOS -type d | head -n1)"
           if [ -z "$VULKAN_SDK" ]; then

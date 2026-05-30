@@ -190,36 +190,28 @@ class PeriodicCallback {
   PeriodicCallback(std::chrono::milliseconds interval,
                    std::function<void()> callback, std::string thread_name) {
     assert_not_null(callback);
-    std::jthread worker =
-        std::jthread([interval, callback = std::move(callback),
-                      thread_name](std::stop_token stoken) {
-          xe::threading::set_name(thread_name);
-
-          while (!stoken.stop_requested()) {
-            callback();
-            std::this_thread::sleep_for(interval);
-          }
-        });
-
-    periodic_stop_source_ = worker.get_stop_source();
-
-    worker.detach();
+    stop_.store(false, std::memory_order_relaxed);
+    std::thread([interval, callback = std::move(callback),
+                 thread_name = std::move(thread_name), stop = &stop_]() {
+      xe::threading::set_name(thread_name);
+      while (!stop->load(std::memory_order_relaxed)) {
+        callback();
+        std::this_thread::sleep_for(interval);
+      }
+    }).detach();
   }
 
- public:
-  std::stop_source GetStopSource();
-
-  ~PeriodicCallback() { periodic_stop_source_.request_stop(); }
+  ~PeriodicCallback() { stop_.store(true, std::memory_order_relaxed); }
 
   static std::unique_ptr<PeriodicCallback> CreateRepeating(
       std::chrono::milliseconds period, std::function<void()> callback,
       std::string thread_name) {
-    return std::unique_ptr<PeriodicCallback>(
-        new PeriodicCallback(period, std::move(callback), thread_name));
+    return std::unique_ptr<PeriodicCallback>(new PeriodicCallback(
+        period, std::move(callback), std::move(thread_name)));
   }
 
  private:
-  std::stop_source periodic_stop_source_;
+  std::atomic<bool> stop_{true};
 };
 
 // Results for a WaitHandle operation.
