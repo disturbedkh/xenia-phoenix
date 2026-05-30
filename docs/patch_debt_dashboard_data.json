@@ -1,19 +1,19 @@
 {
-  "patches_root": "g:\\Xenia-Xenia Canary\\Xenia-Phoenix\\game-patches",
+  "patches_root": "tools/tier0/fixtures/patch_debt",
   "counts_by_category": {
-    "B": 536,
-    "C": 988,
-    "D": 80,
-    "A": 83
+    "B": 945,
+    "C": 598,
+    "A": 83,
+    "D": 61
   },
   "top_categories": [
     [
-      "C",
-      988
+      "B",
+      945
     ],
     [
-      "B",
-      536
+      "C",
+      598
     ],
     [
       "A",
@@ -21,7 +21,7 @@
     ],
     [
       "D",
-      80
+      61
     ]
   ],
   "rows": [
@@ -41,13 +41,13 @@
       "file": "354807D1 - Painkiller Hell & Damnation (TU1).patch.toml",
       "title": "Painkiller: Hell & Damnation",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D1 - Painkiller Hell & Damnation (TU1).patch.toml",
       "title": "Painkiller: Hell & Damnation",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D1 - Painkiller Hell & Damnation (TU1).patch.toml",
@@ -71,13 +71,13 @@
       "file": "354807D1 - Painkiller Hell & Damnation.patch.toml",
       "title": "Painkiller: Hell & Damnation",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D1 - Painkiller Hell & Damnation.patch.toml",
       "title": "Painkiller: Hell & Damnation",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D1 - Painkiller Hell & Damnation.patch.toml",
@@ -101,13 +101,13 @@
       "file": "354807D5 - Deadfall Adventures (TU1).patch.toml",
       "title": "Deadfall Adventures",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D5 - Deadfall Adventures (TU1).patch.toml",
       "title": "Deadfall Adventures",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D5 - Deadfall Adventures (TU1).patch.toml",
@@ -131,13 +131,13 @@
       "file": "354807D5 - Deadfall Adventures.patch.toml",
       "title": "Deadfall Adventures",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D5 - Deadfall Adventures.patch.toml",
       "title": "Deadfall Adventures",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "354807D5 - Deadfall Adventures.patch.toml",
@@ -149,7 +149,7 @@
       "file": "415407D7 - Catherine (USA).patch.toml",
       "title": "Catherine",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415407DE - Game of Thrones (USA).patch.toml",
@@ -161,7 +161,7 @@
       "file": "415407DE - Game of Thrones (USA).patch.toml",
       "title": "Game of Thrones",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415407DE - Game of Thrones (USA).patch.toml",
@@ -203,7 +203,7 @@
       "file": "415607DA - Marvel Ultimate Alliance (Special Edition).patch.toml",
       "title": "Marvel: Ultimate Alliance",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607DA - Marvel Ultimate Alliance (TU2).patch.toml",
@@ -215,7 +215,7 @@
       "file": "415607DA - Marvel Ultimate Alliance (TU2).patch.toml",
       "title": "Marvel: Ultimate Alliance",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607DA - Marvel Ultimate Alliance.patch.toml",
@@ -227,19 +227,19 @@
       "file": "415607DA - Marvel Ultimate Alliance.patch.toml",
       "title": "Marvel: Ultimate Alliance",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607DD - Tony Hawk's Project 8.patch.toml",
       "title": "Tony Hawk's Project 8",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607DD - Tony Hawk's Project 8.patch.toml",
       "title": "Tony Hawk's Project 8",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607DD - Tony Hawk's Project 8.patch.toml",
@@ -269,7 +269,7 @@
       "file": "415607E1 - Call Of Duty 3 (TU3).patch.toml",
       "title": "Call Of Duty 3",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607E1 - Call Of Duty 3 (TU3).patch.toml",
@@ -311,7 +311,7 @@
       "file": "415607E1 - Call Of Duty 3 MP (TU3).patch.toml",
       "title": "Call Of Duty 3",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607E1 - Call Of Duty 3 MP (TU3).patch.toml",
@@ -347,7 +347,7 @@
       "file": "415607E1 - Call Of Duty 3 MP.patch.toml",
       "title": "Call Of Duty 3",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607E1 - Call Of Duty 3 MP.patch.toml",
@@ -383,7 +383,7 @@
       "file": "415607E1 - Call Of Duty 3.patch.toml",
       "title": "Call Of Duty 3",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607E1 - Call Of Duty 3.patch.toml",
@@ -401,13 +401,13 @@
       "file": "415607E6 - Call of Duty 4 Modern Warfare (TU4).patch.toml",
       "title": "Call of Duty 4: Modern Warfare",
       "patch": "Native 1280x720 resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "415607E6 - Call of Duty 4 Modern Warfare MP (TU4).patch.toml",
       "title": "Call of Duty 4: Modern Warfare",
       "patch": "Native 1280x720 resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "415607EF - Singularity (TU2).patch.toml",
@@ -419,7 +419,7 @@
       "file": "415607EF - Singularity (TU2).patch.toml",
       "title": "Singularity",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607EF - Singularity (TU2).patch.toml",
@@ -437,7 +437,7 @@
       "file": "415607EF - Singularity.patch.toml",
       "title": "Singularity",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415607EF - Singularity.patch.toml",
@@ -485,31 +485,31 @@
       "file": "41560816 - X-Men Origins Wolverine.patch.toml",
       "title": "X-Men Origins: Wolverine",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "41560817 - Call of Duty - Modern Warfare 2 (TU0).patch.toml",
       "title": "Call of Duty: Modern Warfare 2",
       "patch": "Native 1280x720 resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "41560817 - Call of Duty - Modern Warfare 2 (TU9).patch.toml",
       "title": "Call of Duty: Modern Warfare 2",
       "patch": "Native 1280x720 resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "41560817 - Call of Duty - Modern Warfare 2 MP (TU0).patch.toml",
       "title": "Call of Duty: Modern Warfare 2",
       "patch": "Native 1280x720 resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "41560817 - Call of Duty - Modern Warfare 2 MP (TU9).patch.toml",
       "title": "Call of Duty: Modern Warfare 2",
       "patch": "Native 1280x720 resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "41560817 - Modern Warfare 2 (TU6).patch.toml",
@@ -635,7 +635,7 @@
       "file": "4156084C - Transformers War for Cybertron (TU1).patch.toml",
       "title": "Transformers War for Cybertron",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4156084C - Transformers War for Cybertron (TU1).patch.toml",
@@ -665,7 +665,7 @@
       "file": "4156084C - Transformers War for Cybertron.patch.toml",
       "title": "Transformers War for Cybertron",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4156084C - Transformers War for Cybertron.patch.toml",
@@ -683,7 +683,7 @@
       "file": "4156088B - Apache Air Assault (TU1).patch.toml",
       "title": "Apache: Air Assault",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4156088B - Apache Air Assault.patch.toml",
@@ -695,7 +695,7 @@
       "file": "4156088B - Apache Air Assault.patch.toml",
       "title": "Apache: Air Assault",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4156089C - Transformers Fall of Cybertron (TU1).patch.toml",
@@ -713,7 +713,7 @@
       "file": "4156089C - Transformers Fall of Cybertron (TU1).patch.toml",
       "title": "Transformers: Fall of Cybertron",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4156089C - Transformers Fall of Cybertron (TU2).patch.toml",
@@ -731,7 +731,7 @@
       "file": "4156089C - Transformers Fall of Cybertron (TU2).patch.toml",
       "title": "Transformers: Fall of Cybertron",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4156089C - Transformers Fall of Cybertron.patch.toml",
@@ -749,7 +749,7 @@
       "file": "4156089C - Transformers Fall of Cybertron.patch.toml",
       "title": "Transformers: Fall of Cybertron",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415608A4 - Transformers Dark of the Moon (TU1).patch.toml",
@@ -761,7 +761,7 @@
       "file": "415608A4 - Transformers Dark of the Moon (TU1).patch.toml",
       "title": "Transformers: Dark of the Moon",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415608A4 - Transformers Dark of the Moon (TU1).patch.toml",
@@ -779,7 +779,7 @@
       "file": "415608A4 - Transformers Dark of the Moon.patch.toml",
       "title": "Transformers: Dark of the Moon",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415608A4 - Transformers Dark of the Moon.patch.toml",
@@ -797,7 +797,7 @@
       "file": "415608AF - GoldenEye 007 Reloaded.patch.toml",
       "title": "GoldenEye 007: Reloaded",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "415608C5 - Family Guy Back to the Multiverse.patch.toml",
@@ -821,7 +821,7 @@
       "file": "415608EC - Deadpool.patch.toml",
       "title": "Deadpool",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "41560904 - Transformers-Rise of The Dark Spark.patch.toml",
@@ -839,7 +839,7 @@
       "file": "41560904 - Transformers-Rise of The Dark Spark.patch.toml",
       "title": "Transformers: Rise of The Dark Spark",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "424107DC - Dragon Ball Z Burst Limit (EU).patch.toml",
@@ -863,13 +863,13 @@
       "file": "425307D1 - The Elder Scrolls IV Oblivion (GOTY).patch.toml",
       "title": "The Elder Scrolls IV: Oblivion (GOTY)",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307D1 - The Elder Scrolls IV Oblivion (GOTY).patch.toml",
       "title": "The Elder Scrolls IV: Oblivion (GOTY)",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307D1 - The Elder Scrolls IV Oblivion (GOTY).patch.toml",
@@ -899,7 +899,7 @@
       "file": "425307D7 - Hunted The Demon's Forge (TU1).patch.toml",
       "title": "Hunted: The Demon's Forge",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307D7 - Hunted The Demon's Forge (TU1).patch.toml",
@@ -917,7 +917,7 @@
       "file": "425307D7 - Hunted The Demon's Forge.patch.toml",
       "title": "Hunted: The Demon's Forge",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307D7 - Hunted The Demon's Forge.patch.toml",
@@ -935,7 +935,7 @@
       "file": "425307DB - Wet.patch.toml",
       "title": "Wet",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307E3 - Dishonored (Europe).patch.toml",
@@ -947,7 +947,7 @@
       "file": "425307E3 - Dishonored (Europe).patch.toml",
       "title": "Dishonored",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307E3 - Dishonored (Europe).patch.toml",
@@ -971,7 +971,7 @@
       "file": "425307E3 - Dishonored (Europe, USA)(TU4).patch.toml",
       "title": "Dishonored",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307E3 - Dishonored (Europe, USA)(TU4).patch.toml",
@@ -995,7 +995,7 @@
       "file": "425307E3 - Dishonored (USA).patch.toml",
       "title": "Dishonored",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425307E3 - Dishonored (USA).patch.toml",
@@ -1055,7 +1055,7 @@
       "file": "425607D3 - Turok (TU2).patch.toml",
       "title": "Turok",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425607D3 - Turok (TU2).patch.toml",
@@ -1085,7 +1085,7 @@
       "file": "425607D3 - Turok.patch.toml",
       "title": "Turok",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425607D3 - Turok.patch.toml",
@@ -1103,7 +1103,7 @@
       "file": "425607E5 - Toy Story 3.patch.toml",
       "title": "Toy Story 3",
       "patch": "1024x576 Resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "425607ED - Tron Evolution (TU1).patch.toml",
@@ -1127,7 +1127,7 @@
       "file": "425607ED - Tron Evolution (TU1).patch.toml",
       "title": "Tron: Evolution",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425607ED - Tron Evolution (TU1).patch.toml",
@@ -1157,7 +1157,7 @@
       "file": "425607ED - Tron Evolution.patch.toml",
       "title": "Tron: Evolution",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "425607ED - Tron Evolution.patch.toml",
@@ -1235,7 +1235,7 @@
       "file": "434307E0 - Dark Void (TU1).patch.toml",
       "title": "Dark Void",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "434307E0 - Dark Void.patch.toml",
@@ -1253,7 +1253,7 @@
       "file": "434307E0 - Dark Void.patch.toml",
       "title": "Dark Void",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430817 - Asura's Wrath (TU1).patch.toml",
@@ -1265,13 +1265,13 @@
       "file": "43430817 - Asura's Wrath (TU1).patch.toml",
       "title": "Asura's Wrath",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430817 - Asura's Wrath (TU1).patch.toml",
       "title": "Asura's Wrath",
       "patch": "Resolution Scaling Fix / Disable All Post-Processing",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "43430817 - Asura's Wrath.patch.toml",
@@ -1283,13 +1283,13 @@
       "file": "43430817 - Asura's Wrath.patch.toml",
       "title": "Asura's Wrath",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430817 - Asura's Wrath.patch.toml",
       "title": "Asura's Wrath",
       "patch": "Resolution Scaling Fix / Disable All Post-Processing",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "43430824 - DmC Devil May Cry (TU1).patch.toml",
@@ -1307,7 +1307,7 @@
       "file": "43430824 - DmC Devil May Cry (TU1).patch.toml",
       "title": "DmC: Devil May Cry",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430824 - DmC Devil May Cry (TU1).patch.toml",
@@ -1331,7 +1331,7 @@
       "file": "43430824 - DmC Devil May Cry.patch.toml",
       "title": "DmC: Devil May Cry",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430824 - DmC Devil May Cry.patch.toml",
@@ -1355,13 +1355,13 @@
       "file": "4343082F - Remember Me.patch.toml",
       "title": "Remember Me",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4343082F - Remember Me.patch.toml",
       "title": "Remember Me",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430830 - Lost Planet 3 (TU1).patch.toml",
@@ -1385,7 +1385,7 @@
       "file": "43430830 - Lost Planet 3 (TU1).patch.toml",
       "title": "Lost Planet 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430830 - Lost Planet 3.patch.toml",
@@ -1409,7 +1409,7 @@
       "file": "43430830 - Lost Planet 3.patch.toml",
       "title": "Lost Planet 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "43430841 - Resident Evil.patch.toml",
@@ -1439,7 +1439,7 @@
       "file": "434D07DE - Rise of the Argonauts.patch.toml",
       "title": "Rise of the Argonauts",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "434D07E0 - Turning Point Fall of Liberty.patch.toml",
@@ -1481,7 +1481,7 @@
       "file": "434D0822 - Leisure Suit Larry Box Office Bust.patch.toml",
       "title": "Leisure Suit Larry: Box Office Bust",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "434D0822 - Leisure Suit Larry Box Office Bust.patch.toml",
@@ -1583,13 +1583,13 @@
       "file": "454107DC - Burnout Revenge.patch.toml",
       "title": "Burnout Revenge",
       "patch": "Disable Sky Bloom and Low-Resolution Gaussian Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454107DC - Burnout Revenge.patch.toml",
       "title": "Burnout Revenge",
       "patch": "Disable Motion Blur and Radial Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454107F8 - Army of Two (USA)(TU2).patch.toml",
@@ -1607,7 +1607,7 @@
       "file": "454107F8 - Army of Two (USA)(TU2).patch.toml",
       "title": "Army of Two",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454107F8 - Army of Two (USA).patch.toml",
@@ -1637,7 +1637,7 @@
       "file": "454107F8 - Army of Two (USA).patch.toml",
       "title": "Army of Two",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454107F9 - Battlefield Bad Company.patch.toml",
@@ -1805,7 +1805,7 @@
       "file": "4541084C - Army of Two (Europe)(TU2).patch.toml",
       "title": "Army of Two",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541084C - Army of Two (Europe).patch.toml",
@@ -1823,7 +1823,7 @@
       "file": "4541084C - Army of Two (Europe).patch.toml",
       "title": "Army of Two",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "45410850 - Mirror's Edge (TU2).patch.toml",
@@ -1847,7 +1847,7 @@
       "file": "45410850 - Mirror's Edge (TU2).patch.toml",
       "title": "Mirror's Edge",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "45410850 - Mirror's Edge (TU2).patch.toml",
@@ -1889,13 +1889,13 @@
       "file": "45410850 - Mirror's Edge.patch.toml",
       "title": "Mirror's Edge",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "45410850 - Mirror's Edge.patch.toml",
       "title": "Mirror's Edge",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "45410850 - Mirror's Edge.patch.toml",
@@ -1925,7 +1925,7 @@
       "file": "4541087F - Skate 2.patch.toml",
       "title": "Skate 2",
       "patch": "21:9 Aspect Ratio",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "4541087F - Skate 2.patch.toml",
@@ -1955,7 +1955,7 @@
       "file": "4541087F - Skate 2.patch.toml",
       "title": "Skate 2",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108CE - Mass Effect 2 (TU2).patch.toml",
@@ -1985,13 +1985,13 @@
       "file": "454108CE - Mass Effect 2 (TU2).patch.toml",
       "title": "Mass Effect 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108CE - Mass Effect 2 (TU2).patch.toml",
       "title": "Mass Effect 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108CE - Mass Effect 2 (TU2).patch.toml",
@@ -2003,7 +2003,7 @@
       "file": "454108CE - Mass Effect 2 (TU2).patch.toml",
       "title": "Mass Effect 2",
       "patch": "Disable Low-Resolution Depth of Field",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108CE - Mass Effect 2 (TU2).patch.toml",
@@ -2051,13 +2051,13 @@
       "file": "454108CE - Mass Effect 2.patch.toml",
       "title": "Mass Effect 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108CE - Mass Effect 2.patch.toml",
       "title": "Mass Effect 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108CE - Mass Effect 2.patch.toml",
@@ -2069,7 +2069,7 @@
       "file": "454108CE - Mass Effect 2.patch.toml",
       "title": "Mass Effect 2",
       "patch": "Disable Low-Resolution Depth of Field",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108CE - Mass Effect 2.patch.toml",
@@ -2117,13 +2117,13 @@
       "file": "454108D8 - Army of Two The 40th Day (TU3).patch.toml",
       "title": "Army of Two: The 40th Day",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108D8 - Army of Two The 40th Day (TU3).patch.toml",
       "title": "Army of Two: The 40th Day",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108D8 - Army of Two The 40th Day (TU3).patch.toml",
@@ -2147,13 +2147,13 @@
       "file": "454108D8 - Army of Two The 40th Day.patch.toml",
       "title": "Army of Two: The 40th Day",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108D8 - Army of Two The 40th Day.patch.toml",
       "title": "Army of Two: The 40th Day",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108D8 - Army of Two The 40th Day.patch.toml",
@@ -2213,13 +2213,13 @@
       "file": "454108EF - Bulletstorm (TU3).patch.toml",
       "title": "Bulletstorm",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108EF - Bulletstorm (TU3).patch.toml",
       "title": "Bulletstorm",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108EF - Bulletstorm (TU3).patch.toml",
@@ -2261,13 +2261,13 @@
       "file": "454108EF - Bulletstorm.patch.toml",
       "title": "Bulletstorm",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108EF - Bulletstorm.patch.toml",
       "title": "Bulletstorm",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "454108EF - Bulletstorm.patch.toml",
@@ -2375,7 +2375,7 @@
       "file": "45410916 - Alice Madness Returns.patch.toml",
       "title": "Alice: Madness Returns",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541092A - Shadows of the Damned.patch.toml",
@@ -2387,13 +2387,13 @@
       "file": "4541092A - Shadows of the Damned.patch.toml",
       "title": "Shadows of the Damned",
       "patch": "Disable All Post-Processing",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541092A - Shadows of the Damned.patch.toml",
       "title": "Shadows of the Damned",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541095D - Mass Effect 3 (TU6).patch.toml",
@@ -2405,13 +2405,13 @@
       "file": "4541095D - Mass Effect 3 (TU6).patch.toml",
       "title": "Mass Effect 3",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541095D - Mass Effect 3 (TU6).patch.toml",
       "title": "Mass Effect 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541095D - Mass Effect 3.patch.toml",
@@ -2423,13 +2423,13 @@
       "file": "4541095D - Mass Effect 3.patch.toml",
       "title": "Mass Effect 3",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541095D - Mass Effect 3.patch.toml",
       "title": "Mass Effect 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "45410968 - Crysis.patch.toml",
@@ -2453,13 +2453,13 @@
       "file": "4541096D - SSX.patch.toml",
       "title": "SSX\u2122",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541096D - SSX.patch.toml",
       "title": "SSX\u2122",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4541096E - Fuse.patch.toml",
@@ -2501,7 +2501,7 @@
       "file": "464507DB - Game of Thrones (Europe 1).patch.toml",
       "title": "Game of Thrones",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "464507DB - Game of Thrones (Europe 1).patch.toml",
@@ -2519,7 +2519,7 @@
       "file": "464507DB - Game of Thrones (Europe 2).patch.toml",
       "title": "Game of Thrones",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "464507DB - Game of Thrones (Europe 2).patch.toml",
@@ -2543,7 +2543,7 @@
       "file": "464507DF - Sherlock Holmes Crimes & Punishments.patch.toml",
       "title": "Sherlock Holmes: Crimes & Punishments",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "464507E1 - Farming Simulator (TU1).patch.toml",
@@ -2561,7 +2561,7 @@
       "file": "464507E1 - Farming Simulator 15.patch.toml",
       "title": "Farming Simulator 15",
       "patch": "1504x846 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "464507E1 - Farming Simulator.patch.toml",
@@ -2681,7 +2681,7 @@
       "file": "475007D3 - Legendary.patch.toml",
       "title": "Legendary",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "475007D4 - Section 8 (TU1).patch.toml",
@@ -2705,7 +2705,7 @@
       "file": "475007D4 - Section 8 (TU1).patch.toml",
       "title": "Section 8",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "475007D4 - Section 8 (TU1).patch.toml",
@@ -2741,7 +2741,7 @@
       "file": "475007D4 - Section 8.patch.toml",
       "title": "Section 8",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "475007D4 - Section 8.patch.toml",
@@ -2771,7 +2771,7 @@
       "file": "475807D1 - Lucha Libre AAA Heroes del Ring.patch.toml",
       "title": "Lucha Libre AAA: Heroes del Ring",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "475807D1 - Lucha Libre AAA Heroes del Ring.patch.toml",
@@ -2783,7 +2783,7 @@
       "file": "475807D1 - Lucha Libre AAA Heroes del Ring.patch.toml",
       "title": "Lucha Libre AAA: Heroes del Ring",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "475807D7 - El Chavo Kart.patch.toml",
@@ -2795,7 +2795,7 @@
       "file": "475807D7 - El Chavo Kart.patch.toml",
       "title": "El Chavo Kart",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "475807D7 - El Chavo Kart.patch.toml",
@@ -2807,19 +2807,19 @@
       "file": "494F07D1 - El Shaddai.patch.toml",
       "title": "El Shaddai",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "494F07D1 - El Shaddai.patch.toml",
       "title": "El Shaddai",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "494F07D1 - El Shaddai.patch.toml",
       "title": "El Shaddai",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07DF - Dead Island (GOTY).patch.toml",
@@ -2831,7 +2831,7 @@
       "file": "4B4D07DF - Dead Island (GOTY).patch.toml",
       "title": "Dead Island",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07DF - Dead Island (TU2).patch.toml",
@@ -2843,7 +2843,7 @@
       "file": "4B4D07DF - Dead Island (TU2).patch.toml",
       "title": "Dead Island",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07DF - Dead Island.patch.toml",
@@ -2855,7 +2855,7 @@
       "file": "4B4D07DF - Dead Island.patch.toml",
       "title": "Dead Island",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07E9 - Ride to Hell Retribution.patch.toml",
@@ -2873,7 +2873,7 @@
       "file": "4B4D07E9 - Ride to Hell Retribution.patch.toml",
       "title": "Ride to Hell: Retribution",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07E9 - Ride to Hell Retribution.patch.toml",
@@ -2885,7 +2885,7 @@
       "file": "4B4D07EA - Catherine (Europe).patch.toml",
       "title": "Catherine",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07F2 - Dead Island Riptide (Complete Edition).patch.toml",
@@ -2897,7 +2897,7 @@
       "file": "4B4D07F2 - Dead Island Riptide (Complete Edition).patch.toml",
       "title": "Dead Island: Riptide",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07F2 - Dead Island Riptide (TU2).patch.toml",
@@ -2909,7 +2909,7 @@
       "file": "4B4D07F2 - Dead Island Riptide (TU2).patch.toml",
       "title": "Dead Island: Riptide",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4D07F2 - Dead Island Riptide.patch.toml",
@@ -2921,43 +2921,43 @@
       "file": "4B4D07F2 - Dead Island Riptide.patch.toml",
       "title": "Dead Island: Riptide",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E07DA - Pro Evolution Soccer 6 (TU3).patch.toml",
       "title": "Pro Evolution Soccer 6",
       "patch": "3840x2160 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E07DA - Pro Evolution Soccer 6 (TU3).patch.toml",
       "title": "Pro Evolution Soccer 6",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E07DA - Pro Evolution Soccer 6 (TU3).patch.toml",
       "title": "Pro Evolution Soccer 6",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E07DA - Pro Evolution Soccer 6.patch.toml",
       "title": "Pro Evolution Soccer 6",
       "patch": "3840x2160 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E07DA - Pro Evolution Soccer 6.patch.toml",
       "title": "Pro Evolution Soccer 6",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E07DA - Pro Evolution Soccer 6.patch.toml",
       "title": "Pro Evolution Soccer 6",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E0802 - Saw.patch.toml",
@@ -2975,7 +2975,7 @@
       "file": "4B4E0802 - Saw.patch.toml",
       "title": "Saw",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E081F - NeverDead (TU1).patch.toml",
@@ -2999,7 +2999,7 @@
       "file": "4B4E0822 - Saw II Flesh & Blood.patch.toml",
       "title": "Saw II: Flesh & Blood",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E0823 - Silent Hill Downpour (TU1).patch.toml",
@@ -3017,7 +3017,7 @@
       "file": "4B4E0823 - Silent Hill Downpour (TU1).patch.toml",
       "title": "Silent Hill: Downpour",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E0823 - Silent Hill Downpour (TU1).patch.toml",
@@ -3041,7 +3041,7 @@
       "file": "4B4E0823 - Silent Hill Downpour.patch.toml",
       "title": "Silent Hill: Downpour",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4E0823 - Silent Hill Downpour.patch.toml",
@@ -3083,7 +3083,7 @@
       "file": "4B4F07D7 - Fatal Inertia (TU1).patch.toml",
       "title": "Fatal Inertia",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4F07D7 - Fatal Inertia (TU1).patch.toml",
@@ -3107,7 +3107,7 @@
       "file": "4B4F07D7 - Fatal Inertia.patch.toml",
       "title": "Fatal Inertia",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B4F07D7 - Fatal Inertia.patch.toml",
@@ -3125,13 +3125,13 @@
       "file": "4B5607E2 - Yaiba Ninja Gaiden Z.patch.toml",
       "title": "Yaiba: Ninja Gaiden Z",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4B5607E8 - Dead or Alive 5 Ultimate.patch.toml",
       "title": "Dead or Alive 5 Ultimate",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4C4107D7 - LEGO Star Wars The Complete Saga.patch.toml",
@@ -3161,19 +3161,19 @@
       "file": "4D5307D1 - Project Gotham Racing 3 (v10.0 or higher).patch.toml",
       "title": "Project Gotham Racing 3",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D1 - Project Gotham Racing 3 (v10.0 or higher).patch.toml",
       "title": "Project Gotham Racing 3",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D1 - Project Gotham Racing 3 (v10.0 or higher).patch.toml",
       "title": "Project Gotham Racing 3",
       "patch": "21:9 Aspect Ratio",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D1 - Project Gotham Racing 3 (v9.0 or lower).patch.toml",
@@ -3185,19 +3185,19 @@
       "file": "4D5307D1 - Project Gotham Racing 3 (v9.0 or lower).patch.toml",
       "title": "Project Gotham Racing 3",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D1 - Project Gotham Racing 3 (v9.0 or lower).patch.toml",
       "title": "Project Gotham Racing 3",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D1 - Project Gotham Racing 3 (v9.0 or lower).patch.toml",
       "title": "Project Gotham Racing 3",
       "patch": "21:9 Aspect Ratio",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D2 - Kameo Elements of Power (TU2).patch.toml",
@@ -3209,7 +3209,7 @@
       "file": "4D5307D2 - Kameo Elements of Power (TU2).patch.toml",
       "title": "Kameo: Elements of Power (TU2)",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D2 - Kameo Elements of Power.patch.toml",
@@ -3221,7 +3221,7 @@
       "file": "4D5307D2 - Kameo Elements of Power.patch.toml",
       "title": "Kameo: Elements of Power",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D3 - Perfect Dark Zero (Platinum Hits).patch.toml",
@@ -3233,7 +3233,7 @@
       "file": "4D5307D3 - Perfect Dark Zero (Platinum Hits).patch.toml",
       "title": "Perfect Dark: Zero (Platinum Hits)",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D3 - Perfect Dark Zero (Platinum Hits).patch.toml",
@@ -3251,7 +3251,7 @@
       "file": "4D5307D3 - Perfect Dark Zero (TU3).patch.toml",
       "title": "Perfect Dark: Zero (TU3)",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D3 - Perfect Dark Zero (TU3).patch.toml",
@@ -3269,7 +3269,7 @@
       "file": "4D5307D3 - Perfect Dark Zero.patch.toml",
       "title": "Perfect Dark: Zero",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D3 - Perfect Dark Zero.patch.toml",
@@ -3293,13 +3293,13 @@
       "file": "4D5307D5 - Gears of War (Japan).patch.toml",
       "title": "Gears Of War",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War (Japan).patch.toml",
       "title": "Gears Of War",
       "patch": "8x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War (Japan).patch.toml",
@@ -3335,13 +3335,13 @@
       "file": "4D5307D5 - Gears of War (TU5).patch.toml",
       "title": "Gears Of War",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War (TU5).patch.toml",
       "title": "Gears Of War",
       "patch": "Texture Streaming Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War (TU5).patch.toml",
@@ -3359,7 +3359,7 @@
       "file": "4D5307D5 - Gears of War (TU5).patch.toml",
       "title": "Gears Of War",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War (TU5).patch.toml",
@@ -3407,13 +3407,13 @@
       "file": "4D5307D5 - Gears of War.patch.toml",
       "title": "Gears Of War",
       "patch": "Texture Streaming Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War.patch.toml",
       "title": "Gears Of War",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War.patch.toml",
@@ -3425,7 +3425,7 @@
       "file": "4D5307D5 - Gears of War.patch.toml",
       "title": "Gears Of War",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307D5 - Gears of War.patch.toml",
@@ -3563,7 +3563,7 @@
       "file": "4D5307E6 - Halo 3.patch.toml",
       "title": "Halo 3",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307E6 - Halo 3.patch.toml",
@@ -3575,7 +3575,7 @@
       "file": "4D5307E6 - Halo 3.patch.toml",
       "title": "Halo 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307E6 - Halo 3.patch.toml",
@@ -3611,7 +3611,7 @@
       "file": "4D5307E8 - Mass Effect (Japan).patch.toml",
       "title": "Mass Effect",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307E8 - Mass Effect (Japan).patch.toml",
@@ -3647,7 +3647,7 @@
       "file": "4D5307E8 - Mass Effect (USA Rev 1).patch.toml",
       "title": "Mass Effect",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307E8 - Mass Effect (USA Rev 1).patch.toml",
@@ -3689,7 +3689,7 @@
       "file": "4D5307E8 - Mass Effect.patch.toml",
       "title": "Mass Effect",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307E8 - Mass Effect.patch.toml",
@@ -3707,13 +3707,13 @@
       "file": "4D5307E8 - Mass Effect.patch.toml",
       "title": "Mass Effect",
       "patch": "Upscaling Fix (Choose One), Option A: 1440P Post-Processing",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307E8 - Mass Effect.patch.toml",
       "title": "Mass Effect",
       "patch": "Upscaling Fix (Choose One), Option B: 4K Post-Processing",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307E8 - Mass Effect.patch.toml",
@@ -3749,13 +3749,13 @@
       "file": "4D5307ED - Banjo-Kazooie Nuts & Bolts (TU3).patch.toml",
       "title": "Banjo-Kazooie: Nuts & Bolts (TU3)",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307ED - Banjo-Kazooie Nuts & Bolts (TU3).patch.toml",
       "title": "Banjo-Kazooie: Nuts & Bolts (TU3)",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307ED - Banjo-Kazooie Nuts & Bolts (TU3).patch.toml",
@@ -3809,13 +3809,13 @@
       "file": "4D5307ED - Banjo-Kazooie Nuts & Bolts.patch.toml",
       "title": "Banjo-Kazooie: Nuts & Bolts",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307ED - Banjo-Kazooie Nuts & Bolts.patch.toml",
       "title": "Banjo-Kazooie: Nuts & Bolts",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307ED - Banjo-Kazooie Nuts & Bolts.patch.toml",
@@ -3869,7 +3869,7 @@
       "file": "4D5307F1 - Fable II (1).patch.toml",
       "title": "Fable II",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307F1 - Fable II (1).patch.toml",
@@ -3899,7 +3899,7 @@
       "file": "4D5307F1 - Fable II (2).patch.toml",
       "title": "Fable II",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307F1 - Fable II (2).patch.toml",
@@ -3917,7 +3917,7 @@
       "file": "4D5307F1 - Fable II (GOTY_Platinum Edition).patch.toml",
       "title": "Fable II",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307F1 - Fable II (GOTY_Platinum Edition).patch.toml",
@@ -3971,7 +3971,7 @@
       "file": "4D5307F1 - Fable II (GOTY_Platinum Edition, TU1).patch.toml",
       "title": "Fable II",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307F1 - Fable II (GOTY_Platinum Edition, TU1).patch.toml",
@@ -3995,7 +3995,7 @@
       "file": "4D5307F9 - Project Gotham Racing 4 (TU2).patch.toml",
       "title": "Project Gotham Racing 4",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307F9 - Project Gotham Racing 4 (TU2).patch.toml",
@@ -4013,7 +4013,7 @@
       "file": "4D5307F9 - Project Gotham Racing 4.patch.toml",
       "title": "Project Gotham Racing 4",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307F9 - Project Gotham Racing 4.patch.toml",
@@ -4037,19 +4037,19 @@
       "file": "4D5307FA - Lost Odyssey (NTSC-J).patch.toml",
       "title": "Lost Odyssey",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307FA - Lost Odyssey (NTSC-J).patch.toml",
       "title": "Lost Odyssey",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307FA - Lost Odyssey (NTSC-J).patch.toml",
       "title": "Lost Odyssey",
       "patch": "Disable Dynamic Shadows",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307FA - Lost Odyssey.patch.toml",
@@ -4085,19 +4085,19 @@
       "file": "4D5307FA - Lost Odyssey.patch.toml",
       "title": "Lost Odyssey",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307FA - Lost Odyssey.patch.toml",
       "title": "Lost Odyssey",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307FA - Lost Odyssey.patch.toml",
       "title": "Lost Odyssey",
       "patch": "Disable Dynamic Shadows",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5307FA - Lost Odyssey.patch.toml",
@@ -4127,7 +4127,7 @@
       "file": "4D530805 - Alan Wake.patch.toml",
       "title": "Alan Wake",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530805 - Alan Wake.patch.toml",
@@ -4169,7 +4169,7 @@
       "file": "4D53082D - Gears of War 2 (TU6).patch.toml",
       "title": "Gears of War 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2 (TU6).patch.toml",
@@ -4181,13 +4181,13 @@
       "file": "4D53082D - Gears of War 2 (TU6).patch.toml",
       "title": "Gears of War 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2 (TU6).patch.toml",
       "title": "Gears of War 2",
       "patch": "Texture Streaming Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2 (TU6).patch.toml",
@@ -4199,7 +4199,7 @@
       "file": "4D53082D - Gears of War 2 (TU6).patch.toml",
       "title": "Gears of War 2",
       "patch": "Depth of Field, Option A - Disable Gaussian Blur (Upscaling Fix)",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2 (TU6).patch.toml",
@@ -4271,19 +4271,19 @@
       "file": "4D53082D - Gears of War 2.patch.toml",
       "title": "Gears of War 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2.patch.toml",
       "title": "Gears of War 2",
       "patch": "Texture Streaming Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2.patch.toml",
       "title": "Gears of War 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2.patch.toml",
@@ -4295,7 +4295,7 @@
       "file": "4D53082D - Gears of War 2.patch.toml",
       "title": "Gears of War 2",
       "patch": "Depth of Field, Option A - Disable Gaussian Blur (Upscaling Fix)",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53082D - Gears of War 2.patch.toml",
@@ -4349,7 +4349,7 @@
       "file": "4D53085B - Halo Reach.patch.toml",
       "title": "Halo: Reach",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D53085B - Halo Reach.patch.toml",
@@ -4379,7 +4379,7 @@
       "file": "4D530877 - Halo 3 ODST.patch.toml",
       "title": "Halo 3: ODST",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5308AB - Gears of War 3 (TU6 Disc; TU1 XBL).patch.toml",
@@ -4403,19 +4403,19 @@
       "file": "4D5308AB - Gears of War 3 (TU6 Disc; TU1 XBL).patch.toml",
       "title": "Gears of War 3",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5308AB - Gears of War 3 (TU6 Disc; TU1 XBL).patch.toml",
       "title": "Gears of War 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5308AB - Gears of War 3 (TU6 Disc; TU1 XBL).patch.toml",
       "title": "Gears of War 3",
       "patch": "Resolution Scaling Fix / Disable All Post-Processing",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "4D5308AB - Gears of War 3 (TU6 Disc; TU1 XBL).patch.toml",
@@ -4475,19 +4475,19 @@
       "file": "4D5308AB - Gears of War 3.patch.toml",
       "title": "Gears of War 3",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5308AB - Gears of War 3.patch.toml",
       "title": "Gears of War 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5308AB - Gears of War 3.patch.toml",
       "title": "Gears of War 3",
       "patch": "Resolution Scaling Fix / Disable All Post-Processing",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "4D5308AB - Gears of War 3.patch.toml",
@@ -4703,13 +4703,13 @@
       "file": "4D5308C8 - Gears of War 2 (Japan).patch.toml",
       "title": "Gears of War 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5308C8 - Gears of War 2 (Japan).patch.toml",
       "title": "Gears of War 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5308C8 - Gears of War 2 (Japan).patch.toml",
@@ -4751,13 +4751,13 @@
       "file": "4D5309B1 - Halo Combat Evolved Anniversary.patch.toml",
       "title": "Halo: Combat Evolved Anniversary",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5309B1 - Halo Combat Evolved Anniversary.patch.toml",
       "title": "Halo: Combat Evolved Anniversary",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5309C9 - Forza Horizon (E3 Demo).patch.toml",
@@ -4769,7 +4769,7 @@
       "file": "4D5309C9 - Forza Horizon (TU4).patch.toml",
       "title": "Forza Horizon",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5309C9 - Forza Horizon (TU4).patch.toml",
@@ -4793,7 +4793,7 @@
       "file": "4D5309C9 - Forza Horizon.patch.toml",
       "title": "Forza Horizon",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5309C9 - Forza Horizon.patch.toml",
@@ -4829,19 +4829,19 @@
       "file": "4D530A26 - Gears of War Judgment (TU4).patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment (TU4).patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "Disable All Post-Processing",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment (TU4).patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "Resolution Scaling Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment (TU4).patch.toml",
@@ -4859,7 +4859,7 @@
       "file": "4D530A26 - Gears of War Judgment (TU4).patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment (TU4).patch.toml",
@@ -4913,19 +4913,19 @@
       "file": "4D530A26 - Gears of War Judgment.patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment.patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "Disable All Post-Processing",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment.patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "Resolution Scaling Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment.patch.toml",
@@ -4943,7 +4943,7 @@
       "file": "4D530A26 - Gears of War Judgment.patch.toml",
       "title": "Gears of War: Judgment",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A26 - Gears of War Judgment.patch.toml",
@@ -4991,7 +4991,7 @@
       "file": "4D530A87 - Fable Anniversary (TU5).patch.toml",
       "title": "Fable Anniversary",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A87 - Fable Anniversary (TU5).patch.toml",
@@ -5015,7 +5015,7 @@
       "file": "4D530A87 - Fable Anniversary.patch.toml",
       "title": "Fable Anniversary",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530A87 - Fable Anniversary.patch.toml",
@@ -5039,7 +5039,7 @@
       "file": "4D530AA4 - Forza Horizon 2 (TU2).patch.toml",
       "title": "Forza Horizon 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530AA4 - Forza Horizon 2 (TU2).patch.toml",
@@ -5057,7 +5057,7 @@
       "file": "4D530AA4 - Forza Horizon 2.patch.toml",
       "title": "Forza Horizon 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530AA4 - Forza Horizon 2.patch.toml",
@@ -5075,7 +5075,7 @@
       "file": "4D530AB5 - Forza Horizon 2 Presents Fast & Furious (TU1).patch.toml",
       "title": "Forza Horizon 2 Presents Fast & Furious",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530AB5 - Forza Horizon 2 Presents Fast & Furious (TU1).patch.toml",
@@ -5093,7 +5093,7 @@
       "file": "4D530AB5 - Forza Horizon 2 Presents Fast & Furious.patch.toml",
       "title": "Forza Horizon 2 Presents Fast & Furious",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D530AB5 - Forza Horizon 2 Presents Fast & Furious.patch.toml",
@@ -5165,7 +5165,7 @@
       "file": "4D5707D7 - Blacksite.patch.toml",
       "title": "Blacksite Area 51",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5707D9 - Hour of Victory.patch.toml",
@@ -5183,7 +5183,7 @@
       "file": "4D5707D9 - Hour of Victory.patch.toml",
       "title": "Hour of Victory",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5707D9 - Hour of Victory.patch.toml",
@@ -5207,13 +5207,13 @@
       "file": "4D5707DB - Unreal Tournament 3.patch.toml",
       "title": "Unreal Tournament 3",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5707DB - Unreal Tournament 3.patch.toml",
       "title": "Unreal Tournament 3",
       "patch": "Disable Most Post-Processing",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4D5707DF - TNA Impact (TU1).patch.toml",
@@ -5225,13 +5225,13 @@
       "file": "4E4D07D3 - Ridge Racer 6.patch.toml",
       "title": "Ridge Racer 6",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4E4D07D3 - Ridge Racer 6.patch.toml",
       "title": "Ridge Racer 6",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4E4D07F0 - Splatterhouse.patch.toml",
@@ -5249,13 +5249,13 @@
       "file": "4E4D07F1 - Enslaved Odyssey to the West (TU1).patch.toml",
       "title": "Enslaved: Odyssey to the West",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4E4D07F1 - Enslaved Odyssey to the West (TU1).patch.toml",
       "title": "Enslaved: Odyssey to the West",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4E4D07F1 - Enslaved Odyssey to the West (TU1).patch.toml",
@@ -5273,13 +5273,13 @@
       "file": "4E4D07F1 - Enslaved Odyssey to the West.patch.toml",
       "title": "Enslaved: Odyssey to the West",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4E4D07F1 - Enslaved Odyssey to the West.patch.toml",
       "title": "Enslaved: Odyssey to the West",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4E4D07F1 - Enslaved Odyssey to the West.patch.toml",
@@ -5309,7 +5309,7 @@
       "file": "4E4D080B - Magnacarta2.patch.toml",
       "title": "Magnacarta 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "4E4D0859 - TEKKEN TAG 2 (TU0).patch.toml",
@@ -5369,7 +5369,7 @@
       "file": "504307D1 - Fairytale Fights (TU1).patch.toml",
       "title": "Fairytale Fights",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "504307D1 - Fairytale Fights.patch.toml",
@@ -5393,7 +5393,7 @@
       "file": "504307D1 - Fairytale Fights.patch.toml",
       "title": "Fairytale Fights",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "534307E2 - Bionicle Heroes.patch.toml",
@@ -5423,13 +5423,13 @@
       "file": "534307F6 - Batman Arkham Asylum.patch.toml",
       "title": "Batman: Arkham Asylum",
       "patch": "Anisotropic Filtering x16",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "534307F6 - Batman Arkham Asylum.patch.toml",
       "title": "Batman: Arkham Asylum",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "534307F6 - Batman Arkham Asylum.patch.toml",
@@ -5459,7 +5459,7 @@
       "file": "5343080B - Batman Arkham Asylum GOTY.patch.toml",
       "title": "Batman: Arkham Asylum GOTY",
       "patch": "Anisotropic Filtering x16",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5343080B - Batman Arkham Asylum GOTY.patch.toml",
@@ -5471,7 +5471,7 @@
       "file": "5343080B - Batman Arkham Asylum GOTY.patch.toml",
       "title": "Batman: Arkham Asylum GOTY",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5343080B - Batman Arkham Asylum GOTY.patch.toml",
@@ -5585,7 +5585,7 @@
       "file": "5345080E - Alpha Protocol.patch.toml",
       "title": "Alpha Protocol",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53450812 - Sonic Unleashed (TU2).patch.toml",
@@ -5597,7 +5597,7 @@
       "file": "53450812 - Sonic Unleashed (TU2).patch.toml",
       "title": "Sonic Unleashed",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53450812 - Sonic Unleashed (TU2).patch.toml",
@@ -5627,7 +5627,7 @@
       "file": "53450812 - Sonic Unleashed (TU2).patch.toml",
       "title": "Sonic Unleashed",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53450812 - Sonic Unleashed.patch.toml",
@@ -5639,7 +5639,7 @@
       "file": "53450812 - Sonic Unleashed.patch.toml",
       "title": "Sonic Unleashed",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53450812 - Sonic Unleashed.patch.toml",
@@ -5669,7 +5669,7 @@
       "file": "53450812 - Sonic Unleashed.patch.toml",
       "title": "Sonic Unleashed",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53450813 - Bayonetta.patch.toml",
@@ -5723,7 +5723,7 @@
       "file": "5345082B - Planet 51 The Game.patch.toml",
       "title": "Planet 51: The Game",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53450845 - Thor God of Thunder.patch.toml",
@@ -5741,7 +5741,7 @@
       "file": "53450845 - Thor God of Thunder.patch.toml",
       "title": "Thor: God of Thunder",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53450848 - Sonic Generations (TU2).patch.toml",
@@ -5759,7 +5759,7 @@
       "file": "5345085A - Dreamcast Collection.patch.toml",
       "title": "Dreamcast Collection",
       "patch": "1040x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5345085E - Alien Isolation (TU2).patch.toml",
@@ -5801,7 +5801,7 @@
       "file": "535107DA - The Last Remnant.patch.toml",
       "title": "The Last Remnant",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "535107DA - The Last Remnant.patch.toml",
@@ -5831,13 +5831,13 @@
       "file": "53510802 - Tomb Raider (TU3).patch.toml",
       "title": "Tomb Raider",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53510802 - Tomb Raider.patch.toml",
       "title": "Tomb Raider",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "53510803 - Thief (TU2).patch.toml",
@@ -5885,13 +5885,13 @@
       "file": "5351081E - Murdered Soul Suspect (TU1).patch.toml",
       "title": "Murdered: Soul Suspect",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5351081E - Murdered Soul Suspect (TU1).patch.toml",
       "title": "Murdered: Soul Suspect",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5351081E - Murdered Soul Suspect (TU1).patch.toml",
@@ -5921,13 +5921,13 @@
       "file": "5351081E - Murdered Soul Suspect.patch.toml",
       "title": "Murdered: Soul Suspect",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5351081E - Murdered Soul Suspect.patch.toml",
       "title": "Murdered: Soul Suspect",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5351081E - Murdered Soul Suspect.patch.toml",
@@ -5975,7 +5975,7 @@
       "file": "544307D1 - DEAD OR ALIVE 4 (Rev1).patch.toml",
       "title": "DEAD OR ALIVE 4 (Rev1)",
       "patch": "21:9 Ultrawide Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "544307D1 - DEAD OR ALIVE 4 (Rev1).patch.toml",
@@ -6029,7 +6029,7 @@
       "file": "544307D1 - DEAD OR ALIVE 4 (TU1).patch.toml",
       "title": "DEAD OR ALIVE 4 (TU1)",
       "patch": "21:9 Ultrawide Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "544307D1 - DEAD OR ALIVE 4 (TU1).patch.toml",
@@ -6083,7 +6083,7 @@
       "file": "544307D1 - DEAD OR ALIVE 4.patch.toml",
       "title": "DEAD OR ALIVE 4",
       "patch": "21:9 Ultrawide Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "544307D1 - DEAD OR ALIVE 4.patch.toml",
@@ -6113,7 +6113,7 @@
       "file": "544307D5 - Ninja Gaiden II (Japan, TU3).patch.toml",
       "title": "Ninja Gaiden II",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "544307D5 - Ninja Gaiden II (Japan, TU3).patch.toml",
@@ -6125,7 +6125,7 @@
       "file": "544307D5 - Ninja Gaiden II (World).patch.toml",
       "title": "Ninja Gaiden II",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "544307D5 - Ninja Gaiden II (World).patch.toml",
@@ -6137,7 +6137,7 @@
       "file": "544307D5 - Ninja Gaiden II (World, TU2).patch.toml",
       "title": "Ninja Gaiden II",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107D1 - Saints Row (TU1).patch.toml",
@@ -6221,7 +6221,7 @@
       "file": "545107D1 - Saints Row (TU1).patch.toml",
       "title": "Saints Row",
       "patch": "Set Aspect Ratio to true 21:9",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107D1 - Saints Row (TU1).patch.toml",
@@ -6299,13 +6299,13 @@
       "file": "545107F8 - Saints Row (Japan).patch.toml",
       "title": "Saints Row",
       "patch": "1201x675",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "545107F8 - Saints Row (Japan).patch.toml",
       "title": "Saints Row",
       "patch": "1280x610",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "545107F8 - Saints Row (Japan).patch.toml",
@@ -6407,13 +6407,13 @@
       "file": "545107FC - Saints Row 2 (TU3).patch.toml",
       "title": "Saints Row 2 (TU3)",
       "patch": "Motion Blur Strength Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FC - Saints Row 2 (TU3).patch.toml",
       "title": "Saints Row 2 (TU3)",
       "patch": "Force 720p",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FC - Saints Row 2 (TU3).patch.toml",
@@ -6455,7 +6455,7 @@
       "file": "545107FC - Saints Row 2 (TU3).patch.toml",
       "title": "Saints Row 2 (TU3)",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FC - Saints Row 2 (TU3).patch.toml",
@@ -6491,7 +6491,7 @@
       "file": "545107FC - Saints Row 2 (TU3).patch.toml",
       "title": "Saints Row 2 (TU3)",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FC - Saints Row 2 (TU3).patch.toml",
@@ -6527,13 +6527,13 @@
       "file": "545107FC - Saints Row 2.patch.toml",
       "title": "Saints Row 2",
       "patch": "Motion Blur Strength Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FC - Saints Row 2.patch.toml",
       "title": "Saints Row 2",
       "patch": "Force 720p",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FC - Saints Row 2.patch.toml",
@@ -6569,7 +6569,7 @@
       "file": "545107FC - Saints Row 2.patch.toml",
       "title": "Saints Row 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FC - Saints Row 2.patch.toml",
@@ -6611,7 +6611,7 @@
       "file": "545107FE - DAH Path of the Furon.patch.toml",
       "title": "Destroy All Humans! Path of the Furon",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545107FE - DAH Path of the Furon.patch.toml",
@@ -6629,7 +6629,7 @@
       "file": "545107FE - DAH Path of the Furon.patch.toml",
       "title": "Destroy All Humans! Path of the Furon",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5451083B - 50 Cent Blood on the Sand.patch.toml",
@@ -6653,13 +6653,13 @@
       "file": "5451083B - 50 Cent Blood on the Sand.patch.toml",
       "title": "50 Cent: Blood on the Sand",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5451083B - 50 Cent Blood on the Sand.patch.toml",
       "title": "50 Cent: Blood on the Sand",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5451083B - 50 Cent Blood on the Sand.patch.toml",
@@ -6677,7 +6677,7 @@
       "file": "5451083B - 50 Cent Blood on the Sand.patch.toml",
       "title": "50 Cent: Blood on the Sand",
       "patch": "Steam Deck / 16:10 Aspect Ratio Support",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54510846 - Homefront (TU4).patch.toml",
@@ -6695,7 +6695,7 @@
       "file": "54510846 - Homefront (TU4).patch.toml",
       "title": "Homefront",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54510846 - Homefront.patch.toml",
@@ -6713,7 +6713,7 @@
       "file": "54510846 - Homefront.patch.toml",
       "title": "Homefront",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54510850 - SpongeBob - Truth or Square.patch.toml",
@@ -6725,7 +6725,7 @@
       "file": "54510865 - de Blob 2.patch.toml",
       "title": "de Blob 2",
       "patch": "Horizontal Line Fix",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54510866 - WWE All Stars.patch.toml",
@@ -6767,7 +6767,7 @@
       "file": "545407DD - The Bureau XCOM Declassified (TU1).patch.toml",
       "title": "The Bureau: XCOM Declassified",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407DD - The Bureau XCOM Declassified.patch.toml",
@@ -6785,7 +6785,7 @@
       "file": "545407DD - The Bureau XCOM Declassified.patch.toml",
       "title": "The Bureau: XCOM Declassified",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407DF - Table Tennis.patch.toml",
@@ -6827,7 +6827,7 @@
       "file": "545407E7 - Borderlands (TU5).patch.toml",
       "title": "Borderlands",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407E7 - Borderlands (TU5).patch.toml",
@@ -6845,7 +6845,7 @@
       "file": "545407E7 - Borderlands.patch.toml",
       "title": "Borderlands",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407E7 - Borderlands.patch.toml",
@@ -6893,7 +6893,7 @@
       "file": "545407F2 - Grand Theft Auto IV (TU8).patch.toml",
       "title": "Grand Theft Auto IV (TU8)",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407F2 - Grand Theft Auto IV.patch.toml",
@@ -6917,7 +6917,7 @@
       "file": "545407F2 - Grand Theft Auto IV.patch.toml",
       "title": "Grand Theft Auto IV",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407F8 - Midnight Club Los Angeles (Complete Edition).patch.toml",
@@ -6935,7 +6935,7 @@
       "file": "545407F8 - Midnight Club Los Angeles (Complete Edition).patch.toml",
       "title": "Midnight Club: Los Angeles Complete Edition",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407F8 - Midnight Club Los Angeles (Complete Edition).patch.toml",
@@ -6965,7 +6965,7 @@
       "file": "545407F8 - Midnight Club Los Angeles.patch.toml",
       "title": "Midnight Club: Los Angeles",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545407F8 - Midnight Club Los Angeles.patch.toml",
@@ -6995,25 +6995,25 @@
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 1).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Disable Depth of Field & Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 1).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 1).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "360p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 1).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "480p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 1).patch.toml",
@@ -7073,7 +7073,7 @@
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 1).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 1).patch.toml",
@@ -7103,25 +7103,25 @@
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 2).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Disable Depth of Field & Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 2).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 2).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "360p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 2).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "480p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 2).patch.toml",
@@ -7181,7 +7181,7 @@
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 2).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (GOTY, Disc 2).patch.toml",
@@ -7211,25 +7211,25 @@
       "file": "5454082B - Red Dead Redemption (Original, NTSC).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Disable Depth of Field & Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "360p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "480p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC).patch.toml",
@@ -7289,7 +7289,7 @@
       "file": "5454082B - Red Dead Redemption (Original, NTSC).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC).patch.toml",
@@ -7325,25 +7325,25 @@
       "file": "5454082B - Red Dead Redemption (Original, NTSC, TU9).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Disable Depth of Field & Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC, TU9).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC, TU9).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "360p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC, TU9).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "480p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC, TU9).patch.toml",
@@ -7403,7 +7403,7 @@
       "file": "5454082B - Red Dead Redemption (Original, NTSC, TU9).patch.toml",
       "title": "Red Dead Redemption",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption (Original, NTSC, TU9).patch.toml",
@@ -7433,25 +7433,25 @@
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
       "title": "Red Dead Redemption: Undead Nightmare",
       "patch": "Disable Depth of Field & Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
       "title": "Red Dead Redemption: Undead Nightmare",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
       "title": "Red Dead Redemption: Undead Nightmare",
       "patch": "360p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
       "title": "Red Dead Redemption: Undead Nightmare",
       "patch": "480p Mode",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
@@ -7487,7 +7487,7 @@
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
       "title": "Red Dead Redemption: Undead Nightmare",
       "patch": "High Resolution Post-Processing Effects",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
@@ -7511,7 +7511,7 @@
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
       "title": "Red Dead Redemption: Undead Nightmare",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454082B - Red Dead Redemption-Undead Nightmare (Platinum Hits).patch.toml",
@@ -7565,7 +7565,7 @@
       "file": "54540843 - Spec Ops The Line (TU2).patch.toml",
       "title": "Spec Ops: The Line",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54540843 - Spec Ops The Line (TU2).patch.toml",
@@ -7595,7 +7595,7 @@
       "file": "54540843 - Spec Ops The Line.patch.toml",
       "title": "Spec Ops: The Line",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54540843 - Spec Ops The Line.patch.toml",
@@ -7625,13 +7625,13 @@
       "file": "5454085D - Bioshock Infinite (TU7).patch.toml",
       "title": "Bioshock Infinite",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454085D - Bioshock Infinite (TU7).patch.toml",
       "title": "Bioshock Infinite",
       "patch": "16x Anisotropic Filtering - alternative",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454085D - Bioshock Infinite.patch.toml",
@@ -7649,13 +7649,13 @@
       "file": "5454085D - Bioshock Infinite.patch.toml",
       "title": "Bioshock Infinite",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454085D - Bioshock Infinite.patch.toml",
       "title": "Bioshock Infinite",
       "patch": "16x Anisotropic Filtering - alternative",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454087C - Borderlands 2 (TU14).patch.toml",
@@ -7667,7 +7667,7 @@
       "file": "5454087C - Borderlands 2 (TU14).patch.toml",
       "title": "Borderlands 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454087C - Borderlands 2 (TU14).patch.toml",
@@ -7685,7 +7685,7 @@
       "file": "5454087C - Borderlands 2.patch.toml",
       "title": "Borderlands 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454087C - Borderlands 2.patch.toml",
@@ -7709,7 +7709,7 @@
       "file": "54540882 - XCOM Enemy Unknown (TU1).patch.toml",
       "title": "XCOM: Enemy Unknown",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54540882 - XCOM Enemy Unknown (TU2).patch.toml",
@@ -7727,7 +7727,7 @@
       "file": "54540882 - XCOM Enemy Unknown (TU2).patch.toml",
       "title": "XCOM: Enemy Unknown",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "54540882 - XCOM Enemy Unknown.patch.toml",
@@ -7745,7 +7745,7 @@
       "file": "54540882 - XCOM Enemy Unknown.patch.toml",
       "title": "XCOM: Enemy Unknown",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5454088D - The Darkness II (TU2).patch.toml",
@@ -7817,7 +7817,7 @@
       "file": "545408A7 - Grand Theft Auto V (TU26).patch.toml",
       "title": "Grand Theft Auto V",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545408A7 - Grand Theft Auto V (TU26).patch.toml",
@@ -7871,7 +7871,7 @@
       "file": "545408A7 - Grand Theft Auto V (TU27).patch.toml",
       "title": "Grand Theft Auto V",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545408A7 - Grand Theft Auto V (TU27).patch.toml",
@@ -7907,7 +7907,7 @@
       "file": "545408AE - XCOM Enemy Within (TU1).patch.toml",
       "title": "XCOM: Enemy Within",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545408AE - XCOM Enemy Within.patch.toml",
@@ -7925,7 +7925,7 @@
       "file": "545408AE - XCOM Enemy Within.patch.toml",
       "title": "XCOM: Enemy Within",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545408B4 - Borderlands The Pre-Sequel! (TU9).patch.toml",
@@ -7937,7 +7937,7 @@
       "file": "545408B4 - Borderlands The Pre-Sequel! (TU9).patch.toml",
       "title": "Borderlands: The Pre-Sequel!",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545408B4 - Borderlands The Pre-Sequel! (TU9).patch.toml",
@@ -7955,7 +7955,7 @@
       "file": "545408B4 - Borderlands The Pre-Sequel!.patch.toml",
       "title": "Borderlands: The Pre-Sequel!",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "545408B4 - Borderlands The Pre-Sequel!.patch.toml",
@@ -7997,7 +7997,7 @@
       "file": "555307EA - Brothers in Arms Hell's Highway.patch.toml",
       "title": "Brothers in Arms: Hell's Highway",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "555307EA - Brothers in Arms Hell's Highway.patch.toml",
@@ -8045,7 +8045,7 @@
       "file": "555308BD - The Smurfs 2.patch.toml",
       "title": "The Smurfs 2",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "565507D4 - The Bourne Conspiracy.patch.toml",
@@ -8057,7 +8057,7 @@
       "file": "565507D4 - The Bourne Conspiracy.patch.toml",
       "title": "The Bourne Conspiracy",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "565507D4 - The Bourne Conspiracy.patch.toml",
@@ -8069,7 +8069,7 @@
       "file": "565507D4 - The Bourne Conspiracy.patch.toml",
       "title": "The Bourne Conspiracy",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "565707D0 - Lollipop Chainsaw (Premium Edition).patch.toml",
@@ -8099,7 +8099,7 @@
       "file": "565707D0 - Lollipop Chainsaw (Premium Edition).patch.toml",
       "title": "Lollipop Chainsaw",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "565707D0 - Lollipop Chainsaw.patch.toml",
@@ -8141,7 +8141,7 @@
       "file": "565707D0 - Lollipop Chainsaw.patch.toml",
       "title": "Lollipop Chainsaw",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "565707D0 - Lollipop Chainsaw.patch.toml",
@@ -8159,7 +8159,7 @@
       "file": "565707D6 - Killer Is Dead.patch.toml",
       "title": "Killer Is Dead",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "565707D6 - Killer Is Dead.patch.toml",
@@ -8201,13 +8201,13 @@
       "file": "57520802 - Batman Arkham City (TU6).patch.toml",
       "title": "Batman: Arkham City",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520802 - Batman Arkham City (TU6).patch.toml",
       "title": "Batman: Arkham City",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520802 - Batman Arkham City (TU6).patch.toml",
@@ -8231,7 +8231,7 @@
       "file": "57520802 - Batman Arkham City GOTY.patch.toml",
       "title": "Batman: Arkham City: Game of the Year Edition",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520802 - Batman Arkham City GOTY.patch.toml",
@@ -8243,7 +8243,7 @@
       "file": "57520802 - Batman Arkham City GOTY.patch.toml",
       "title": "Batman: Arkham City: Game of the Year Edition",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520802 - Batman Arkham City GOTY.patch.toml",
@@ -8273,13 +8273,13 @@
       "file": "57520802 - Batman Arkham City.patch.toml",
       "title": "Batman: Arkham City",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520802 - Batman Arkham City.patch.toml",
       "title": "Batman: Arkham City",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520802 - Batman Arkham City.patch.toml",
@@ -8309,13 +8309,13 @@
       "file": "57520828 - Batman Arkham Origins (TU3).patch.toml",
       "title": "Batman: Arkham Origins",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520828 - Batman Arkham Origins (TU3).patch.toml",
       "title": "Batman: Arkham Origins",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520828 - Batman Arkham Origins (TU3).patch.toml",
@@ -8345,13 +8345,13 @@
       "file": "57520828 - Batman Arkham Origins (TU4).patch.toml",
       "title": "Batman: Arkham Origins",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520828 - Batman Arkham Origins (TU4).patch.toml",
       "title": "Batman: Arkham Origins",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520828 - Batman Arkham Origins (TU4).patch.toml",
@@ -8387,13 +8387,13 @@
       "file": "57520828 - Batman Arkham Origins.patch.toml",
       "title": "Batman: Arkham Origins",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520828 - Batman Arkham Origins.patch.toml",
       "title": "Batman: Arkham Origins",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "57520828 - Batman Arkham Origins.patch.toml",
@@ -8417,31 +8417,31 @@
       "file": "584107D5 - Small Arms.patch.toml",
       "title": "Small Arms",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584107D5 - Small Arms.patch.toml",
       "title": "Small Arms",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584107D5 - Small Arms.patch.toml",
       "title": "Small Arms",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5841086A - Boom Boom Rocket (TU2).patch.toml",
       "title": "Boom Boom Rocket",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5841086A - Boom Boom Rocket.patch.toml",
       "title": "Boom Boom Rocket",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410873 - Undertow (TU2).patch.toml",
@@ -8477,7 +8477,7 @@
       "file": "58410898 - Military Madness Nectaris.patch.toml",
       "title": "Military Madness: Nectaris",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108A9 - Bean (GoldenEye 007).patch.toml",
@@ -8489,7 +8489,7 @@
       "file": "584108A9 - Bean (GoldenEye 007).patch.toml",
       "title": "Bean (GoldenEye 007)",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108A9 - Bean (GoldenEye 007).patch.toml",
@@ -8507,19 +8507,19 @@
       "file": "584108AA - 1942 Joint Strike.patch.toml",
       "title": "1942: Joint Strike",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108AB - WOTB Commando 3 (TU2).patch.toml",
       "title": "WOTB: Commando 3",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108AB - WOTB Commando 3.patch.toml",
       "title": "WOTB: Commando 3",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108C7 - Shrek n' Roll.patch.toml",
@@ -8531,7 +8531,7 @@
       "file": "584108C7 - Shrek n' Roll.patch.toml",
       "title": "Shrek n' Roll",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108C8 - Quake Arena Arcade.patch.toml",
@@ -8543,13 +8543,13 @@
       "file": "584108CB - Defense Grid The Awakening (TU5).patch.toml",
       "title": "Defense Grid: The Awakening",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108CB - Defense Grid The Awakening.patch.toml",
       "title": "Defense Grid: The Awakening",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108D3 - Boogie Bunnies.patch.toml",
@@ -8561,7 +8561,7 @@
       "file": "584108D3 - Boogie Bunnies.patch.toml",
       "title": "Boogie Bunnies",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108DB - A Kingdom for Keflings.patch.toml",
@@ -8591,19 +8591,19 @@
       "file": "584108F6 - Shadow Complex.patch.toml",
       "title": "Shadow Complex",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584108F6 - Shadow Complex.patch.toml",
       "title": "Shadow Complex",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410908 - Gel Set & Match.patch.toml",
       "title": "Gel: Set & Match",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5841090B - Doritos Dash of Destruction.patch.toml",
@@ -8627,7 +8627,7 @@
       "file": "58410921 - CellFactor PW.patch.toml",
       "title": "CellFactor: PW",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410954 - Banjo-Kazooie (TU2).patch.toml",
@@ -8867,13 +8867,13 @@
       "file": "58410964 - Alien Breed Episode 1.patch.toml",
       "title": "Alien Breed Episode 1",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410964 - Alien Breed Episode 1.patch.toml",
       "title": "Alien Breed Episode 1",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410964 - Alien Breed Episode 1.patch.toml",
@@ -8885,7 +8885,7 @@
       "file": "58410968 - Outrun Online Arcade.patch.toml",
       "title": "Outrun\u2122 Online Arcade",
       "patch": "Aspect Ratio",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5841096A - Hydro Thunder Hurricane.patch.toml",
@@ -8939,7 +8939,7 @@
       "file": "584109DA - Serious Sam HD TFE.patch.toml",
       "title": "Serious Sam HD: TFE",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584109DA - Serious Sam HD TFE.patch.toml",
@@ -8969,13 +8969,13 @@
       "file": "58410A05 - Outland.patch.toml",
       "title": "Outland",
       "patch": "1504x846 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410A05 - Outland.patch.toml",
       "title": "Outland",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410A05 - Outland.patch.toml",
@@ -8999,13 +8999,13 @@
       "file": "58410A22 - Alien Breed 2 Assault.patch.toml",
       "title": "Alien Breed 2: Assault",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410A22 - Alien Breed 2 Assault.patch.toml",
       "title": "Alien Breed 2: Assault",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410A22 - Alien Breed 2 Assault.patch.toml",
@@ -9017,13 +9017,13 @@
       "file": "58410A34 - Crazy Taxi.patch.toml",
       "title": "Crazy Taxi",
       "patch": "1040x720 Resolution",
-      "category_guess": "D"
+      "category_guess": "B"
     },
     {
       "file": "58410A39 - Space Channel 5 Part 2.patch.toml",
       "title": "Space Channel 5 Part 2",
       "patch": "1280x675 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410A70 - Harm's Way.patch.toml",
@@ -9047,7 +9047,7 @@
       "file": "58410A72 - Serious Sam HD TSE.patch.toml",
       "title": "Serious Sam HD: TSE",
       "patch": "1280x720 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410A72 - Serious Sam HD TSE.patch.toml",
@@ -9095,7 +9095,7 @@
       "file": "58410A95 - Iron Brigade (TU6).patch.toml",
       "title": "Iron Brigade",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410A95 - Iron Brigade.patch.toml",
@@ -9113,7 +9113,7 @@
       "file": "58410A95 - Iron Brigade.patch.toml",
       "title": "Iron Brigade",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410AA2 - Dungeons & Dragons Daggerdale.patch.toml",
@@ -9125,7 +9125,7 @@
       "file": "58410AA2 - Dungeons & Dragons Daggerdale.patch.toml",
       "title": "Dungeons & Dragons: Daggerdale",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410AA3 - Alien Breed 3 Descent.patch.toml",
@@ -9143,13 +9143,13 @@
       "file": "58410AA3 - Alien Breed 3 Descent.patch.toml",
       "title": "Alien Breed 3: Descent",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410AA3 - Alien Breed 3 Descent.patch.toml",
       "title": "Alien Breed 3: Descent",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410AA3 - Alien Breed 3 Descent.patch.toml",
@@ -9197,7 +9197,7 @@
       "file": "58410B22 - Alien Rage.patch.toml",
       "title": "Alien Rage",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B22 - Alien Rage.patch.toml",
@@ -9221,7 +9221,7 @@
       "file": "58410B45 - Section 8 Prejudice (TU2).patch.toml",
       "title": "Section 8: Prejudice",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B45 - Section 8 Prejudice (TU2).patch.toml",
@@ -9245,7 +9245,7 @@
       "file": "58410B45 - Section 8 Prejudice.patch.toml",
       "title": "Section 8: Prejudice",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B45 - Section 8 Prejudice.patch.toml",
@@ -9269,13 +9269,13 @@
       "file": "58410B48 - Dead Block.patch.toml",
       "title": "Dead Block",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B48 - Dead Block.patch.toml",
       "title": "Dead Block",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B48 - Dead Block.patch.toml",
@@ -9287,7 +9287,7 @@
       "file": "58410B52 - Warhammer 40,000 Kill Team.patch.toml",
       "title": "Warhammer 40,000: Kill Team",
       "patch": "1920x1080 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B55 - Who Wants to Be a Millionaire Special Editions.patch.toml",
@@ -9323,7 +9323,7 @@
       "file": "58410B6D - Dungeon Defenders (TU2).patch.toml",
       "title": "Dungeon Defenders",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B6D - Dungeon Defenders (TU2).patch.toml",
@@ -9353,7 +9353,7 @@
       "file": "58410B6D - Dungeon Defenders.patch.toml",
       "title": "Dungeon Defenders",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B6D - Dungeon Defenders.patch.toml",
@@ -9377,13 +9377,13 @@
       "file": "58410B7A - Bloodforge (TU1).patch.toml",
       "title": "Bloodforge",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B7A - Bloodforge (TU1).patch.toml",
       "title": "Bloodforge",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B7A - Bloodforge.patch.toml",
@@ -9395,13 +9395,13 @@
       "file": "58410B7A - Bloodforge.patch.toml",
       "title": "Bloodforge",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B7A - Bloodforge.patch.toml",
       "title": "Bloodforge",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58410B8D - Deadlight (TU1).patch.toml",
@@ -9533,7 +9533,7 @@
       "file": "584111F7 - Minecraft (XBLA, TU0).patch.toml",
       "title": "Minecraft",
       "patch": "Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584111F7 - Minecraft (XBLA, TU0).patch.toml",
@@ -9581,7 +9581,7 @@
       "file": "58411233 - Alan Wake's American Nightmare.patch.toml",
       "title": "Alan Wake's American Nightmare",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58411233 - Alan Wake's American Nightmare.patch.toml",
@@ -9665,7 +9665,7 @@
       "file": "58411277 - Zeno Clash 2 (TU1).patch.toml",
       "title": "Zeno Clash 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58411277 - Zeno Clash 2 (TU1).patch.toml",
@@ -9695,7 +9695,7 @@
       "file": "58411277 - Zeno Clash 2.patch.toml",
       "title": "Zeno Clash 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58411277 - Zeno Clash 2.patch.toml",
@@ -9749,7 +9749,7 @@
       "file": "5841128C - Karateka.patch.toml",
       "title": "Karateka",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58411293 - Narco Terror.patch.toml",
@@ -9803,7 +9803,7 @@
       "file": "584112A5 - Brothers A Tale of Two Sons.patch.toml",
       "title": "Brothers: A Tale of Two Sons",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584112A5 - Brothers A Tale of Two Sons.patch.toml",
@@ -9821,13 +9821,13 @@
       "file": "584112AD - Special Forces Team X.patch.toml",
       "title": "Special Forces: Team X",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584112AD - Special Forces Team X.patch.toml",
       "title": "Special Forces: Team X",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584112B0 - Call of Juarez Gunslinger.patch.toml",
@@ -9845,13 +9845,13 @@
       "file": "58411329 - Sanctum 2.patch.toml",
       "title": "Sanctum 2",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58411329 - Sanctum 2.patch.toml",
       "title": "Sanctum 2",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58411329 - Sanctum 2.patch.toml",
@@ -9875,13 +9875,13 @@
       "file": "584113C2 - Teenage Mutant Ninja Turtles Out of the Shadows.patch.toml",
       "title": "Teenage Mutant Ninja Turtles: Out of the Shadows",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584113C2 - Teenage Mutant Ninja Turtles Out of the Shadows.patch.toml",
       "title": "Teenage Mutant Ninja Turtles: Out of the Shadows",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584113C2 - Teenage Mutant Ninja Turtles Out of the Shadows.patch.toml",
@@ -9899,7 +9899,7 @@
       "file": "584113F8 - Fireburst.patch.toml",
       "title": "Fireburst",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584113F8 - Fireburst.patch.toml",
@@ -9923,13 +9923,13 @@
       "file": "584113FE - Flashback (TU1).patch.toml",
       "title": "Flashback",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584113FE - Flashback (TU1).patch.toml",
       "title": "Flashback",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584113FE - Flashback (TU1).patch.toml",
@@ -9953,13 +9953,13 @@
       "file": "584113FE - Flashback.patch.toml",
       "title": "Flashback",
       "patch": "Disable Motion Blur",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584113FE - Flashback.patch.toml",
       "title": "Flashback",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "584113FE - Flashback.patch.toml",
@@ -10019,7 +10019,7 @@
       "file": "58411403 - Marlow Briggs and the Mask of Death.patch.toml",
       "title": "Marlow Briggs and the Mask of Death",
       "patch": "960x540 Resolution",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "58411403 - Marlow Briggs and the Mask of Death.patch.toml",
@@ -10055,7 +10055,7 @@
       "file": "5841141A - Contrast (TU1).patch.toml",
       "title": "Contrast",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5841141A - Contrast (TU1).patch.toml",
@@ -10085,7 +10085,7 @@
       "file": "5841141A - Contrast.patch.toml",
       "title": "Contrast",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5841141A - Contrast.patch.toml",
@@ -10127,7 +10127,7 @@
       "file": "5841147C - Life Is Strange (TU9).patch.toml",
       "title": "Life Is Strange",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     },
     {
       "file": "5841147C - Life Is Strange.patch.toml",
@@ -10145,7 +10145,7 @@
       "file": "5841147C - Life Is Strange.patch.toml",
       "title": "Life Is Strange",
       "patch": "16x Anisotropic Filtering",
-      "category_guess": "C"
+      "category_guess": "B"
     }
   ]
 }
