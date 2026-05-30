@@ -21,22 +21,16 @@ jobs:
 
       - name: Install Vulkan SDK
         run: |
-          if [ ! -d "$HOME/vulkan-sdk" ]; then
-            brew install --cask vulkan-sdk
-            INSTALL_ROOT="$(find /Applications/VulkanSDK -maxdepth 1 -mindepth 1 -type d | head -n1)"
-            if [ -n "$INSTALL_ROOT" ]; then
-              mkdir -p "$HOME/vulkan-sdk"
-              cp -R "$INSTALL_ROOT" "$HOME/vulkan-sdk/"
-            fi
-          fi
-          VULKAN_SDK="$(find "$HOME/vulkan-sdk" -maxdepth 2 -name macOS -type d | head -n1)"
-          if [ -z "$VULKAN_SDK" ]; then
-            VULKAN_SDK="$(find "$HOME/vulkan-sdk" -maxdepth 3 -type d -name include | head -n1 | xargs dirname)"
-          fi
+          brew install molten-vk vulkan-headers glslang spirv-tools
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          SPIRV_OPT="$(command -v spirv-opt)"
+          VULKAN_SDK="$(dirname "$(dirname "$SPIRV_OPT")")"
           echo "VULKAN_SDK=$VULKAN_SDK" >> "$GITHUB_ENV"
-          echo "PATH=$VULKAN_SDK/bin:$PATH" >> "$GITHUB_ENV"
-          echo "DYLD_LIBRARY_PATH=$VULKAN_SDK/lib:$DYLD_LIBRARY_PATH" >> "$GITHUB_ENV"
-          echo "VK_ICD_FILENAMES=$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json" >> "$GITHUB_ENV"
+          ICD="$(find "$(brew --prefix molten-vk)" -name MoltenVK_icd.json | head -n1)"
+          if [ -n "$ICD" ]; then
+            echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+          fi
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix molten-vk)/lib:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
 
       - name: Download submodules
         run: git submodule update --init --depth=1
