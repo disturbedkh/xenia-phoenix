@@ -466,6 +466,40 @@ void DirectoryScanner::ScanDirectory(const std::filesystem::path& dir) {
     }
   }
 
+  // Phase 2b: Xbox content folder IDs (GOD 00007000, XBLA 000D0000, install
+  // 00004000).
+  if (!found_xex) {
+    static const char* kContentFolderIds[] = {"00007000", "000D0000",
+                                              "00004000"};
+    for (const auto& sub : subdirs) {
+      const auto folder_name = xe::path_to_utf8(sub.filename());
+      for (const char* content_id : kContentFolderIds) {
+        if (folder_name != content_id) {
+          continue;
+        }
+        std::error_code ec;
+        for (const auto& child : std::filesystem::directory_iterator(sub, ec)) {
+          if (!child.is_directory()) {
+            continue;
+          }
+          for (const auto& file :
+               std::filesystem::directory_iterator(child.path(), ec)) {
+            if (!file.is_regular_file()) {
+              continue;
+            }
+            const auto path = file.path();
+            if (auto m = vfs::ExtractStfsMetadata(path, language_)) {
+              if (IsLaunchableContentType(m->content_type)) {
+                RecordGame(MakeFromStfs(path, *m));
+                phase2_hits++;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   XELOGD(
       "DirectoryScanner: leave '{}' — found_xex={}, phase1_hits={}, "
       "phase2_probed={}, phase2_hits={}, recurse={}",

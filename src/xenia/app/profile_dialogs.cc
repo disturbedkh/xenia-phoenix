@@ -6,13 +6,17 @@
  * Released under the BSD license - see LICENSE in the root for more details. *
  ******************************************************************************
  */
+
 #include "xenia/app/profile_dialogs.h"
 #include "xenia/app/emulator_window.h"
+#include "xenia/app/profile_backup.h"
 #include "xenia/base/png_utils.h"
 #include "xenia/base/system.h"
+#include "xenia/kernel/netplay/xlive_api.h"
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/kernel/xam/xam_ui.h"
 #include "xenia/ui/file_picker.h"
+#include "xenia/ui/imgui_host_notification.h"
 
 #include "xenia/kernel/xam/ui/create_profile_ui.h"
 #include "xenia/kernel/xam/ui/gamercard_ui.h"
@@ -115,11 +119,17 @@ void ProfileConfigDialog::LoadProfileIcon(const uint64_t xuid) {
     return;
   }
 
-  const auto profile_manager = emulator_window_->emulator()
-                                   ->kernel_state()
-                                   ->xam_state()
-                                   ->profile_manager();
+  const auto xam_state =
+      emulator_window_->emulator()->kernel_state()->xam_state();
+
+  const auto profile_manager = xam_state->profile_manager();
+  const auto user_tracker = xam_state->user_tracker();
+
   if (!profile_manager) {
+    return;
+  }
+
+  if (!user_tracker) {
     return;
   }
 
@@ -129,7 +139,17 @@ void ProfileConfigDialog::LoadProfileIcon(const uint64_t xuid) {
     if (profile_icon_.contains(xuid)) {
       profile_icon_[xuid].release();
     }
+
+    if (profile_gamerpic_key_.contains(xuid)) {
+      profile_gamerpic_key_.erase(xuid);
+    }
     return;
+  }
+
+  const auto gamerpic_key = user_tracker->GetUserGamerpicSetting(xuid);
+
+  if (gamerpic_key.has_value()) {
+    profile_gamerpic_key_[xuid] = gamerpic_key.value();
   }
 
   const auto profile_icon =
@@ -197,6 +217,33 @@ void ProfileConfigDialog::OnDraw(ImGuiIO& io) {
     const uint8_t user_index =
         profile_manager->GetUserIndexAssignedToProfile(xuid);
 
+    // Detect the change because creating ImmediateTexture every frame will
+    // impact performance.
+    //
+    // If dialog is open while Gamerpic Browser changes gamerpic then we want to
+    // detect the change.
+    const auto user_tracker = emulator_window_->emulator()
+                                  ->kernel_state()
+                                  ->xam_state()
+                                  ->user_tracker();
+
+    if (user_tracker && profile_gamerpic_key_.contains(xuid)) {
+      const auto gamerpic_key = user_tracker->GetUserGamerpicSetting(xuid);
+
+      if (gamerpic_key.has_value()) {
+        const kernel::xam::GamerPictureKey cached_gamerpic_key =
+            profile_gamerpic_key_.at(xuid);
+        const kernel::xam::GamerPictureKey current_gamerpic_key =
+            gamerpic_key.value();
+
+        // Reload gamerpic icon if changed.
+        if (memcmp(&cached_gamerpic_key, &current_gamerpic_key,
+                   sizeof(kernel::xam::GamerPictureKey)) != 0) {
+          LoadProfileIcon(xuid);
+        }
+      }
+    }
+
     const auto profile_icon = profile_icon_.find(xuid) != profile_icon_.cend()
                                   ? profile_icon_[xuid].get()
                                   : nullptr;
@@ -248,6 +295,25 @@ void ProfileConfigDialog::OnDraw(ImGuiIO& io) {
               emulator_window_->emulator()->kernel_state(), xuid);
         }
 
+        if (ImGui::BeginMenu("Copy")) {
+          if (ImGui::MenuItem("Gamertag")) {
+            ImGui::SetClipboardText(account.GetGamertagString().c_str());
+          }
+
+          if (ImGui::MenuItem("XUID")) {
+            ImGui::SetClipboardText(fmt::format("{:016X}", xuid).c_str());
+          }
+
+          if (account.IsLiveEnabled()) {
+            if (ImGui::MenuItem("XUID Online")) {
+              ImGui::SetClipboardText(
+                  fmt::format("{:016X}", account.xuid_online.get()).c_str());
+            }
+          }
+
+          ImGui::EndMenu();
+        }
+
         const bool is_signedin = profile_manager->GetProfile(xuid) != nullptr;
         ImGui::BeginDisabled(!is_signedin);
         if (ImGui::MenuItem("Show Played Titles")) {
@@ -271,6 +337,49 @@ void ProfileConfigDialog::OnDraw(ImGuiIO& io) {
 
         if (!emulator_window_->emulator()->is_title_open()) {
           ImGui::Separator();
+
+          if (account.IsLiveEnabled()) {
+            if (ImGui::BeginMenu("Convert to Offline Profile")) {
+              ImGui::BeginTooltip();
+              ImGui::TextUnformatted(
+                  fmt::format(
+                      "You're about to convert profile: {} (XUID: {:016X}) "
+                      "to an offline profile. Are you sure?",
+                      account.GetGamertagString(), xuid)
+                      .c_str());
+              ImGui::EndTooltip();
+
+              if (ImGui::MenuItem("Yes, convert it!")) {
+                profile_manager->ConvertToOfflineProfile(xuid);
+                ImGui::EndMenu();
+                ImGui::EndPopup();
+                return false;
+              }
+
+              ImGui::EndMenu();
+            }
+          } else {
+            if (ImGui::BeginMenu("Convert to Xbox Live-Enabled Profile")) {
+              ImGui::BeginTooltip();
+              ImGui::TextUnformatted(
+                  fmt::format(
+                      "You're about to convert profile: {} (XUID: {:016X}) "
+                      "to an Xbox Live-Enabled profile. Are you sure?",
+                      account.GetGamertagString(), xuid)
+                      .c_str());
+              ImGui::EndTooltip();
+
+              if (ImGui::MenuItem("Yes, convert it!")) {
+                profile_manager->ConvertToXboxLiveEnabledProfile(xuid);
+                ImGui::EndMenu();
+                ImGui::EndPopup();
+                return false;
+              }
+
+              ImGui::EndMenu();
+            }
+          }
+
           if (ImGui::BeginMenu("Delete Profile")) {
             ImGui::BeginTooltip();
             ImGui::TextUnformatted(
@@ -312,12 +421,259 @@ void ProfileConfigDialog::OnDraw(ImGuiIO& io) {
 
   ImGui::Spacing();
 
+  if (selected_xuid_) {
+    ProfileBackup backup(emulator_window_->emulator()->content_root(),
+                         emulator_window_->emulator()->storage_root() /
+                             "cache" / "profile_backups");
+    if (ImGui::Button("Backup selected profile")) {
+      std::string error;
+      if (!backup.ExportProfile(selected_xuid_, error)) {
+        new ui::HostNotificationWindow(emulator_window_->imgui_drawer(),
+                                       "Profile backup failed", error, 0);
+      }
+    }
+  }
+
   if (ImGui::Button("Create Profile")) {
     new kernel::xam::ui::CreateProfileUI(emulator_window_->imgui_drawer(),
                                          emulator_window_->emulator());
   }
 
   ImGui::End();
+}
+
+void ManagerDialog::Initalize(ui::ImGuiDrawer* imgui_drawer,
+                              uint32_t user_index) {
+  emulator_ = emulator_window_->emulator();
+
+  const auto profile =
+      emulator_->kernel_state()->xam_state()->GetUserProfile(user_index);
+
+  if (!profile) {
+    return;
+  }
+
+  friends_presence_ =
+      emulator_->GetXboxLiveAPI()->GetFriendsPresenceAsync(profile->xuid());
+  immediate_gamerpics_ = emulator_->GetXboxLiveAPI()->GetFriendsGamerpicsAsync(
+      profile->xuid(), imgui_drawer);
+}
+
+void ManagerDialog::OnDraw(ImGuiIO& io) {
+  if (!manager_opened_) {
+    manager_opened_ = true;
+    ImGui::OpenPopup("Manager");
+
+    if (emulator_->GetXboxLiveAPI()->IsConnectedToServer()) {
+      friends_args.filter_offline = true;
+    }
+
+    sessions_args.filter_own = true;
+  }
+
+  // Add profile dropdown selector?
+  const uint32_t user_index = 0;
+
+  auto profile =
+      emulator_->kernel_state()->xam_state()->GetUserProfile(user_index);
+
+  const bool is_profile_signed_in = profile == nullptr;
+
+  ImGuiViewport* viewport = ImGui::GetMainViewport();
+  ImVec2 center = viewport->GetCenter();
+
+  ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+  if (ImGui::BeginPopupModal("Manager", &manager_opened_,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImVec2 btn_size = ImVec2(200, 40);
+
+    if (is_profile_signed_in) {
+      ImGui::Text("You're not logged into a profile!");
+      ImGui::Separator();
+    }
+
+    ImGui::SetWindowFontScale(1.2f);
+
+    ImGui::BeginDisabled(is_profile_signed_in);
+    if (ImGui::Button("Friends", btn_size)) {
+      friends_args.friends_open = true;
+      ImGui::OpenPopup("Friends");
+    }
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+
+    ImGui::BeginDisabled(is_profile_signed_in ||
+                         !emulator_->GetXboxLiveAPI()->IsConnectedToServer());
+    if (ImGui::Button("Sessions", btn_size)) {
+      sessions_args.sessions_open = true;
+      ImGui::OpenPopup("Sessions");
+    }
+    ImGui::EndDisabled();
+
+    if (emulator_->GetXboxLiveAPI()->IsXUIDMismatched()) {
+      ImVec2 button_pos = ImGui::GetCursorScreenPos();
+      ImVec2 button_end =
+          ImVec2(button_pos.x + btn_size.x, button_pos.y + btn_size.y);
+
+      ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+      draw_list->AddRect(button_pos, button_end, IM_COL32(255, 0, 0, 255), 0.0f,
+                         0, 3.0f);
+    }
+
+    if (ImGui::Button("Delete Netplay Profiles", btn_size)) {
+      ImGui::OpenPopup("Delete Profiles");
+    }
+
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+      ImGui::SetTooltip("Delete profiles to fix XUID mismatch error.");
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("UPnP and Ports", btn_size)) {
+      upnp_and_ports_args.first_draw = true;
+      upnp_and_ports_args.dialog_open = true;
+      ImGui::OpenPopup("UPnP and Ports");
+    }
+
+    ImGui::SetWindowFontScale(1.0f);
+
+    if (!friends_args.friends_open) {
+      friends_args.first_draw = false;
+    }
+
+    if (!sessions_args.sessions_open) {
+      sessions_args.first_draw = false;
+      sessions_args.refresh_sessions_sync = true;
+      sessions.clear();
+    }
+
+    if (friends_presence_.valid()) {
+      if (friends_presence_.wait_for(0s) == std::future_status::ready) {
+        friends_presence_result_ = friends_presence_.get();
+      }
+    }
+
+    if (friends_args.refresh_presence) {
+      friends_presence_result_ = {};
+      friends_args.refresh_presence = false;
+
+      friends_presence_ =
+          emulator_->GetXboxLiveAPI()->GetFriendsPresenceAsync(profile->xuid());
+      immediate_gamerpics_ =
+          emulator_->GetXboxLiveAPI()->GetFriendsGamerpicsAsync(profile->xuid(),
+                                                                imgui_drawer());
+    }
+
+    if (immediate_gamerpics_.valid()) {
+      if (immediate_gamerpics_.wait_for(0s) == std::future_status::ready) {
+        immediate_gamerpics_result_.merge(immediate_gamerpics_.get());
+      }
+    }
+
+    xeDrawFriendsContent(imgui_drawer(), profile, friends_args,
+                         &friends_presence_result_,
+                         immediate_gamerpics_result_);
+
+    xeDrawSessionsContent(imgui_drawer(), profile, sessions_args, &sessions);
+
+    if (!deletion_args.deleted_profiles_open) {
+      deletion_args.first_draw = false;
+      deleted_profiles = {};
+    }
+
+    bool open_deleted_profiles = false;
+
+    float btn_height = 25;
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(225, -1), ImVec2(225, -1));
+    if (ImGui::BeginPopupModal("Delete Profiles", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+      if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_GamepadFaceRight, false)) {
+        ImGui::CloseCurrentPopup();
+      }
+
+      float btn_width = (ImGui::GetContentRegionAvail().x * 0.5f) -
+                        (ImGui::GetStyle().ItemSpacing.x * 0.5f);
+      ImVec2 btn_size = ImVec2(btn_width, btn_height);
+
+      const std::string desc = "Are you sure?";
+      const std::string desc2 = "You will be signed out.";
+
+      ImVec2 desc_size = ImGui::CalcTextSize(desc.c_str());
+      ImVec2 desc2_size = ImGui::CalcTextSize(desc2.c_str());
+
+      ImGui::SetCursorPosX((ImGui::GetWindowWidth() - desc_size.x) * 0.5f);
+      ImGui::Text(desc.c_str());
+
+      if (!is_profile_signed_in) {
+        ImGui::Spacing();
+
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - desc2_size.x) * 0.5f);
+        ImGui::Text(desc2.c_str());
+      }
+
+      ImGui::Separator();
+
+      if (ImGui::Button("Yes", btn_size)) {
+        if (!is_profile_signed_in) {
+          std::map<uint8_t, uint64_t> xuids;
+
+          kernel::xam::XamState* xam_state =
+              emulator_window_->emulator()->kernel_state()->xam_state();
+
+          for (uint32_t i = 0; i < XUserMaxUserCount; i++) {
+            if (xam_state->IsUserSignedIn(i)) {
+              xuids[i] = xam_state->GetUserProfile(i)->xuid();
+            }
+          }
+
+          xam_state->profile_manager()->LogoutMultiple(xuids);
+        }
+
+        deleted_profiles = emulator_->GetXboxLiveAPI()->DeleteMyProfiles();
+
+        open_deleted_profiles = true;
+
+        ImGui::CloseCurrentPopup();
+      }
+
+      ImGui::SameLine();
+
+      if (ImGui::Button("Cancel", btn_size)) {
+        ImGui::CloseCurrentPopup();
+      }
+
+      ImGui::EndPopup();
+    }
+
+    if (open_deleted_profiles) {
+      emulator_->GetXboxLiveAPI()->SetXUIDMismatch(false);
+
+      deletion_args.deleted_profiles_open = true;
+      ImGui::OpenPopup("Deleted Profiles");
+    }
+
+    xe::kernel::xam::xeDrawMyDeletedProfiles(imgui_drawer(), deletion_args,
+                                             &deleted_profiles);
+
+    if (!upnp_and_ports_args.dialog_open) {
+      upnp_and_ports_args.first_draw = false;
+    }
+
+    xe::kernel::xam::xeDrawUPnPAndPorts(imgui_drawer(), upnp_and_ports_args,
+                                        emulator_->GetUPnP());
+
+    ImGui::EndPopup();
+  }
+
+  if (!manager_opened_) {
+    Close();
+    ImGui::CloseCurrentPopup();
+    emulator_window_->ToggleFriendsDialog();
+  }
 }
 
 }  // namespace app

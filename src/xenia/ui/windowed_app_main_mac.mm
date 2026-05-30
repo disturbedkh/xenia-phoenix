@@ -12,9 +12,13 @@
 #import <Cocoa/Cocoa.h>
 
 #include "xenia/base/cvar.h"
+#include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
 #include "xenia/ui/windowed_app.h"
 #include "xenia/ui/windowed_app_context_mac.h"
+
+DECLARE_path(storage_root);
+DECLARE_bool(portable);
 
 int main(int argc, char** argv) {
   @autoreleasepool {
@@ -30,6 +34,10 @@ int main(int argc, char** argv) {
                                app->GetPositionalOptions());
 
     xe::InitializeLogging(app->GetName());
+
+    const auto storage_root =
+        xe::filesystem::ResolveStorageRoot(cvars::storage_root, cvars::portable);
+    xe::AttachFileLogSink(storage_root / "log", app->GetName());
 
     int result = EXIT_FAILURE;
     if (app->OnInitialize()) {

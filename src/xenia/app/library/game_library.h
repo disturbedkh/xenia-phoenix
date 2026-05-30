@@ -32,11 +32,19 @@ struct LibraryEntry {
   std::string title_name;
   std::filesystem::path path;
   std::filesystem::path icon_path;
+  std::filesystem::path custom_icon_path;
   std::time_t last_played = 0;
   uint64_t play_seconds = 0;
   std::string media_type;
   std::string title_id_hex;
 };
+
+inline std::filesystem::path EffectiveIconPath(const LibraryEntry& entry) {
+  if (!entry.custom_icon_path.empty()) {
+    return entry.custom_icon_path;
+  }
+  return entry.icon_path;
+}
 
 // Persistent game library: watched folders, scanned entries, icon cache.
 class GameLibrary {
@@ -71,12 +79,18 @@ class GameLibrary {
   void CacheIconRgba(uint32_t title_id, int width, int height,
                      const std::vector<uint8_t>& rgba);
 
+  bool SetCustomCover(const std::filesystem::path& game_path,
+                      const std::filesystem::path& image_file);
+  void ClearCustomCover(const std::filesystem::path& game_path);
+
   LibraryEntry* FindByPath(const std::filesystem::path& path);
   LibraryEntry* FindByTitleId(uint32_t title_id);
 
   std::filesystem::path IconsCacheDir() const;
+  std::filesystem::path CustomIconsCacheDir() const;
 
  private:
+  std::filesystem::path CustomIconCachePath(const LibraryEntry& entry) const;
   void MergeScanResults(const std::vector<DiscoveredGame>& discovered);
   LibraryEntry FromDiscovered(const DiscoveredGame& g);
   void WriteIconPng(uint32_t title_id, const std::vector<uint8_t>& png);

@@ -12,9 +12,13 @@
 #include <cstdlib>
 
 #include "xenia/base/cvar.h"
+#include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
 #include "xenia/ui/windowed_app.h"
 #include "xenia/ui/windowed_app_context_gtk.h"
+
+DECLARE_path(storage_root);
+DECLARE_bool(portable);
 
 int main(int argc_pre_gtk, char** argv_pre_gtk) {
   // Before touching anything GTK+, make sure that when running on Wayland,
@@ -52,6 +56,10 @@ int main(int argc_pre_gtk, char** argv_pre_gtk) {
 
     // Initialize logging. Needs parsed cvars.
     xe::InitializeLogging(app->GetName());
+
+    const auto storage_root = xe::filesystem::ResolveStorageRoot(
+        cvars::storage_root, cvars::portable);
+    xe::AttachFileLogSink(storage_root / "log", app->GetName());
 
     if (app->OnInitialize()) {
       app_context.RunMainGTKLoop();

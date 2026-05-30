@@ -46,6 +46,7 @@ class MenuItem {
   MenuItem* parent_item() const { return parent_item_; }
   Type type() { return type_; }
   const std::string& text() { return text_; }
+  void set_text(std::string text) { text_ = std::move(text); }
   const std::string& hotkey() { return hotkey_; }
 
   // If the menu is currently attached to a Window, changes to it (such as the

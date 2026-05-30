@@ -14,8 +14,15 @@
 #include <memory>
 #include <string>
 
+#include "xenia/app/gamerpic_browser.h"
+#include "xenia/app/guide_overlay.h"
 #include "xenia/app/library/game_library.h"
+#include "xenia/app/netplay_settings_dialog.h"
 #include "xenia/app/profile_dialogs.h"
+#include "xenia/app/settings_ui_registry.h"
+#include "xenia/app/title_launch_dispatcher.h"
+#include "xenia/app/updater.h"
+#include "xenia/app/updater_dialog.h"
 #include "xenia/emulator.h"
 #include "xenia/gpu/command_processor.h"
 #include "xenia/ui/imgui_dialog.h"
@@ -33,8 +40,9 @@ namespace app {
 
 class LauncherDashboardDialog;
 class LibrarySettingsDialog;
-class GraphicsSettingsDialog;
 class ConsoleSettingsDialog;
+class PreferencesDialog;
+class FirstRunWizardDialog;
 
 struct RecentTitleEntry {
   std::string title_name;
@@ -59,6 +67,8 @@ class EmulatorWindow {
 
   virtual ~EmulatorWindow();
 
+  void ShutdownUpdaterDialog();
+
   static std::unique_ptr<EmulatorWindow> Create(
       Emulator* emulator, ui::WindowedAppContext& app_context, uint32_t width,
       uint32_t height);
@@ -82,6 +92,9 @@ class EmulatorWindow {
   ui::WindowedAppContext& app_context() const { return app_context_; }
   ui::Window* window() const { return window_.get(); }
   ui::ImGuiDrawer* imgui_drawer() const { return imgui_drawer_.get(); }
+  std::shared_ptr<ui::ImGuiDrawer> imgui_drawer_shared() const {
+    return imgui_drawer_;
+  }
   ui::ImmediateDrawer* immediate_drawer() const {
     return immediate_drawer_.get();
   }
@@ -93,10 +106,13 @@ class EmulatorWindow {
   void OnEmulatorInitialized();
 
   xe::X_STATUS RunTitle(const std::filesystem::path& path_to_file);
+  xe::X_STATUS DispatchLaunch(LaunchRequest request);
   void RequestLaunchTitle(const std::filesystem::path& path_to_file);
   void UpdateTitle();
   void SetFullscreen(bool fullscreen);
   void ToggleFullscreen();
+  void SetAutoCheckForUpdates(bool state);
+  void UpdateCompletionNotification();
   void SetInitializingShaderStorage(bool initializing);
 
   void TakeScreenshot();
@@ -105,19 +121,36 @@ class EmulatorWindow {
                  const xe::ui::RawImage& image);
 
   void ToggleProfilesConfigDialog();
+  void ToggleGamerpicBrowserDialog();
   void ToggleXMPConfigDialog();
-  void ToggleDisplayConfigDialog();
+  void TogglePreferencesDialog(PreferencesTab tab = PreferencesTab::kGraphics,
+                               bool per_game_mode = false);
   void ToggleGraphicsSettingsDialog();
   void ToggleGraphicsSettingsDialogFromKeyboard();
+  void ToggleDisplayConfigDialog();
+  void ToggleAudioSettings();
+  void ToggleInputSettings();
+  void ToggleStorageSettings();
+  void ToggleGeneralSettings();
+  void ToggleCpuSystemSettings();
+  void ToggleLoggingSettings();
+  void ToggleAdvancedSettings();
+  void ToggleGameOverridesSettings();
   void ToggleLibrarySettingsDialog();
-  void ScheduleCloseGraphicsSettingsDialog();
+  void ScheduleClosePreferencesDialog();
   void ScheduleCloseLibrarySettingsDialog();
   void ToggleConsoleSettingsDialog();
+  void ToggleNetplaySettingsDialog();
+  void ToggleNetplayStatusDialog();
+  void ToggleFriendsDialog();
+  void ToggleUpdaterDialog();
+  void ToggleCompletionDialog();
+  void DisplayHotKeysConfig();
+  void OpenConfigFileLocation();
   void SetHotkeysState(bool enabled) { disable_hotkeys_ = !enabled; }
 
   // Called from ImGuiDialog::OnClose when a self-deleting owned dialog ends.
   void OnLibrarySettingsDialogClosed(ui::ImGuiDialog* dialog);
-  void OnDisplayConfigDialogClosed(ui::ImGuiDialog* dialog);
 
   // Types of button functions for hotkeys.
   enum class ButtonFunctions {
@@ -238,20 +271,6 @@ class EmulatorWindow {
         installation_entries_;
   };
 
-  class DisplayConfigDialog final : public ui::ImGuiDialog {
-   public:
-    DisplayConfigDialog(ui::ImGuiDrawer* imgui_drawer,
-                        EmulatorWindow& emulator_window)
-        : ui::ImGuiDialog(imgui_drawer), emulator_window_(emulator_window) {}
-
-   protected:
-    void OnDraw(ImGuiIO& io) override;
-    void OnClose() override;
-
-   private:
-    EmulatorWindow& emulator_window_;
-  };
-
   class XMPConfigDialog final : public ui::ImGuiDialog {
    public:
     XMPConfigDialog(ui::ImGuiDrawer* imgui_drawer,
@@ -272,6 +291,7 @@ class EmulatorWindow {
     float volume_ = 0.0f;
   };
 
+ public:
   explicit EmulatorWindow(Emulator* emulator,
                           ui::WindowedAppContext& app_context, uint32_t width,
                           uint32_t height);
@@ -314,6 +334,10 @@ class EmulatorWindow {
   void GpuClearCaches();
   void ShowLauncher();
   void HideLauncher();
+  void ToggleLauncher();
+  void ToggleGuideOverlay();
+  void AddGameLibraryFolder(const std::filesystem::path& path);
+  void OnLifecycleChange(LifecycleState old_state, LifecycleState new_state);
   void ToggleControllerVibration();
   void ShowCompatibility();
   void ShowFAQ();
@@ -325,7 +349,6 @@ class EmulatorWindow {
   void GamepadHotKeys();
   void ToggleGPUSetting(gpu::GPUSetting setting);
   void CycleReadbackResolve();
-  void DisplayHotKeysConfig();
 
   static std::string CanonicalizeFileExtension(
       const std::filesystem::path& path);
@@ -335,6 +358,42 @@ class EmulatorWindow {
   void LoadRecentlyLaunchedTitles();
   void AddRecentlyLaunchedTitle(std::filesystem::path path_to_file,
                                 std::string title_name);
+  void ShowUpdateAvailableDialog(const std::string& commit,
+                                 const std::string& date);
+
+  struct DevModeSnapshot {
+    int32_t log_level = 2;
+    uint32_t log_mask = 0;
+    bool flush_log = true;
+    bool force_flush_on_error = false;
+    bool subsystem_sentinels = false;
+    bool capture_log_tail_on_crash = true;
+  };
+
+  std::unique_ptr<ui::MenuItem> CreateDevMenu();
+  void RebuildDevModeMenuItem();
+  void RebuildLogLevelSubmenu();
+  void RebuildLogChannelsSubmenu();
+  void RebuildForceFlushMenuItem();
+  void ToggleDevMode();
+  void SetLogLevel(int32_t level);
+  void ToggleLogChannel(uint32_t channel_bit);
+  void ToggleForceFlushOnError();
+  void DumpHostThreadStateNow();
+  void ForceFlushLogNow();
+  void OpenLogFolder();
+  void OpenLatestCrashReport();
+
+  ui::MenuItem* dev_mode_menu_item_ = nullptr;
+  ui::MenuItem* log_level_submenu_ = nullptr;
+  ui::MenuItem* log_channels_submenu_ = nullptr;
+  ui::MenuItem* force_flush_menu_item_ = nullptr;
+  size_t log_level_submenu_items_ = 0;
+  size_t log_channels_submenu_items_ = 0;
+  bool dev_mode_active_ = false;
+  DevModeSnapshot dev_mode_snapshot_{};
+
+  void ClearMenuChildren(ui::MenuItem* menu, size_t& item_count);
 
   void ClearDialogs();
 
@@ -342,16 +401,23 @@ class EmulatorWindow {
   ui::WindowedAppContext& app_context_;
   EmulatorWindowListener window_listener_;
   std::unique_ptr<ui::Window> window_;
-  std::unique_ptr<ui::ImGuiDrawer> imgui_drawer_;
+  std::shared_ptr<ui::ImGuiDrawer> imgui_drawer_;
   std::unique_ptr<DisplayConfigGameConfigLoadCallback>
       display_config_game_config_load_callback_;
   std::unique_ptr<GraphicsSettingsGameConfigLoadCallback>
       graphics_settings_game_config_load_callback_;
   std::unique_ptr<library::GameLibrary> game_library_;
+  std::unique_ptr<TitleLaunchDispatcher> title_launch_dispatcher_;
   std::unique_ptr<LauncherDashboardDialog> launcher_dashboard_;
+  std::unique_ptr<GuideOverlayDialog> guide_overlay_;
+  // User explicitly toggled launcher over gameplay (F9); suppress lifecycle
+  // auto-hide.
+  bool launcher_overlay_requested_ = false;
   std::unique_ptr<LibrarySettingsDialog> library_settings_dialog_;
-  std::unique_ptr<GraphicsSettingsDialog> graphics_settings_dialog_;
-  bool graphics_settings_close_pending_ = false;
+  std::unique_ptr<PreferencesDialog> preferences_dialog_;
+  bool preferences_close_pending_ = false;
+  PreferencesTab preferences_open_tab_ = PreferencesTab::kGraphics;
+  bool preferences_per_game_mode_ = false;
   bool library_settings_close_pending_ = false;
   // Creation may fail, in this case immediate drawer UI must not be drawn.
   std::unique_ptr<ui::ImmediateDrawer> immediate_drawer_;
@@ -363,14 +429,28 @@ class EmulatorWindow {
   std::string base_title_;
   bool initializing_shader_storage_ = false;
 
-  std::unique_ptr<DisplayConfigDialog> display_config_dialog_;
   std::unique_ptr<ConsoleSettingsDialog> console_settings_dialog_;
 
   // Storing pointers and toggling dialog state is useful for broadcasting
   // messages back to guest.
   std::unique_ptr<ProfileConfigDialog> profile_config_dialog_;
 
+  std::unique_ptr<TitleGamerpicBrowser> gamerpic_browser_dialog_;
+
   std::unique_ptr<XMPConfigDialog> xmp_config_dialog_;
+
+  std::unique_ptr<NetplaySettingsDialog> netplay_settings_dialog_;
+  std::unique_ptr<NetplayStatusDialog> netplay_status_dialog_;
+  std::unique_ptr<ManagerDialog> friends_manager_dialog_;
+
+  std::shared_ptr<Updater> updater_;
+  std::shared_future<CheckForUpdateInfo> update_info_;
+  std::atomic<bool> cancel_request{false};
+  std::unique_ptr<UpdaterDialog> updater_dialog_;
+  std::unique_ptr<UpdaterCompletionDialog> updater_completion_dialog_;
+
+  static std::filesystem::path ResolvePatchesRoot(
+      const std::filesystem::path& storage_root);
 
   std::vector<RecentTitleEntry> recently_launched_titles_;
 };

@@ -14,6 +14,7 @@
 #include <thread>
 
 #include "third_party/fmt/include/fmt/format.h"
+#include "third_party/stb/stb_image.h"
 #include "third_party/stb/stb_image_write.h"
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -26,6 +27,7 @@
 #include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/string.h"
+#include "xenia/base/xxhash.h"
 
 namespace xe {
 namespace app {
@@ -48,10 +50,25 @@ GameLibrary::GameLibrary(std::filesystem::path storage_root)
       library_path_(storage_root_ / kLibraryFilename) {
   std::error_code ec;
   std::filesystem::create_directories(IconsCacheDir(), ec);
+  std::filesystem::create_directories(CustomIconsCacheDir(), ec);
 }
 
 std::filesystem::path GameLibrary::IconsCacheDir() const {
   return storage_root_ / "cache" / "icons";
+}
+
+std::filesystem::path GameLibrary::CustomIconsCacheDir() const {
+  return storage_root_ / "cache" / "icons" / "custom";
+}
+
+std::filesystem::path GameLibrary::CustomIconCachePath(
+    const LibraryEntry& entry) const {
+  if (entry.title_id) {
+    return CustomIconsCacheDir() / (TitleIdHex(entry.title_id) + ".png");
+  }
+  const auto path_utf8 = xe::path_to_utf8(entry.path);
+  const XXH64_hash_t hash = XXH64(path_utf8.data(), path_utf8.size(), 0);
+  return CustomIconsCacheDir() / (fmt::format("{:016X}", hash) + ".png");
 }
 
 void GameLibrary::Load() {
@@ -105,6 +122,11 @@ void GameLibrary::Load() {
             e.icon_path = xe::to_path(s->get());
           }
         }
+        if (auto* v = t->get("custom_icon_path")) {
+          if (auto* s = v->as_string()) {
+            e.custom_icon_path = xe::to_path(s->get());
+          }
+        }
         if (auto* v = t->get("last_played")) {
           if (auto* i = v->as_integer()) {
             e.last_played = static_cast<std::time_t>(i->get());
@@ -151,6 +173,9 @@ void GameLibrary::Save() {
     entry.insert("path", xe::path_to_utf8(e.path));
     if (!e.icon_path.empty()) {
       entry.insert("icon_path", xe::path_to_utf8(e.icon_path));
+    }
+    if (!e.custom_icon_path.empty()) {
+      entry.insert("custom_icon_path", xe::path_to_utf8(e.custom_icon_path));
     }
     entry.insert("last_played", static_cast<int64_t>(e.last_played));
     entry.insert("play_seconds", static_cast<int64_t>(e.play_seconds));
@@ -266,6 +291,7 @@ void GameLibrary::MergeScanResults(
     if (existing) {
       merged.last_played = existing->last_played;
       merged.play_seconds = existing->play_seconds;
+      merged.custom_icon_path = existing->custom_icon_path;
       if (merged.icon_path.empty()) {
         merged.icon_path = existing->icon_path;
       }
@@ -395,6 +421,55 @@ void GameLibrary::CacheIconRgba(uint32_t title_id, int width, int height,
     e->icon_path = icon_path;
     Save();
   }
+}
+
+bool GameLibrary::SetCustomCover(const std::filesystem::path& game_path,
+                                 const std::filesystem::path& image_file) {
+  LibraryEntry* entry = FindByPath(game_path);
+  if (!entry) {
+    return false;
+  }
+
+  std::error_code ec;
+  if (!std::filesystem::exists(image_file, ec)) {
+    return false;
+  }
+
+  const auto image_utf8 = xe::path_to_utf8(image_file);
+  int width = 0;
+  int height = 0;
+  int channels = 0;
+  unsigned char* pixels =
+      stbi_load(image_utf8.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+  if (!pixels || width <= 0 || height <= 0) {
+    stbi_image_free(pixels);
+    XELOGW("GameLibrary: failed to load cover image '{}'", image_utf8);
+    return false;
+  }
+
+  const auto out_path = CustomIconCachePath(*entry);
+  xe::filesystem::CreateParentFolder(out_path);
+  if (!stbi_write_png(xe::path_to_utf8(out_path).c_str(), width, height, 4,
+                      pixels, width * 4)) {
+    stbi_image_free(pixels);
+    XELOGW("GameLibrary: failed to write custom cover '{}'",
+           xe::path_to_utf8(out_path));
+    return false;
+  }
+  stbi_image_free(pixels);
+
+  entry->custom_icon_path = out_path;
+  Save();
+  return true;
+}
+
+void GameLibrary::ClearCustomCover(const std::filesystem::path& game_path) {
+  LibraryEntry* entry = FindByPath(game_path);
+  if (!entry || entry->custom_icon_path.empty()) {
+    return;
+  }
+  entry->custom_icon_path.clear();
+  Save();
 }
 
 LibraryEntry* GameLibrary::FindByPath(const std::filesystem::path& path) {

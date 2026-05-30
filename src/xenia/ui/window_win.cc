@@ -1384,7 +1384,19 @@ void Win32MenuItem::OnChildAdded(MenuItem* generic_child_item) {
   }
 }
 
-void Win32MenuItem::OnChildRemoved(MenuItem* generic_child_item) {}
+void Win32MenuItem::OnChildRemoved(MenuItem* generic_child_item) {
+  if (!handle_) {
+    return;
+  }
+  size_t index = 0;
+  for (const auto& child : children_) {
+    if (child.get() == generic_child_item) {
+      RemoveMenu(handle_, static_cast<UINT>(index), MF_BYPOSITION);
+      return;
+    }
+    ++index;
+  }
+}
 
 }  // namespace ui
 }  // namespace xe

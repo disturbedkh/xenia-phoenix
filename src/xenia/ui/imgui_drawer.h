@@ -12,6 +12,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <span>
@@ -84,12 +85,26 @@ class ImGuiDrawer : public WindowInputListener, public UIDrawer {
     return locked_achievement_icon_.get();
   }
 
+  ImmediateTexture* GetLoadingTileIcon() {
+    return locked_achievement_icon_.get();
+  }
+
   ImFont* GetTitleFont() {
     if (!GetIO().Fonts->Fonts[1]->IsLoaded()) {
       return GetIO().Fonts->Fonts[0];
     }
     return GetIO().Fonts->Fonts[1];
   }
+
+  ImFont* GetDisplayFont() {
+    if (display_font_ && display_font_->IsLoaded()) {
+      return display_font_;
+    }
+    return GetTitleFont();
+  }
+
+  void LoadNxeDisplayFont(const std::filesystem::path& ttf_path,
+                          float display_size = 48.f);
 
   void LoadInputSystem(hid::InputSystem* input_system);
   void SetGuideButtonAction(std::function<void(uint8_t)> func);
@@ -113,6 +128,8 @@ class ImGuiDrawer : public WindowInputListener, public UIDrawer {
   bool LoadCustomFont(ImGuiIO& io, ImFontConfig& font_config, float font_size);
   bool LoadWindowsFont(ImGuiIO& io, ImFontConfig& font_config, float font_size);
   bool LoadJapaneseFont(ImGuiIO& io, float font_size);
+  void LoadNxeDisplayFontInternal(const std::filesystem::path& ttf_path,
+                                  float display_size);
 
   void SetupNotificationTextures();
   void SetupFontTexture();
@@ -171,6 +188,8 @@ class ImGuiDrawer : public WindowInputListener, public UIDrawer {
 
   double frame_time_tick_frequency_;
   uint64_t last_frame_time_ticks_;
+
+  ImFont* display_font_ = nullptr;
 
   bool are_notifications_enabled_ = true;
 };

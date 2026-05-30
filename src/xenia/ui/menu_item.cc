@@ -53,8 +53,8 @@ void MenuItem::AddChild(MenuItemPtr child_item) {
 void MenuItem::RemoveChild(MenuItem* child_item) {
   for (auto it = children_.begin(); it != children_.end(); ++it) {
     if (it->get() == child_item) {
-      children_.erase(it);
       OnChildRemoved(child_item);
+      children_.erase(it);
       break;
     }
   }
