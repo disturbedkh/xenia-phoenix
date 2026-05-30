@@ -126,6 +126,14 @@ struct endian_store {
     *this -= 1;
     return (*this + 1);
   }  // a--
+  endian_store<T, E>& operator&=(T a) {
+    *this = *this & a;
+    return *this;
+  }
+  endian_store<T, E>& operator|=(T a) {
+    *this = *this | a;
+    return *this;
+  }
 
   T value;
 };

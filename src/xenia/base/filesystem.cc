@@ -13,6 +13,7 @@
 #include <ios>
 #include <system_error>
 
+#include "xenia/base/platform.h"
 #include "xenia/base/string_util.h"
 
 namespace xe {
@@ -50,6 +51,27 @@ std::string ReadAllText(const std::filesystem::path& path) {
     return {};
   }
   return data;
+}
+
+std::filesystem::path ResolveStorageRoot(
+    const std::filesystem::path& override_path, bool portable) {
+  std::filesystem::path storage_root = override_path;
+  if (storage_root.empty()) {
+    storage_root = GetExecutableFolder();
+    if (!portable && !std::filesystem::exists(storage_root / "portable.txt")) {
+      storage_root = GetUserFolder();
+#if XE_PLATFORM_ANDROID
+      std::filesystem::path android_files =
+          GetAndroidApplicationFilesDirectory();
+      if (!android_files.empty()) {
+        storage_root = android_files;
+      }
+#else
+      storage_root = storage_root / "Xenia";
+#endif
+    }
+  }
+  return std::filesystem::absolute(storage_root);
 }
 
 bool CreateParentFolder(const std::filesystem::path& path) {

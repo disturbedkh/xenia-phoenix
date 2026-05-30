@@ -107,6 +107,12 @@ void set_current_thread_id(uint32_t id);
 // Sets the current thread name.
 void set_name(const std::string_view name);
 
+// Returns the name last set on this thread via set_name (empty if unset).
+std::string_view current_thread_name();
+
+// Called by platform set_name implementations.
+void set_current_thread_name_storage(std::string_view name);
+
 // Yields the current thread to the scheduler. Maybe.
 void MaybeYield();
 
@@ -177,6 +183,43 @@ class HighResolutionTimer {
 
  private:
   std::weak_ptr<TimerQueueWaitItem> wait_item_;
+};
+
+class PeriodicCallback {
+ public:
+  PeriodicCallback(std::chrono::milliseconds interval,
+                   std::function<void()> callback, std::string thread_name) {
+    assert_not_null(callback);
+    std::jthread worker =
+        std::jthread([interval, callback = std::move(callback),
+                      thread_name](std::stop_token stoken) {
+          xe::threading::set_name(thread_name);
+
+          while (!stoken.stop_requested()) {
+            callback();
+            std::this_thread::sleep_for(interval);
+          }
+        });
+
+    periodic_stop_source_ = worker.get_stop_source();
+
+    worker.detach();
+  }
+
+ public:
+  std::stop_source GetStopSource();
+
+  ~PeriodicCallback() { periodic_stop_source_.request_stop(); }
+
+  static std::unique_ptr<PeriodicCallback> CreateRepeating(
+      std::chrono::milliseconds period, std::function<void()> callback,
+      std::string thread_name) {
+    return std::unique_ptr<PeriodicCallback>(
+        new PeriodicCallback(period, std::move(callback), thread_name));
+  }
+
+ private:
+  std::stop_source periodic_stop_source_;
 };
 
 // Results for a WaitHandle operation.

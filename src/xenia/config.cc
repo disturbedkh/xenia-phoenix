@@ -20,9 +20,14 @@
 #include "xenia/base/string_buffer.h"
 #include "xenia/base/system.h"
 #include "xenia/emulator.h"
+#include "xenia/recommended_settings.h"
 
 toml::parse_result ParseFile(const std::filesystem::path& filename) {
-  return toml::parse_file(xe::path_to_utf8(filename));
+  const std::string contents = xe::filesystem::ReadAllText(filename);
+  if (contents.empty()) {
+    return toml::parse_result();
+  }
+  return toml::parse(contents, xe::path_to_utf8(filename));
 }
 
 CmdVar(config, "", "Specifies the target config to load.");
@@ -306,9 +311,15 @@ void SetupConfig(const std::filesystem::path& config_folder) {
     // updated, or default values were changed.
     SaveConfig();
   }
+  LoadRecommendedSettingsTable();
 }
 
 void LoadGameConfig(const std::string_view title_id) {
+  ApplyRecommendedSettings(title_id);
+  ReadGameConfigFile(title_id);
+}
+
+void ReadGameConfigFile(const std::string_view title_id) {
   const auto game_config_path = GetGameConfigPath(std::string(title_id));
   if (std::filesystem::exists(game_config_path)) {
     ReadGameConfig(game_config_path);

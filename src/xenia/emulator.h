@@ -10,17 +10,27 @@
 #ifndef XENIA_EMULATOR_H_
 #define XENIA_EMULATOR_H_
 
+#include <atomic>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "xenia/apu/audio_media_player.h"
 #include "xenia/base/delegate.h"
 #include "xenia/base/exception_handler.h"
+#include "xenia/base/threading.h"
 #include "xenia/kernel/kernel_state.h"
+#include "xenia/kernel/netplay/network_adapter_manager.h"
+#include "xenia/kernel/netplay/upnp.h"
+#include "xenia/kernel/netplay/xlive_api.h"
 #include "xenia/kernel/util/game_info_database.h"
 #include "xenia/kernel/util/xlast.h"
 #include "xenia/memory.h"
@@ -59,6 +69,19 @@ constexpr fourcc_t kEmulatorSaveSignature = make_fourcc("XSAV");
 static constexpr std::string_view kDefaultGameSymbolicLink = "GAME:";
 static constexpr std::string_view kDefaultPartitionSymbolicLink = "D:";
 static constexpr std::string_view kDefaultUpdateSymbolicLink = "UPDATE:";
+
+// High-level emulator lifecycle (launcher vs title vs relaunch).
+enum class LifecycleState {
+  Bare,
+  Ready,
+  Launching,
+  Running,
+  Paused,
+  Terminating,
+  Relaunching,
+  Respawning,
+  Exiting,
+};
 
 // The main type that runs the whole emulator.
 // This is responsible for initializing and managing all the various subsystems.
@@ -127,6 +150,14 @@ class Emulator {
   // Are we currently running a title?
   bool is_title_open() const { return title_id_.has_value(); }
 
+  LifecycleState lifecycle_state() const {
+    return lifecycle_state_.load(std::memory_order_acquire);
+  }
+
+  const std::filesystem::path& last_launch_path() const {
+    return last_launch_path_;
+  }
+
   // Window used for displaying graphical output. Can be null.
   ui::Window* display_window() const { return display_window_; }
 
@@ -180,11 +211,18 @@ class Emulator {
   kernel::util::GameInfoDatabase* game_info_database() const {
     return game_info_database_.get();
   }
-  // Initializes the emulator and configures all components.
-  // The given window is used for display and the provided functions are used
-  // to create subsystems as required.
-  // Once this function returns a game can be launched using one of the Launch
-  // functions.
+
+  kernel::NetworkAdapterManager* GetNetworkAdapterManager() {
+    return network_adapter_manager_.get();
+  }
+
+  kernel::UPnP* GetUPnP() { return upnp_.get(); }
+  void ShutdownUPnP() { upnp_.reset(); }
+
+  kernel::XLiveAPI* GetXboxLiveAPI() { return xbox_live_api_.get(); }
+
+  // Bare-essentials init: memory, cpu, vfs, kernel. Stores subsystem factories;
+  // call SetupSubsystems after per-game cvar overrides are applied.
   X_STATUS Setup(
       ui::Window* display_window, ui::ImGuiDrawer* imgui_drawer,
       bool require_cpu_backend,
@@ -195,8 +233,51 @@ class Emulator {
       std::function<std::vector<std::unique_ptr<hid::InputDriver>>(ui::Window*)>
           input_driver_factory);
 
+  // Creates GPU/APU from stored factories and attaches HID drivers.
+  X_STATUS SetupSubsystems();
+
+  // Tears down GPU/APU/media player; kernel and vfs stay alive.
+  void ShutdownSubsystems();
+
+  const std::string& active_gpu_backend() const { return active_gpu_backend_; }
+  const std::string& active_apu_backend() const { return active_apu_backend_; }
+
+  // Full teardown (used by relaunch and process exit).
+  void Shutdown();
+
+  void set_mount_standard_drives_callback(std::function<void()> callback) {
+    mount_standard_drives_callback_ = std::move(callback);
+  }
+  void SetPendingBackends(std::string gpu, std::string apu);
+  void MountStandardDrives();
+
   // Terminates the currently running title.
   X_STATUS TerminateTitle();
+
+  // Full in-process relaunch. Must run on a non-guest thread.
+  void RelaunchTitle(const std::string& host_path,
+                     const std::string& launch_module, uint32_t launch_flags,
+                     std::vector<uint8_t> launch_data);
+
+  // Stop title and return kernel to idle (launcher visible). Non-guest thread.
+  void ResetTitle();
+
+  // Queue work on the dedicated lifecycle worker (joinable, not detached).
+  void PostToLifecycleWorker(std::function<void()> work);
+  void ShutdownLifecycleWorker();
+
+  // Called on the UI thread after SetupSubsystems during relaunch/reset.
+  void set_presenter_setup_callback(std::function<void()> callback) {
+    presenter_setup_callback_ = std::move(callback);
+  }
+  // Called on the UI thread BEFORE ShutdownSubsystems destroys the
+  // GraphicsSystem (and its Presenter). The UI must drop every pointer it
+  // holds into the presenter (window swap chain, ImGuiDrawer, immediate
+  // drawer, profiler IO, etc.) here — otherwise ShowLauncher on the next
+  // Ready transition will dereference freed memory.
+  void set_presenter_teardown_callback(std::function<void()> callback) {
+    presenter_teardown_callback_ = std::move(callback);
+  }
 
   const std::unique_ptr<vfs::Device> CreateVfsDevice(
       const std::filesystem::path& path, const std::string_view mount_path);
@@ -305,12 +386,34 @@ class Emulator {
 
   void WaitUntilExit();
 
+  // Breaks WaitUntilExit and unblocks restore/relaunch waits during app
+  // shutdown.
+  void RequestShutdown();
+
  public:
   xe::Delegate<uint32_t, const std::string_view> on_launch;
   xe::Delegate<bool> on_shader_storage_initialization;
   xe::Delegate<> on_patch_apply;
   xe::Delegate<> on_terminate;
   xe::Delegate<> on_exit;
+  xe::Delegate<LifecycleState, LifecycleState> on_lifecycle_change;
+  xe::Delegate<const std::string_view, const std::u16string_view>
+      on_presence_change;
+  xe::Delegate<const kernel::XSESSION_INFO*, uint32_t, uint32_t, uint64_t>
+      on_session_change;
+  xe::Delegate<> on_before_shutdown;
+
+  using LaunchNewTitleCallback = std::function<void(
+      const std::string& host_path, const std::string& launch_module,
+      uint32_t launch_flags, const std::string& launch_data_hex)>;
+  LaunchNewTitleCallback on_launch_new_title() const {
+    return on_launch_new_title_;
+  }
+  void set_on_launch_new_title(LaunchNewTitleCallback callback) {
+    on_launch_new_title_ = std::move(callback);
+  }
+
+  void SetLifecycleState(LifecycleState new_state);
 
  private:
   enum : uint64_t { EmulatorFlagDisclaimerAcknowledged = 1ULL << 0 };
@@ -327,7 +430,18 @@ class Emulator {
   X_STATUS CompleteLaunch(const std::filesystem::path& path,
                           const std::string_view module_path);
 
+  // Phase 1 of ResetTitle/RelaunchTitle: terminate guest title XThreads only
+  // (XThread instances that are NOT XHostThreads). Run before draining the
+  // subsystem workers so the title stops feeding ringbuffers/audio queues.
+  void TerminateTitleXThreads_(const char* phase_label);
+
+  // Phase 3 of ResetTitle/RelaunchTitle: sweep any XHostThreads still alive
+  // in the kernel object table after ShutdownSubsystems. In practice this
+  // should be a no-op; logged as a warning if it isn't.
+  void TerminateRemainingHostXThreads_(const char* phase_label);
+
   std::filesystem::path command_line_;
+  std::filesystem::path last_launch_path_;
   std::filesystem::path storage_root_;
   std::filesystem::path content_root_;
   std::filesystem::path cache_root_;
@@ -366,10 +480,44 @@ class Emulator {
   kernel::object_ref<kernel::XHostThread> plugin_loader_thread_;
   std::optional<uint32_t> title_id_;  // Currently running title ID
   std::unique_ptr<kernel::util::GameInfoDatabase> game_info_database_;
+  std::unique_ptr<kernel::NetworkAdapterManager> network_adapter_manager_;
+  std::unique_ptr<kernel::UPnP> upnp_;
+  std::unique_ptr<kernel::XLiveAPI> xbox_live_api_;
 
   bool paused_;
   bool restoring_;
+  bool relaunching_ = false;
+  std::atomic<bool> shutdown_requested_{false};
+  bool preserve_processor_cache_on_relaunch_ = false;
   threading::Fence restore_fence_;  // Fired on restore finish.
+  std::unique_ptr<threading::Event> relaunch_complete_event_;
+
+  std::atomic<LifecycleState> lifecycle_state_{LifecycleState::Bare};
+
+  bool require_cpu_backend_ = false;
+  std::function<std::unique_ptr<apu::AudioSystem>(cpu::Processor*)>
+      audio_system_factory_;
+  std::function<std::unique_ptr<gpu::GraphicsSystem>()>
+      graphics_system_factory_;
+  std::function<std::vector<std::unique_ptr<hid::InputDriver>>(ui::Window*)>
+      input_driver_factory_;
+
+  std::string active_gpu_backend_;
+  std::string active_apu_backend_;
+
+  LaunchNewTitleCallback on_launch_new_title_;
+  std::function<void()> presenter_setup_callback_;
+  std::function<void()> presenter_teardown_callback_;
+  std::function<void()> mount_standard_drives_callback_;
+  std::string pending_gpu_backend_;
+  std::string pending_apu_backend_;
+
+  std::thread lifecycle_worker_;
+  std::mutex lifecycle_worker_mutex_;
+  std::condition_variable lifecycle_worker_cv_;
+  std::deque<std::function<void()>> lifecycle_worker_queue_;
+  bool lifecycle_worker_quit_ = false;
+  void LifecycleWorkerThreadMain();
 };
 
 }  // namespace xe

@@ -7,12 +7,18 @@
  ******************************************************************************
  */
 
+#include <csignal>
+#include <cstdlib>
 #include <cstring>
+#include <cwchar>
+#include <exception>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "xenia/base/cvar.h"
+#include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/main_win.h"
 #include "xenia/base/platform_win.h"
@@ -21,6 +27,7 @@
 #include "version.h"
 
 // For RequestWin32MMCSS.
+#include <crtdbg.h>
 #include <dwmapi.h>
 // For RequestWin32HighResolutionTimer.
 #include <winternl.h>
@@ -32,6 +39,22 @@ DEFINE_bool(
     "Opt in the Multimedia Class Scheduler Service (MMCSS) scheduling for "
     "prioritized access to CPU resources",
     "Win32");
+
+DEFINE_path(
+    storage_root, "",
+    "Root path for persistent internal data storage (config, etc.), or empty "
+    "to use the path preferred for the OS, such as the documents folder, or "
+    "the emulator executable directory if portable.txt is present in it.",
+    "Storage");
+#ifndef XE_PLATFORM_WIN32
+DEFINE_transient_bool(portable, false,
+                      "Specifies if Xenia should run in portable mode.",
+                      "General");
+#else
+DEFINE_transient_bool(portable, true,
+                      "Specifies if Xenia should run in portable mode.",
+                      "General");
+#endif
 
 namespace xe {
 
@@ -153,6 +176,101 @@ void CoalesceSplitPathArgv(int& argc, char**& argv) {
   argv = ptrs.data();
 }
 
+static std::string WideToUtf8(const wchar_t* wide) {
+  if (!wide) {
+    return "<null>";
+  }
+  return xe::to_utf8(std::u16string_view(
+      reinterpret_cast<const char16_t*>(wide), std::wcslen(wide)));
+}
+
+static void LogWin32StartupContext() {
+  XELOGI("Command line: {}", WideToUtf8(GetCommandLineW()));
+
+  wchar_t working_dir_w[MAX_PATH + 1] = {};
+  if (GetCurrentDirectoryW(xe::countof(working_dir_w), working_dir_w)) {
+    XELOGI("Working directory: {}", WideToUtf8(working_dir_w));
+  }
+
+  XELOGI("Process ID: {}", GetCurrentProcessId());
+  XELOGI("Debugger attached: {}", IsDebuggerPresent() ? "yes" : "no");
+
+  const auto storage_root =
+      xe::filesystem::ResolveStorageRoot(cvars::storage_root, cvars::portable);
+  XELOGI("Storage root: {}", storage_root);
+  XELOGI("Log file: {}", xe::GetActiveLogFilePath());
+
+  using RtlGetVersionFn = LONG(WINAPI*)(PRTL_OSVERSIONINFOW);
+  HMODULE ntdll_module = GetModuleHandleW(L"ntdll.dll");
+  if (ntdll_module) {
+    auto rtl_get_version = reinterpret_cast<RtlGetVersionFn>(
+        GetProcAddress(ntdll_module, "RtlGetVersion"));
+    if (rtl_get_version) {
+      RTL_OSVERSIONINFOW version_info = {};
+      version_info.dwOSVersionInfoSize = sizeof(version_info);
+      if (rtl_get_version(&version_info) >= 0) {
+        XELOGI("Host OS: {}.{}.{}", version_info.dwMajorVersion,
+               version_info.dwMinorVersion, version_info.dwBuildNumber);
+      }
+    }
+  }
+}
+
+#ifdef _DEBUG
+static int XeniaCrtReportHook(int report_type, char* message,
+                              int* return_value) {
+  (void)return_value;
+  XELOGE("[CRT report type={}] {}", report_type, message ? message : "<null>");
+  xe::logging::WriteCrashSidecar("crt", message ? message : "<null>");
+  xe::FlushLog();
+  return FALSE;
+}
+#endif
+
+static void XeniaInvalidParameterHandler(const wchar_t* expression,
+                                         const wchar_t* function,
+                                         const wchar_t* file, unsigned int line,
+                                         uintptr_t reserved) {
+  (void)reserved;
+  XELOGE("[CRT invalid parameter] expr={} func={} file={} line={}",
+         expression ? WideToUtf8(expression) : "<null>",
+         function ? WideToUtf8(function) : "<null>",
+         file ? WideToUtf8(file) : "<null>", line);
+  xe::FlushLog();
+}
+
+[[noreturn]] static void XeniaTerminateHandler() {
+  XELOGE("std::terminate invoked");
+  xe::FlushLog();
+  std::abort();
+}
+
+[[noreturn]] static void XeniaPurecallHandler() {
+  XELOGE("pure-virtual call");
+  xe::FlushLog();
+  std::abort();
+}
+
+static void XeniaSigabrtHandler(int signal) {
+  (void)signal;
+  XELOGE("SIGABRT");
+  xe::FlushLog();
+}
+
+static void InstallSoftwareLevelCrashHooks() {
+#ifdef _DEBUG
+  _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, &XeniaCrtReportHook);
+  _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW);
+  _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW);
+  _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW);
+#endif
+  _set_invalid_parameter_handler(&XeniaInvalidParameterHandler);
+  std::set_terminate(&XeniaTerminateHandler);
+  _set_purecall_handler(&XeniaPurecallHandler);
+  signal(SIGABRT, &XeniaSigabrtHandler);
+  _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+}
+
 }  // namespace
 
 bool ParseWin32LaunchArguments(
@@ -199,6 +317,12 @@ int InitializeWin32App(const std::string_view app_name) {
   // Initialize logging. Needs parsed FLAGS.
   xe::InitializeLogging(app_name);
 
+  const auto storage_root =
+      xe::filesystem::ResolveStorageRoot(cvars::storage_root, cvars::portable);
+  xe::AttachFileLogSink(storage_root / "log", app_name);
+
+  InstallSoftwareLevelCrashHooks();
+
   // Print version info.
   XELOGI(
       "Build: "
@@ -206,6 +330,13 @@ int InitializeWin32App(const std::string_view app_name) {
       "PR#" XE_BUILD_PR_NUMBER " - "
 #endif
       XE_BUILD_BRANCH "@" XE_BUILD_COMMIT_SHORT " on " XE_BUILD_DATE);
+#if XE_ARCH_AMD64 == 1
+  XELOGI("Target architecture: x64");
+#elif XE_ARCH_ARM64 == 1
+  XELOGI("Target architecture: arm64");
+#endif
+
+  LogWin32StartupContext();
 
   // Request high-performance timing and scheduling.
   if (cvars::win32_high_resolution_timer) {

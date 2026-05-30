@@ -40,6 +40,13 @@ std::filesystem::path GetExecutableFolder();
 // Get user folder.
 std::filesystem::path GetUserFolder();
 
+// Resolve the persistent storage root (config, logs, cache siblings).
+// override_path: value of --storage_root, or empty for default.
+// portable: value of --portable; when false, use Documents/Xenia unless
+// portable.txt exists next to the executable.
+std::filesystem::path ResolveStorageRoot(
+    const std::filesystem::path& override_path, bool portable);
+
 // Creates the parent folder of the specified path if needed.
 // This can be used to ensure the destination path for a new file exists before
 // attempting to create it.

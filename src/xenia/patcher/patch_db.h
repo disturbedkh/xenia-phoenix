@@ -104,6 +104,8 @@ class PatchDB {
   void LoadPatches();
 
   PatchFileEntry ReadPatchFile(const std::filesystem::path& file_path) const;
+  PatchFileEntry ReadPatchFromString(const std::string& filename,
+                                     std::string_view toml_content) const;
 
   std::vector<PatchFileEntry> GetTitlePatches(
       const uint32_t title_id, const std::optional<uint64_t> hash);

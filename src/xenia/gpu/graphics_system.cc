@@ -15,6 +15,7 @@
 #include "xenia/base/math.h"
 #include "xenia/base/obs/obs.h"
 #include "xenia/base/profiling.h"
+#include "xenia/base/subsystem_tracer.h"
 #include "xenia/base/threading.h"
 #include "xenia/config.h"
 #include "xenia/debug/phoenix_probe.h"
@@ -88,14 +89,18 @@ GraphicsSystem::GraphicsSystem() : frame_limiter_worker_running_(false) {
   register_file_ = reinterpret_cast<RegisterFile*>(memory::AllocFixed(
       nullptr, sizeof(RegisterFile), memory::AllocationType::kReserveCommit,
       memory::PageAccess::kReadWrite));
+  XE_SUBSYSTEM_TRACE("GPU::GraphicsSystem", "ctor");
 }
 
-GraphicsSystem::~GraphicsSystem() = default;
+GraphicsSystem::~GraphicsSystem() {
+  XE_SUBSYSTEM_TRACE("GPU::GraphicsSystem", "dtor");
+}
 
 X_STATUS GraphicsSystem::Setup(cpu::Processor* processor,
                                kernel::KernelState* kernel_state,
                                ui::WindowedAppContext* app_context,
                                bool with_presentation) {
+  XE_SUBSYSTEM_TRACE("GPU::GraphicsSystem", "Setup");
   memory_ = processor->memory();
   processor_ = processor;
   kernel_state_ = kernel_state;
@@ -260,6 +265,7 @@ X_STATUS GraphicsSystem::Setup(cpu::Processor* processor,
 }
 
 void GraphicsSystem::Shutdown() {
+  XE_SUBSYSTEM_TRACE("GPU::GraphicsSystem", "Shutdown");
   if (command_processor_) {
     EndTracing();
     command_processor_->Shutdown();
@@ -268,7 +274,9 @@ void GraphicsSystem::Shutdown() {
 
   if (frame_limiter_worker_thread_) {
     frame_limiter_worker_running_ = false;
-    frame_limiter_worker_thread_->Wait(0, 0, 0, nullptr);
+    if (frame_limiter_worker_thread_->thread()) {
+      xe::threading::Wait(frame_limiter_worker_thread_->thread(), false);
+    }
     frame_limiter_worker_thread_.reset();
   }
 

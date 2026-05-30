@@ -67,6 +67,10 @@ constexpr size_t kEventRingCapacity = 256;
 ProbeEvent g_event_ring[kEventRingCapacity];
 std::atomic<uint64_t> g_event_seq{0};
 
+NetplayJsonProvider g_netplay_status_provider;
+NetplayJsonProvider g_netplay_sessions_provider;
+std::mutex g_netplay_provider_mutex;
+
 std::string JsonEscape(std::string_view s) {
   std::string out;
   out.reserve(s.size() + 8);
@@ -355,6 +359,30 @@ void HandleClient(SOCKET client) {
     body = PhoenixProbeBuildSnapshotJson();
     code = 200;
     status = "OK";
+  } else if (path == "/netplay/status" ||
+             path.rfind("/netplay/status?", 0) == 0) {
+    {
+      std::lock_guard<std::mutex> lock(g_netplay_provider_mutex);
+      if (g_netplay_status_provider) {
+        body = g_netplay_status_provider();
+      } else {
+        body = "{\"error\":\"netplay_unavailable\"}";
+      }
+    }
+    code = 200;
+    status = "OK";
+  } else if (path == "/netplay/sessions" ||
+             path.rfind("/netplay/sessions?", 0) == 0) {
+    {
+      std::lock_guard<std::mutex> lock(g_netplay_provider_mutex);
+      if (g_netplay_sessions_provider) {
+        body = g_netplay_sessions_provider();
+      } else {
+        body = "{\"sessions\":[]}";
+      }
+    }
+    code = 200;
+    status = "OK";
   } else if (path.rfind("/cvars", 0) == 0) {
     std::string names;
     auto q = path.find('?');
@@ -598,6 +626,20 @@ PhoenixProbeSnapshot PhoenixProbeGetSnapshot() {
   s.obs_gpu_upload_range_error_count =
       obs::InvariantCounter("GpuUploadRangeError");
   return s;
+}
+
+void PhoenixProbeSetNetplayJsonProviders(
+    NetplayJsonProvider status_provider,
+    NetplayJsonProvider sessions_provider) {
+  std::lock_guard<std::mutex> lock(g_netplay_provider_mutex);
+  g_netplay_status_provider = std::move(status_provider);
+  g_netplay_sessions_provider = std::move(sessions_provider);
+}
+
+void PhoenixProbeClearNetplayJsonProviders() {
+  std::lock_guard<std::mutex> lock(g_netplay_provider_mutex);
+  g_netplay_status_provider = {};
+  g_netplay_sessions_provider = {};
 }
 
 }  // namespace debug

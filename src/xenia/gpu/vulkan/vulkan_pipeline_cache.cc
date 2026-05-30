@@ -110,7 +110,8 @@ bool VulkanPipelineCache::Initialize() {
 
   // Substitute fragment shaders for guest depth-only draws when in-PS float24
   // conversion is active - keep the depth buffer's encoding consistent with
-  // PS-converted draws (matches the DXBC backend's float24_{truncate,round}_ps).
+  // PS-converted draws (matches the DXBC backend's
+  // float24_{truncate,round}_ps).
   if (render_target_cache_.depth_float24_convert_in_pixel_shader()) {
     using DepthStencilMode =
         SpirvShaderTranslator::Modification::DepthStencilMode;

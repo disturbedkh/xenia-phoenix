@@ -28,6 +28,11 @@ class AudioMediaPlayer {
   ~AudioMediaPlayer();
 
   void Setup();
+  // Stops the worker thread and joins it. Safe to call multiple times. Must be
+  // invoked BEFORE any of the AudioMediaPlayer's pointer dependencies
+  // (kernel_state, audio_system) are destroyed, otherwise the worker may
+  // dereference a stale pointer (see Emulator::ShutdownSubsystems).
+  void Shutdown();
 
   X_STATUS Play(uint32_t playlist_handle, uint32_t song_handle, bool force);
   X_STATUS Next();

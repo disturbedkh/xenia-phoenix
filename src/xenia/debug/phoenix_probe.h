@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -66,6 +67,11 @@ std::string PhoenixProbeBuildStatusJson();
 std::string PhoenixProbeBuildSnapshotJson();
 std::string PhoenixProbeBuildCvarsJson(std::string_view names_csv);
 std::string PhoenixProbeBuildEventsJson(uint64_t since_seq);
+
+using NetplayJsonProvider = std::function<std::string()>;
+void PhoenixProbeSetNetplayJsonProviders(NetplayJsonProvider status_provider,
+                                         NetplayJsonProvider sessions_provider);
+void PhoenixProbeClearNetplayJsonProviders();
 
 }  // namespace debug
 }  // namespace xe

@@ -15,6 +15,8 @@
 #include "xenia/base/logging.h"
 #include "xenia/base/obs/obs_pm4_bridge.h"
 #include "xenia/base/profiling.h"
+#include "xenia/base/subsystem_tracer.h"
+#include "xenia/base/threading.h"
 #include "xenia/gpu/gpu_flags.h"
 #include "xenia/gpu/graphics_system.h"
 #include "xenia/gpu/packet_disassembler.h"
@@ -124,11 +126,15 @@ CommandProcessor::CommandProcessor(GraphicsSystem* graphics_system,
       write_ptr_index_event_(xe::threading::Event::CreateAutoResetEvent(false)),
       write_ptr_index_(0) {
   assert_not_null(write_ptr_index_event_);
+  XE_SUBSYSTEM_TRACE("GPU::CommandProcessor", "ctor");
 }
 
-CommandProcessor::~CommandProcessor() = default;
+CommandProcessor::~CommandProcessor() {
+  XE_SUBSYSTEM_TRACE("GPU::CommandProcessor", "dtor");
+}
 
 bool CommandProcessor::Initialize() {
+  XE_SUBSYSTEM_TRACE("GPU::CommandProcessor", "Initialize");
   // Initialize the gamma ramps to their default (linear) values - taken from
   // what games set when starting with the sRGB (return value 1)
   // VdGetCurrentDisplayGamma.
@@ -164,11 +170,14 @@ bool CommandProcessor::Initialize() {
 }
 
 void CommandProcessor::Shutdown() {
+  XE_SUBSYSTEM_TRACE("GPU::CommandProcessor", "Shutdown");
   EndTracing();
 
   worker_running_ = false;
   write_ptr_index_event_->Set();
-  worker_thread_->Wait(0, 0, 0, nullptr);
+  if (worker_thread_ && worker_thread_->thread()) {
+    xe::threading::Wait(worker_thread_->thread(), false);
+  }
   worker_thread_.reset();
 }
 

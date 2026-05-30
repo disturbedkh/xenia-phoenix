@@ -9,10 +9,11 @@
 #include "xenia/base/cvar.h"
 #include "xenia/base/filesystem.h"
 #include "xenia/base/logging.h"
-#include "xenia/config.h"
 #include "xenia/memory.h"
 
 #include "xenia/patcher/patch_db.h"
+
+#include <string_view>
 
 DEFINE_bool(apply_patches, true, "Enables custom patching functionality",
             "General");
@@ -57,13 +58,24 @@ void PatchDB::LoadPatches() {
 
 PatchFileEntry PatchDB::ReadPatchFile(
     const std::filesystem::path& file_path) const {
+  const std::string contents = filesystem::ReadAllText(file_path);
+  if (contents.empty()) {
+    PatchFileEntry patch_file;
+    patch_file.title_id = -1;
+    return patch_file;
+  }
+  return ReadPatchFromString(path_to_utf8(file_path.filename()), contents);
+}
+
+PatchFileEntry PatchDB::ReadPatchFromString(
+    const std::string& filename, std::string_view toml_content) const {
   PatchFileEntry patch_file;
   toml::parse_result patch_toml_fields;
 
   try {
-    patch_toml_fields = ParseFile(file_path);
+    patch_toml_fields = toml::parse(toml_content, filename);
   } catch (...) {
-    XELOGE("PatchDB: Cannot load patch file: {}", file_path.filename());
+    XELOGE("PatchDB: Cannot parse patch file: {}", filename);
     patch_file.title_id = -1;
     return patch_file;
   };
@@ -73,7 +85,7 @@ PatchFileEntry PatchDB::ReadPatchFile(
   auto hashes_node = patch_toml_fields.get("hash");
 
   if (!title_name || !title_id || !hashes_node) {
-    XELOGE("PatchDB: Cannot load patch file: {}", file_path.filename());
+    XELOGE("PatchDB: Cannot load patch file: {}", filename);
     patch_file.title_id = -1;
     return patch_file;
   }

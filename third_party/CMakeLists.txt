@@ -824,3 +824,63 @@ if(WIN32)
 endif()
 target_link_libraries(libavformat PRIVATE libavutil libavcodec)
 ffmpeg_common(libavformat)
+
+# ==============================================================================
+# libcurl (netplay REST API client)
+# ==============================================================================
+file(GLOB_RECURSE CURL_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcurl/lib/**.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcurl/lib/**.h"
+)
+add_library(libcurl STATIC ${CURL_SOURCES})
+target_include_directories(libcurl PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/libcurl/lib
+  ${CMAKE_CURRENT_SOURCE_DIR}/libcurl/include
+)
+if(WIN32)
+  target_link_libraries(libcurl PRIVATE crypt32 secur32)
+  target_compile_definitions(libcurl PRIVATE
+    BUILDING_LIBCURL HTTP_ONLY USE_SCHANNEL USE_WINDOWS_SSPI
+  )
+else()
+  find_package(OpenSSL REQUIRED)
+  target_link_libraries(libcurl PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+  target_compile_definitions(libcurl PRIVATE
+    BUILDING_LIBCURL HTTP_ONLY
+  )
+endif()
+
+# ==============================================================================
+# miniupnp (UPnP NAT traversal for netplay)
+# ==============================================================================
+add_library(miniupnp STATIC
+  miniupnp/miniupnpc/src/addr_is_reserved.c
+  miniupnp/miniupnpc/src/connecthostport.c
+  miniupnp/miniupnpc/src/igd_desc_parse.c
+  miniupnp/miniupnpc/src/minisoap.c
+  miniupnp/miniupnpc/src/minissdpc.c
+  miniupnp/miniupnpc/src/miniupnpc.c
+  miniupnp/miniupnpc/src/miniwget.c
+  miniupnp/miniupnpc/src/minixml.c
+  miniupnp/miniupnpc/src/portlistingparse.c
+  miniupnp/miniupnpc/src/receivedata.c
+  miniupnp/miniupnpc/src/upnpcommands.c
+  miniupnp/miniupnpc/src/upnpdev.c
+  miniupnp/miniupnpc/src/upnperrors.c
+  miniupnp/miniupnpc/src/upnpreplyparse.c
+)
+target_include_directories(miniupnp PRIVATE miniupnp/miniupnpc PUBLIC miniupnp/miniupnpc/include)
+target_compile_definitions(miniupnp PRIVATE MINIUPNP_STATICLIB)
+if(WIN32)
+  target_link_libraries(miniupnp PRIVATE ws2_32 iphlpapi)
+  execute_process(
+    COMMAND cscript //NoLogo ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/msvc/genminiupnpcstrings.vbs
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/msvc
+  )
+else()
+  target_compile_definitions(miniupnp PRIVATE _GNU_SOURCE)
+  execute_process(
+    COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/updateminiupnpcstrings.sh
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc
+  )
+endif()
