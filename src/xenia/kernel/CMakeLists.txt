@@ -15,9 +15,13 @@ if(XE_TARGET_X86_64)
     X86_VPCLMULQDQ_CRC
   )
 endif()
+target_compile_definitions(xenia-kernel PRIVATE
+  CURL_STATICLIB
+  MINIUPNP_STATICLIB
+)
 target_link_libraries(xenia-kernel PUBLIC
-  aes_128 fmt zlib-ng pugixml xenia-apu xenia-base xenia-cpu xenia-hid xenia-vfs
-  xenia-phoenix-probe xenia-obs
+  aes_128 fmt zlib-ng pugixml libcurl miniupnp xenia-apu xenia-base xenia-cpu xenia-hid xenia-vfs
+  xenia-phoenix-probe xenia-obs xenia-app-discord
 )
 xe_target_defaults(xenia-kernel)
 

@@ -46,6 +46,8 @@ class Processor;
 namespace xe {
 namespace kernel {
 
+class XLiveAPI;
+
 constexpr fourcc_t kKernelSaveSignature = make_fourcc("KRNL");
 
 static constexpr const uint16_t kBaseKernelBuildVersion = 1888;
@@ -196,6 +198,8 @@ class KernelState {
 
   XConfig* xconfig() const { return xconfig_.get(); }
 
+  XLiveAPI* GetXboxLiveAPI() const;
+
   std::bitset<4> GetConnectedUsers() const;
 
   // Access must be guarded by the global critical region.
@@ -260,6 +264,9 @@ class KernelState {
   // Terminates a title: Unloads all modules, and kills all guest threads.
   // This DOES NOT RETURN if called from a guest thread!
   void TerminateTitle();
+
+  // Stops the kernel dispatch thread before force-terminating guest threads.
+  void ShutdownDispatchThread();
 
   void RegisterThread(XThread* thread);
   void UnregisterThread(XThread* thread);

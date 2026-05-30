@@ -136,6 +136,16 @@ static_assert_size(X_XAMACCOUNTINFO, 0x17C);
 #define X_USER_GET_SIGNIN_INFO_ONLINE_XUID_ONLY 0x00000001
 #define X_USER_GET_SIGNIN_INFO_OFFLINE_XUID_ONLY 0x00000002
 
+#define X_USER_INFO_FLAG_LIVE_ENABLED 0x00000001
+#define X_USER_INFO_FLAG_GUEST 0x00000002
+
+#define X_USER_XUID_OFFLINE 0x00000001
+#define X_USER_XUID_ONLINE 0x00000002
+#define X_USER_XUID_GUEST 0x00000004
+
+#define X_UI_FLAGS_LOCALSIGNIN 0x00000001
+#define X_UI_FLAGS_ONLINEENABLED 0x00000002
+
 #define MAX_FIRSTNAME_SIZE 64
 #define MAX_LASTNAME_SIZE 64
 #define MAX_EMAIL_SIZE 129
@@ -346,11 +356,6 @@ enum class UserLogonFlags : uint32_t {
 enum class UserContextDevice : uint32_t {
   BigButton = 3,
   Microphone = 4,
-};
-
-enum class WriteTileType {
-  Tile = 1,  // Public
-  Personal = 2,
 };
 
 constexpr uint32_t XMP_MAX_METADATA_STRING = 40;

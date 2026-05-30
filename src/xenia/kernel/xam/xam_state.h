@@ -50,11 +50,18 @@ class XamState {
 
   UserProfile* GetUserProfile(uint32_t user_index) const;
   UserProfile* GetUserProfile(uint64_t xuid) const;
+  UserProfile* GetUserProfileLive(uint64_t xuid) const;
+  UserProfile* GetUserProfileAny(uint64_t xuid) const;
+
+  uint8_t GetUserIndexAssignedToProfileFromXUID(uint64_t xuid) const;
 
   bool IsUserSignedIn(uint32_t user_index) const;
   bool IsUserSignedIn(uint64_t xuid) const;
 
   void LoadSpaInfo(const SpaInfo* info);
+
+  void StartPeriodicMaintenance() const;
+  void StopPeriodicMaintenance() const;
 
   void SetContentRegisterCallback(uint32_t callback);
 
@@ -62,11 +69,11 @@ class XamState {
     return xam_dialogs_shown_ > 0 || xam_nui_dialogs_shown_ > 0;
   }
 
+  uint32_t GetOnlineSchemaAddress() const { return online_schema_data_address; }
+
   uint32_t GetLanguageFallbackAddress(uint32_t index) const {
     return language_fallback_address_[index];
   }
-
-  uint32_t GetIptvNameAddress() const { return iptv_name_address_; }
 
   X_DASH_APP_INFO dash_app_info_ = {};
   uint32_t dash_backstack_nodes_count_ = 0;
@@ -77,8 +84,8 @@ class XamState {
   std::atomic<int32_t> xam_nui_dialogs_shown_ = {0};
 
  private:
+  void LoadOnlineSchema();
   void LoadLanguageLocaleFallback();
-  void LoadIptvServiceName();
 
   KernelState* kernel_state_;
 
@@ -91,8 +98,8 @@ class XamState {
   std::unique_ptr<SpaInfo> spa_info_;
 
   // Custom XAM stuff
+  uint32_t online_schema_data_address;
   std::array<uint32_t, 0x12> language_fallback_address_{};
-  uint32_t iptv_name_address_{};
 };
 
 }  // namespace xam

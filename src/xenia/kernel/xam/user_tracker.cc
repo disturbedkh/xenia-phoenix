@@ -7,12 +7,18 @@
  ******************************************************************************
  */
 
+#include <algorithm>
+#include <vector>
+
 #include "xenia/emulator.h"
 #include "xenia/kernel/xam/user_profile.h"
 
 #include "third_party/fmt/include/fmt/format.h"
 #include "third_party/stb/stb_image.h"
+#include "xenia/app/discord/discord_presence.h"
+#include "xenia/base/threading.h"
 #include "xenia/kernel/kernel_state.h"
+#include "xenia/kernel/netplay/xlive_api.h"
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/kernel/xam/user_data.h"
 #include "xenia/kernel/xam/user_property.h"
@@ -20,7 +26,9 @@
 #include "xenia/kernel/xam/user_tracker.h"
 #include "xenia/kernel/xam/xdbf/gpd_info.h"
 
-DECLARE_int32(user_language);
+DECLARE_int32(discord_presence_user_index);
+
+DECLARE_bool(discord);
 
 namespace xe {
 namespace kernel {
@@ -36,7 +44,14 @@ bool UserTracker::AddUser(uint64_t xuid) {
 
   if (spa_data_) {
     AddTitleToPlayedList(xuid);
+    AddDefaultProperties(xuid);
+    AddDefaultContexts(xuid);
   }
+
+  if (kernel_state()->emulator()->is_title_open()) {
+    StartPeriodicMaintenance(xuid);
+  }
+
   return true;
 }
 
@@ -104,6 +119,13 @@ bool UserTracker::UnlockAchievement(uint64_t xuid, uint32_t achievement_id) {
 
   gpd_achievement->flags = gpd_achievement->flags |
                            static_cast<uint32_t>(AchievementFlags::kAchieved);
+
+  if (user->signin_state() == X_USER_SIGNIN_STATE::SignedInToLive) {
+    gpd_achievement->flags =
+        gpd_achievement->flags |
+        static_cast<uint32_t>(AchievementFlags::kAchievedOnline);
+  }
+
   gpd_achievement->unlock_time = Clock::QueryGuestSystemTime();
 
   UpdateSettingValue(xuid, kDashboardID, UserSettingId::XPROFILE_GAMERCARD_CRED,
@@ -198,6 +220,370 @@ void UserTracker::RemoveTitleFromPlayedList(uint64_t xuid, uint32_t title_id) {
   }
 }
 
+void UserTracker::AddDefaultProperties() {
+  if (!spa_data_) {
+    return;
+  }
+
+  for (const uint64_t xuid : tracked_xuids_) {
+    AddDefaultProperties(xuid);
+  }
+}
+
+void UserTracker::AddDefaultProperties(uint64_t xuid) {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  const std::u16string gamertag = user->account_info_.gamertag;
+
+  Property PUID =
+      Property(XPROPERTY_GAMER_PUID,
+               static_cast<int64_t>(user->account_info_.GetOnlineXUID()));
+  Property GAMER_HOST_NAME = Property(XPROPERTY_GAMER_HOSTNAME, gamertag);
+  Property GAMER_NAME = Property(XPROPERTY_GAMERNAME, gamertag);
+  Property GAMER_ZONE = Property(
+      XPROPERTY_GAMER_ZONE,
+      static_cast<int32_t>(GAMERCARD_ZONE_OPTIONS::GAMERCARD_ZONE_PRO));
+  Property GAMER_RATING = Property(XPROPERTY_GAMER_RATING,
+                                   static_cast<float>(0));  // Keep value <= 51?
+  Property GAMER_COUNTRY = Property(XPROPERTY_GAMER_COUNTRY,
+                                    static_cast<int32_t>(user->GetLanguage()));
+  Property GAMER_LANGUAGE = Property(XPROPERTY_GAMER_LANGUAGE,
+                                     static_cast<int32_t>(user->GetCountry()));
+  Property PLATFORM_TYPE = Property(
+      XPROPERTY_PLATFORM_TYPE, static_cast<int32_t>(PLATFORM_TYPE::Xbox360));
+  Property GAMER_MU = Property(XPROPERTY_GAMER_MU,
+                               static_cast<double>(X_STATS_SKILL_MU_DEFAULT));
+  Property GAMER_SIGMA = Property(
+      XPROPERTY_GAMER_SIGMA, static_cast<double>(X_STATS_SKILL_SIGMA_DEFAULT));
+
+  // Normally matchmaking query returns would handle ordering.
+
+  // Required
+  // 4D5308AB XMAT doesn't mark this as a matchmaking property but expects it
+  // for discovering sessions.
+  // 58410A59 expects this property first, otherwise crashes.
+  AddProperty(xuid, &GAMER_HOST_NAME);
+
+  // Required
+  // 58410AC2 sets this manually
+  AddProperty(xuid, &PUID);
+
+  AddProperty(xuid, &GAMER_NAME);
+  AddProperty(xuid, &GAMER_RATING);
+  AddProperty(xuid, &GAMER_ZONE);
+  AddProperty(xuid, &GAMER_COUNTRY);
+  AddProperty(xuid, &GAMER_LANGUAGE);
+
+  // 4D5307D5 does not expect these in XSessionSearch results.
+  AddProperty(xuid, &GAMER_MU);
+  AddProperty(xuid, &GAMER_SIGMA);
+
+  AddProperty(xuid, &PLATFORM_TYPE);
+}
+
+void UserTracker::AddDefaultContexts() {
+  if (!spa_data_) {
+    return;
+  }
+
+  for (const uint64_t xuid : tracked_xuids_) {
+    AddDefaultContexts(xuid);
+  }
+}
+
+void UserTracker::AddDefaultContexts(uint64_t xuid) {
+  Property GAME_MODE = Property(XCONTEXT_GAME_MODE, static_cast<uint32_t>(0));
+  Property GAME_TYPE = Property(XCONTEXT_GAME_TYPE, static_cast<uint32_t>(0));
+
+  const util::XLast* xlast =
+      kernel_state()->emulator()->game_info_database()->GetXLast();
+
+  if (xlast) {
+    // System contexts
+    std::optional<uint32_t> game_type_default =
+        xlast->GetContextsQuery()->GetContextDefaultValue(XCONTEXT_GAME_TYPE);
+    std::optional<uint32_t> game_mode_default =
+        xlast->GetGameModeQuery()->GetGameModeDefaultValue();
+
+    if (game_type_default.has_value()) {
+      GAME_TYPE = Property(XCONTEXT_GAME_TYPE, game_type_default.value());
+    }
+
+    if (game_mode_default.has_value()) {
+      GAME_MODE = Property(XCONTEXT_GAME_MODE, game_mode_default.value());
+    }
+  }
+
+  // Ordered!
+  // Normally matchmaking query returns would handle ordering.
+  AddProperty(xuid, &GAME_TYPE);
+  AddProperty(xuid, &GAME_MODE);
+
+  bool initialize_all_contexts = false;
+
+  // Initialize all contexts to default values
+  if (xlast && initialize_all_contexts) {
+    for (const uint32_t& context_id :
+         xlast->GetContextsQuery()->GetContextsIDs()) {
+      std::optional<uint32_t> default_value =
+          xlast->GetContextsQuery()->GetContextDefaultValue(context_id);
+
+      if (default_value.has_value()) {
+        Property prop = Property(context_id, default_value.value());
+
+        AddProperty(xuid, &prop);
+      }
+    }
+  }
+}
+
+std::u16string UserTracker::GetContextLocalizedString(uint64_t xuid,
+                                                      uint32_t id) const {
+  const Property* context = GetProperty(xuid, id);
+
+  if (!context) {
+    return u"";
+  }
+
+  if (id == XCONTEXT_GAME_MODE) {
+    return GetContextGameModeLocalizedString(xuid);
+  }
+
+  if (id == XCONTEXT_PRESENCE) {
+    auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+    if (!user) {
+      return u"";
+    }
+
+    return user->GetPresenceString();
+  }
+
+  std::u16string localized_string = u"";
+
+  if (kernel_state()->emulator()->game_info_database()->HasXLast()) {
+    util::XLast* xlast =
+        kernel_state()->emulator()->game_info_database()->GetXLast();
+
+    util::XLastContextsQuery* context_query = xlast->GetContextsQuery();
+
+    std::optional<std::uint32_t> context_value_string =
+        context_query->GetContextValueStringID(id,
+                                               context->get_data()->data.u32);
+
+    if (context_value_string.has_value()) {
+      XLanguage desired_language = static_cast<XLanguage>(
+          kernel_state()->xconfig()->ReadSetting<uint32_t>(
+              XCONFIG_USER_CATEGORY, XCONFIG_USER_LANGUAGE));
+
+      localized_string = xlast->GetLocalizedString(context_value_string.value(),
+                                                   desired_language);
+    }
+  }
+
+  return localized_string;
+}
+
+std::u16string UserTracker::GetContextGameModeLocalizedString(
+    uint64_t xuid) const {
+  const Property* context = GetProperty(xuid, XCONTEXT_GAME_MODE);
+
+  if (!context) {
+    return u"";
+  }
+
+  std::u16string localized_string = u"";
+
+  if (kernel_state()->emulator()->game_info_database()->HasXLast()) {
+    util::XLast* xlast =
+        kernel_state()->emulator()->game_info_database()->GetXLast();
+
+    util::XLastGameModeQuery* gamemode_query = xlast->GetGameModeQuery();
+
+    std::optional<std::uint32_t> gamemode_value_string =
+        gamemode_query->GetGameModeStringID(context->get_data()->data.u32);
+
+    if (gamemode_value_string.has_value()) {
+      XLanguage desired_language = static_cast<XLanguage>(
+          kernel_state()->xconfig()->ReadSetting<uint32_t>(
+              XCONFIG_USER_CATEGORY, XCONFIG_USER_LANGUAGE));
+
+      localized_string = xlast->GetLocalizedString(
+          gamemode_value_string.value(), desired_language);
+    }
+  }
+
+  return localized_string;
+}
+
+std::u16string UserTracker::GetContextDescription(uint64_t xuid,
+                                                  uint32_t id) const {
+  const auto& context_data = spa_data_->GetContext(id);
+  if (!context_data) {
+    return u"";
+  }
+
+  const Property* context = GetProperty(xuid, id);
+
+  std::set<std::u16string, CaseInsensitive> context_strings = {};
+
+  auto insert_tidy_string =
+      [&context_strings](const std::u16string& entry) mutable {
+        if (entry.empty()) {
+          return;
+        }
+
+        std::u16string tidy_entry = entry;
+        std::ranges::replace(tidy_entry, u'_', u' ');
+
+        context_strings.emplace(tidy_entry);
+      };
+
+  switch (id) {
+    case XCONTEXT_PRESENCE: {
+      auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+      if (!user) {
+        return u"";
+      }
+
+      insert_tidy_string(user->GetPresenceString());
+    } break;
+    case XCONTEXT_GAME_MODE: {
+      insert_tidy_string(GetContextGameModeLocalizedString(xuid));
+    } break;
+    default: {
+      uint16_t string_id = context_data->string_id;
+
+      if (string_id == std::numeric_limits<uint16_t>::max()) {
+        return u"";
+      }
+
+      insert_tidy_string(GetContextLocalizedString(xuid, id));
+
+      if (kernel_state()->emulator()->game_info_database()->HasXLast()) {
+        auto context_query = kernel_state()
+                                 ->emulator()
+                                 ->game_info_database()
+                                 ->GetXLast()
+                                 ->GetContextsQuery();
+
+        std::optional<std::string> friendly_name =
+            context_query->GetContextFriendlyName(context_data->id);
+
+        if (friendly_name.has_value()) {
+          insert_tidy_string(xe::to_utf16(friendly_name.value()));
+        }
+      }
+    } break;
+  }
+
+  if (context_strings.empty()) {
+    return u"";
+  }
+
+  std::u16string context_desc = u"";
+
+  for (uint32_t index = 1; const auto& desc : context_strings) {
+    if (desc.empty()) {
+      continue;
+    }
+
+    context_desc.append(desc);
+
+    if (index != context_strings.size()) {
+      context_desc.append(u", ");
+    }
+
+    index++;
+  }
+
+  if (!context_desc.empty()) {
+    std::string context_desc_fmt =
+        fmt::format("Context: {:08X} - {}", context_data->id.get(),
+                    xe::to_utf8(context_desc));
+
+    context_desc = xe::to_utf16(context_desc_fmt);
+  }
+
+  return context_desc;
+}
+
+std::u16string UserTracker::GetPropertyDescription(uint32_t id) const {
+  std::set<std::u16string, CaseInsensitive> property_strings = {};
+
+  auto insert_tidy_string =
+      [&property_strings](const std::u16string& entry) mutable {
+        if (entry.empty()) {
+          return;
+        }
+
+        std::u16string tidy_entry = entry;
+        std::ranges::replace(tidy_entry, u'_', u' ');
+
+        property_strings.emplace(tidy_entry);
+      };
+
+  const auto& property_data = spa_data_->GetProperty(id);
+  if (!property_data) {
+    return u"";
+  }
+
+  uint16_t string_id = property_data->string_id;
+
+  if (string_id == std::numeric_limits<uint16_t>::max()) {
+    return u"";
+  }
+
+  if (kernel_state()->emulator()->game_info_database()->HasXLast()) {
+    util::XLast* xlast =
+        kernel_state()->emulator()->game_info_database()->GetXLast();
+
+    XLanguage desired_language =
+        static_cast<XLanguage>(kernel_state()->xconfig()->ReadSetting<uint32_t>(
+            XCONFIG_USER_CATEGORY, XCONFIG_USER_LANGUAGE));
+
+    std::u16string localized_string =
+        xlast->GetLocalizedString(property_data->string_id, desired_language);
+
+    insert_tidy_string(localized_string);
+
+    const auto property_query = xlast->GetPropertiesQuery();
+
+    std::optional<std::string> friendly_name =
+        property_query->GetPropertyFriendlyName(property_data->id);
+
+    if (friendly_name.has_value()) {
+      insert_tidy_string(xe::to_utf16(friendly_name.value()));
+    }
+  }
+
+  std::u16string property_desc = u"";
+
+  for (uint32_t index = 1; const auto& desc : property_strings) {
+    if (desc.empty()) {
+      continue;
+    }
+
+    property_desc.append(desc);
+
+    if (index != property_strings.size()) {
+      property_desc.append(u", ");
+    }
+
+    index++;
+  }
+
+  std::string property_desc_fmt =
+      fmt::format("Property: {:08X} - {}", property_data->id.get(),
+                  xe::to_utf8(property_desc));
+
+  property_desc = xe::to_utf16(property_desc_fmt);
+
+  return property_desc;
+}
+
 // Privates
 bool UserTracker::IsUserTracked(uint64_t xuid) const {
   return tracked_xuids_.find(xuid) != tracked_xuids_.cend();
@@ -243,7 +629,7 @@ std::optional<TitleInfo> UserTracker::GetUserTitleInfo(
 }
 
 std::vector<TitleInfo> UserTracker::GetPlayedTitles(uint64_t xuid) const {
-  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  auto user = kernel_state()->xam_state()->GetUserProfileAny(xuid);
   if (!user) {
     return {};
   }
@@ -457,13 +843,30 @@ void UserTracker::AddProperty(const uint64_t xuid, const Property* property) {
 
   if (property->IsContext()) {
     const auto context_data = spa_data_->GetContext(property_id.value);
-    if (!context_data) {
-      return;
+    if (UserData::is_system_property(property_id.value)) {
+      if (!context_data) {
+        XELOGD("{}: System Context {:08X} not in SPA - Adding anyway!",
+               __func__, property_id.value);
+      }
+    } else {
+      if (!context_data) {
+        return;
+      }
     }
   } else {
     const auto property_data = spa_data_->GetProperty(property_id.value);
-    if (!property_data) {
-      return;
+
+    // 534507D4 doesn't include system properties in SPA therefore we must
+    // always add system properties
+    if (UserData::is_system_property(property_id.value)) {
+      if (!property_data) {
+        XELOGD("{}: System Property {:08X} not in SPA - Adding anyway!",
+               __func__, property_id.value);
+      }
+    } else {
+      if (!property_data) {
+        return;
+      }
     }
   }
 
@@ -647,6 +1050,24 @@ std::optional<uint32_t> UserTracker::GetUserContext(uint64_t xuid,
   return entry->get_data()->data.u32;
 }
 
+uint32_t UserTracker::GetContextValue(uint64_t xuid, uint32_t id) const {
+  const xam::Property* context = GetProperty(xuid, id);
+
+  if (context) {
+    return context->get_data()->data.u32.get();
+  }
+
+  return 0;
+}
+
+uint32_t UserTracker::GetGameModeValue(uint64_t xuid) const {
+  return GetContextValue(xuid, XCONTEXT_GAME_MODE);
+}
+
+uint32_t UserTracker::GetGameTypeValue(uint64_t xuid) const {
+  return GetContextValue(xuid, XCONTEXT_GAME_TYPE);
+}
+
 std::vector<AttributeKey> UserTracker::GetUserContextIds(uint64_t xuid) const {
   if (!IsUserTracked(xuid)) {
     return {};
@@ -732,7 +1153,7 @@ void UserTracker::UpsertSetting(uint64_t xuid, uint32_t title_id,
     return;
   }
 
-  // Sometimes games like to ignore providing expicitly title_id, so we need to
+  // Sometimes games like to ignore providing explicitly title_id, so we need to
   // check it.
   if (!title_id) {
     title_id = spa_data_ ? spa_data_->title_id() : kernel_state()->title_id();
@@ -776,6 +1197,104 @@ bool UserTracker::UpdateUserIcon(uint64_t xuid,
   return true;
 }
 
+void UserTracker::UpdateGamerpicSetting(uint64_t xuid, uint32_t title_id,
+                                        uint32_t big_tile_id,
+                                        uint32_t small_tile_id) {
+  std::u16string gamerpic_key = xe::to_utf16(
+      fmt::format("{:08X}{:08X}{:08X}", title_id, big_tile_id, small_tile_id));
+
+  const uint32_t gamerpic_key_size =
+      static_cast<uint32_t>(string_util::size_in_bytes(gamerpic_key, true));
+
+  const uint32_t gamerpic_key_address =
+      kernel_state()->memory()->SystemHeapAlloc(gamerpic_key_size);
+
+  char16_t* gamerpic_key_ptr =
+      kernel_state()->memory()->TranslateVirtual<char16_t*>(
+          gamerpic_key_address);
+
+  string_util::copy_and_swap_truncating(gamerpic_key_ptr, gamerpic_key,
+                                        gamerpic_key_size);
+
+  const uint8_t user_index =
+      kernel_state()->xam_state()->GetUserIndexAssignedToProfileFromXUID(xuid);
+
+  const uint32_t gamerpic_key_id =
+      static_cast<uint32_t>(xam::UserSettingId::XPROFILE_GAMERCARD_PICTURE_KEY);
+
+  xam::X_USER_PROFILE_SETTING setting_data = {};
+  setting_data.user_index = user_index;
+  setting_data.setting_id = gamerpic_key_id;
+  setting_data.data.type = xam::X_USER_DATA_TYPE::WSTRING;
+  setting_data.data.data.unicode.size = gamerpic_key_size;
+  setting_data.data.data.unicode.ptr = gamerpic_key_address;
+
+  const xam::UserSetting setting = xam::UserSetting(&setting_data);
+
+  kernel_state()->memory()->SystemHeapFree(gamerpic_key_address);
+
+  kernel_state()->xam_state()->user_tracker()->UpsertSetting(xuid, kDashboardID,
+                                                             &setting);
+
+  kernel_state()->BroadcastNotification(
+      kXNotificationSystemProfileSettingChanged, (1 << user_index) & 0xF);
+}
+
+bool UserTracker::UpdateUserGamerpic(uint64_t xuid, uint32_t title_id,
+                                     uint32_t big_tile_id,
+                                     uint32_t small_tile_id,
+                                     std::vector<uint8_t> small_gamerpic_icon,
+                                     std::vector<uint8_t> big_gamerpic_icon) {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return false;
+  }
+
+  if (big_gamerpic_icon.empty() || small_gamerpic_icon.empty()) {
+    return false;
+  }
+
+  bool updated_big_tile = UpdateUserIcon(
+      xuid, {big_gamerpic_icon.data(), big_gamerpic_icon.size()});
+
+  bool updated_small_tile = UpdateUserIcon(
+      xuid, {small_gamerpic_icon.data(), small_gamerpic_icon.size()});
+
+  if (!updated_big_tile || !updated_small_tile) {
+    return false;
+  }
+
+  UpdateGamerpicSetting(xuid, title_id, big_tile_id, small_tile_id);
+
+  return true;
+}
+
+std::optional<xam::GamerPictureKey> UserTracker::GetUserGamerpicSetting(
+    uint64_t xuid) {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return std::nullopt;
+  }
+
+  const uint32_t setting_id =
+      static_cast<uint32_t>(xam::UserSettingId::XPROFILE_GAMERCARD_PICTURE_KEY);
+
+  const std::optional<UserSetting> gamerpic_setting =
+      GetGpdSetting(user, xe::kernel::kDashboardID, setting_id);
+
+  if (!gamerpic_setting.has_value()) {
+    return std::nullopt;
+  }
+
+  const std::string gamerpic_key_data =
+      xe::to_utf8(std::get<std::u16string>(gamerpic_setting->get_host_data()));
+
+  const xam::GamerPictureKey gamerpic_key =
+      *reinterpret_cast<const xam::GamerPictureKey*>(gamerpic_key_data.c_str());
+
+  return gamerpic_key;
+}
+
 std::span<const uint8_t> UserTracker::GetIcon(uint64_t xuid, uint32_t title_id,
                                               XTileType tile_type,
                                               uint64_t tile_id) const {
@@ -817,6 +1336,10 @@ std::span<const uint8_t> UserTracker::GetIcon(uint64_t xuid, uint32_t title_id,
     case XTileType::kLocalGamerTileSmall:
     case XTileType::kPersonalGamerTile:
     case XTileType::kPersonalGamerTileSmall:
+    case XTileType::kAvatarGamerTile:
+    case XTileType::kAvatarGamerTileSmall:
+    case XTileType::kGamerTileByImageId:
+    case XTileType::kGamerTileByKey:
       return user->GetProfileIcon(tile_type);
 
     default:
@@ -855,6 +1378,337 @@ void UserTracker::RefreshTitleSummary(uint64_t xuid, uint32_t title_id) {
   title_data->gamerscore_earned = title_gpd->GetGamerscore();
 
   user->WriteGpd(kDashboardID);
+}
+
+PresenceSyncState UserTracker::IsPresenceOutOfSync(
+    uint64_t xuid, std::vector<FriendPresenceObjectJSON> presence_info) const {
+  PresenceSyncState sync_state = {};
+
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return sync_state;
+  }
+
+  if (presence_info.empty()) {
+    return sync_state;
+  }
+
+  for (const auto& player : presence_info) {
+    const uint64_t xuid = player.XUID();
+
+    if (!user->IsFriend(xuid) && !user->IsSubscribed(xuid)) {
+      XELOGI("Requested unknown peer presence: {} - {:016X}", player.Gamertag(),
+             xuid);
+      continue;
+    }
+
+    if (sync_state.friends && sync_state.peers) {
+      break;
+    }
+
+    if (user->IsFriend(xuid) && !sync_state.friends) {
+      X_ONLINE_FRIEND peer = {};
+
+      if (user->GetFriendFromXUID(xuid, &peer)) {
+        const X_ONLINE_FRIEND updated_peer_presence =
+            player.GetFriendPresence();
+
+        if (std::memcmp(&peer, &updated_peer_presence,
+                        sizeof(X_ONLINE_FRIEND)) != 0) {
+          sync_state.friends = true;
+        }
+      }
+    } else if (user->IsSubscribed(xuid) && !sync_state.peers) {
+      X_ONLINE_PRESENCE peer = {};
+
+      if (user->GetSubscriptionFromXUID(xuid, &peer)) {
+        const X_ONLINE_PRESENCE updated_peer_presence =
+            player.ToOnlineRichPresence();
+
+        if (std::memcmp(&peer, &updated_peer_presence,
+                        sizeof(X_ONLINE_PRESENCE)) != 0) {
+          sync_state.peers = true;
+        }
+      }
+    }
+  }
+
+  return sync_state;
+}
+
+void UserTracker::RefershFriendsAndSubscribersPresence(uint64_t xuid) const {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  const auto friends_xuids = user->GetFriendsXUIDs();
+  const auto subscribed_xuids = user->GetSubscribedXUIDs();
+  std::set<uint64_t> friends_and_subscribed_xuids = {};
+
+  std::set_union(friends_xuids.cbegin(), friends_xuids.cend(),
+                 subscribed_xuids.cbegin(), subscribed_xuids.cend(),
+                 std::inserter(friends_and_subscribed_xuids,
+                               friends_and_subscribed_xuids.cbegin()));
+
+  const auto presences = kernel_state()->GetXboxLiveAPI()->GetFriendsPresence(
+      friends_and_subscribed_xuids);
+
+  const auto presence_sync_state =
+      IsPresenceOutOfSync(xuid, presences->PlayersPresence());
+
+  if (!presence_sync_state.IsOutOfSync()) {
+    return;
+  }
+
+  XELOGD("Friends/Subscribed peers presence state changed.");
+
+  for (const auto& player : presences->PlayersPresence()) {
+    const uint64_t xuid = player.XUID();
+
+    if (user->IsFriend(xuid)) {
+      X_ONLINE_FRIEND friend_presence = player.GetFriendPresence();
+      user->SetFriend(friend_presence);
+    } else if (user->IsSubscribed(xuid)) {
+      X_ONLINE_PRESENCE presence = player.ToOnlineRichPresence();
+      user->SetSubscriptionFromXUID(xuid, &presence);
+    }
+  }
+
+  if (presence_sync_state.friends) {
+    const uint32_t user_index =
+        kernel_state()->xam_state()->GetUserIndexAssignedToProfileFromXUID(
+            xuid);
+
+    kernel_state()->BroadcastNotification(kXNotificationFriendsPresenceChanged,
+                                          user_index);
+  }
+
+  if (presence_sync_state.peers) {
+    kernel_state()->BroadcastNotification(kXNotificationLivePresenceChanged, 0);
+  }
+}
+
+void UserTracker::AddOwnedSession(uint64_t xuid,
+                                  uint32_t session_handle) const {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  auto object =
+      kernel_state()->object_table()->LookupObject<XSession>(session_handle);
+  if (!object) {
+    return;
+  }
+
+  user->AddOwnedSession(object);
+}
+
+void UserTracker::RemoveOwnedSession(uint64_t xuid,
+                                     uint32_t session_handle) const {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  const auto sessions = user->GetOwnedSessions();
+
+  const auto& session_obj_ref =
+      std::find_if(sessions.cbegin(), sessions.cend(),
+                   [session_handle](object_ref<XSession> object) {
+                     return object->handle() == session_handle;
+                   });
+
+  if (session_obj_ref == sessions.cend()) {
+    return;
+  }
+
+  user->RemoveOwnedSession(*session_obj_ref);
+}
+
+bool UserTracker::HasOwnedSessions(uint64_t xuid) const {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return false;
+  }
+
+  return user->GetOwnedSessions().size();
+}
+
+void UserTracker::CleanupOwnedSessions(uint64_t xuid) const {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  for (const auto& session : user->GetOwnedSessions()) {
+    RemoveOwnedSession(xuid, session->handle());
+  }
+}
+
+// Should periodic maintenance be per-user or all users?
+void UserTracker::PeriodicMaintenance(uint64_t xuid,
+                                      size_t iteration_count) const {
+  if (!kernel_state()->emulator()->is_title_open()) {
+    return;
+  }
+
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  // Check if presence string needs updating.
+  const bool presence_string_update_available =
+      user->IsPresenceStringUpdateAvailable();
+
+  // Update discord rich presence before checking live state.
+  if (presence_string_update_available) {
+    user->BuildPresenceString(true, nullptr);
+
+    const std::u16string updated_presence = user->GetPresenceString();
+
+    XELOGI("Periodic Maintenance (Presence): {} - {}", user->name(),
+           xe::to_utf8(updated_presence));
+
+    const uint32_t user_index =
+        kernel_state()->xam_state()->GetUserIndexAssignedToProfileFromXUID(
+            xuid);
+
+    if (cvars::discord_presence_user_index == user_index) {
+      kernel_state()->emulator()->on_presence_change(
+          kernel_state()->emulator()->title_name(), updated_presence);
+    }
+  }
+
+  const uint32_t user_index =
+      kernel_state()->xam_state()->GetUserIndexAssignedToProfileFromXUID(xuid);
+
+  // Discord invites
+  if (cvars::discord && cvars::discord_presence_user_index == user_index) {
+    const auto valid_session = user->FindValidInviteSession();
+
+    if (valid_session.has_value()) {
+      const auto& session = valid_session.value();
+
+      const XSESSION_LOCAL_DETAILS cached_session_details =
+          user->GetDiscordInviteSessionDetails();
+      const XSESSION_LOCAL_DETAILS session_details =
+          session->GetSessionDetails();
+
+      if (cached_session_details != session_details) {
+        const XSESSION_INFO session_info = session->GetSessionInfo();
+        const uint32_t party_size = session->GetMembersCount();
+        const uint32_t party_max = session->GetTotalMaxSlots();
+
+        kernel_state()->emulator()->on_session_change(
+            &session_info, party_size, party_max, user->GetOnlineXUID());
+        user->SetDiscordInviteSessionDetails(session_details);
+      }
+    } else {
+      const XSESSION_LOCAL_DETAILS cached_session_details =
+          user->GetDiscordInviteSessionDetails();
+      const XSESSION_LOCAL_DETAILS empty_session_details = {};
+
+      // Reset cached session details since there is no longer a valid invite
+      // session available.
+      if (cached_session_details != empty_session_details) {
+        kernel_state()->emulator()->on_session_change(nullptr, 0, 0, 0);
+        user->SetDiscordInviteSessionDetails(empty_session_details);
+      }
+    }
+
+    xe::discord::DiscordPresence::Update();
+  }
+
+  if (user->signin_state() != X_USER_SIGNIN_STATE::SignedInToLive ||
+      kernel_state()->GetXboxLiveAPI()->GetInitState() !=
+          XLiveAPI::InitState::Success) {
+    return;
+  }
+
+  // Check every 3nd iteration to reduce backend requests.
+  if (!(iteration_count % 3)) {
+    RefershFriendsAndSubscribersPresence(xuid);
+  }
+
+  if (presence_string_update_available) {
+    kernel_state()->GetXboxLiveAPI()->SetPresence({user->xuid()});
+  }
+
+  if (HasOwnedSessions(xuid)) {
+    for (const auto& session : user->GetOwnedSessions()) {
+      // 1. Check we are host of the session, only the host sends properties to
+      // the backend.
+      // 2. Check session is created so we have a valid session id and ensure
+      // session is already created on backend before updating properties.
+      // 3. Check if session has live features we don't want to POST properties
+      // for offline session.
+      if (session->IsHost() && session->IsCreated() &&
+          session->IsXboxLiveSession()) {
+        if (session->GetCachedLiveProperties() == user->properties_) {
+          continue;
+        }
+
+        if (kernel_state()->GetXboxLiveAPI()->SessionPropertiesSet(
+                session->GetSessionID(), user->xuid())) {
+          session->CacheLiveProperties(user->properties_);
+        }
+      }
+    }
+  }
+}
+
+void UserTracker::StartPeriodicMaintenance(uint64_t xuid) const {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  const auto user_index = kernel_state()
+                              ->xam_state()
+                              ->profile_manager()
+                              ->GetUserIndexAssignedToProfile(xuid);
+
+  // TODO(Adrian):
+  // Netplay doesn't support multiple local profiles too well.
+  // We only register user index 0 on backend therefore start periodic
+  // maintenance only for that user for now.
+  if (user_index > 0) {
+    XELOGI(fmt::format("Skip Starting Periodic Maintenance for {:016X}", xuid));
+    return;
+  }
+
+  if (user->GetPeriodicMaintenanceTask()) {
+    return;
+  }
+
+  auto run = [iteration_count = size_t(0), xuid]() mutable {
+    kernel_state()->xam_state()->user_tracker()->PeriodicMaintenance(
+        xuid, iteration_count);
+    iteration_count++;
+  };
+
+  XELOGD(fmt::format("Started Periodic Maintenance:: {:016X}", xuid));
+
+  auto periodic_task = xe::threading::PeriodicCallback::CreateRepeating(
+      periodic_maintenance_interval_, run,
+      fmt::format("Periodic Maintenance: {}", user->name()).c_str());
+
+  user->SetPeriodicMaintenanceTask(std::move(periodic_task));
+}
+
+void UserTracker::StopPeriodicMaintenance(uint64_t xuid) const {
+  auto user = kernel_state()->xam_state()->GetUserProfile(xuid);
+  if (!user) {
+    return;
+  }
+
+  if (user->GetPeriodicMaintenanceTask()) {
+    XELOGD(fmt::format("Stopped Periodic Maintenance: {:016X}", xuid));
+    user->SetPeriodicMaintenanceTask({});
+  }
 }
 
 }  // namespace xam

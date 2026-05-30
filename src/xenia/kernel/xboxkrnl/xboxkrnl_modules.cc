@@ -19,23 +19,22 @@ namespace xe {
 namespace kernel {
 namespace xboxkrnl {
 
-dword_result_t XexCheckExecutablePrivilege_entry(dword_t privilege) {
-  // BOOL
-  // DWORD Privilege
-
-  // Privilege is bit position in xe_xex2_system_flags enum - so:
-  // Privilege=6 -> 0x00000040 -> XEX_SYSTEM_INSECURE_SOCKETS
+bool XexCheckExecutablePrivilege(uint32_t privilege) {
   uint32_t mask = 1 << privilege;
 
   auto module = kernel_state()->GetExecutableModule();
   if (!module) {
-    return 0;
+    return false;
   }
 
   uint32_t flags = 0;
   module->GetOptHeader<uint32_t>(XEX_HEADER_SYSTEM_FLAGS, &flags);
 
   return (flags & mask) > 0;
+}
+
+dword_result_t XexCheckExecutablePrivilege_entry(dword_t privilege) {
+  return XexCheckExecutablePrivilege(privilege);
 }
 DECLARE_XBOXKRNL_EXPORT1(XexCheckExecutablePrivilege, kModules, kImplemented);
 
