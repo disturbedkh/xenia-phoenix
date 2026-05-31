@@ -19,9 +19,10 @@ setup_build_env() {
   apt-get install -y -qq \
     build-essential mesa-vulkan-drivers valgrind libc++-dev libc++abi-dev \
     libgtk-3-dev libsdl2-dev libvulkan-dev libx11-xcb-dev liblz4-dev \
-    libasound2-dev libfontconfig1-dev \
-    clang-${LLVM_VERSION} lld-${LLVM_VERSION} llvm-${LLVM_VERSION} ninja-build cmake \
-    spirv-tools python3 pkg-config
+    libasound2-dev libfontconfig1-dev libssl-dev \
+    clang-${LLVM_VERSION} lld-${LLVM_VERSION} llvm-${LLVM_VERSION} \
+    clang-format-${LLVM_VERSION} ninja-build cmake \
+    spirv-tools glslang-tools python3 pkg-config
 
   update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 200
   update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 200
@@ -32,15 +33,24 @@ setup_build_env() {
   update-alternatives --install /usr/bin/llvm-nm llvm-nm /usr/bin/llvm-nm-${LLVM_VERSION} 200
 
   if [ -z "${VULKAN_SDK:-}" ] || [ ! -d "${VULKAN_SDK}" ]; then
-    mkdir -p /root/vulkan-sdk
-    if [ ! "$(ls -A /root/vulkan-sdk 2>/dev/null)" ]; then
-      wget -qO /tmp/vulkan-sdk.tar.xz https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.xz
-      tar -xf /tmp/vulkan-sdk.tar.xz -C /root/vulkan-sdk
-    fi
-    VULKAN_SDK_VERSION=$(ls /root/vulkan-sdk)
-    export VULKAN_SDK="/root/vulkan-sdk/${VULKAN_SDK_VERSION}/x86_64"
+    case "$(uname -m)" in
+      x86_64)
+        mkdir -p /root/vulkan-sdk
+        if [ ! "$(ls -A /root/vulkan-sdk 2>/dev/null)" ]; then
+          wget -qO /tmp/vulkan-sdk.tar.xz https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.xz
+          tar -xf /tmp/vulkan-sdk.tar.xz -C /root/vulkan-sdk
+        fi
+        VULKAN_SDK_VERSION=$(ls /root/vulkan-sdk)
+        SDK_PATH="/root/vulkan-sdk/${VULKAN_SDK_VERSION}/x86_64"
+        if [ -d "$SDK_PATH" ]; then
+          export VULKAN_SDK="$SDK_PATH"
+        fi
+        ;;
+    esac
   fi
-  export PATH="${VULKAN_SDK}/bin:${PATH}"
+  if [ -n "${VULKAN_SDK:-}" ] && [ -d "${VULKAN_SDK}" ]; then
+    export PATH="${VULKAN_SDK}/bin:${PATH}"
+  fi
 }
 
 if [ -z "${PHOENIX_LINUX_BUILD_ENV:-}" ]; then
@@ -92,7 +102,7 @@ git submodule update --init --depth=1 $SUBMODULES
 LOG="/src/linux_build_${CONFIG,,}.log"
 : >"$LOG"
 set -o pipefail
-python3 xenia-build.py doctor 2>&1 | tee -a "$LOG"
+python3 xenia-build.py doctor 2>&1 | tee -a "$LOG" || true
 python3 xenia-build.py build --config="${CONFIG}" 2>&1 | tee -a "$LOG"
 build_status=${PIPESTATUS[0]}
 

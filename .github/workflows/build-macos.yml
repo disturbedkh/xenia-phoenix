@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Vulkan SDK
         run: |
-          brew install molten-vk vulkan-headers glslang spirv-tools
+          brew install molten-vk vulkan-headers glslang spirv-tools sdl2 pkg-config
           echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
           SPIRV_OPT="$(command -v spirv-opt)"
           VULKAN_SDK="$(dirname "$(dirname "$SPIRV_OPT")")"

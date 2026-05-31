@@ -447,12 +447,14 @@ if(WIN32)
   )
   target_include_directories(SDL2 PUBLIC SDL2/include)
   target_link_libraries(SDL2 PRIVATE setupapi winmm imm32 version)
-elseif(APPLE)
-  # Use system SDL2 framework on macOS
+#elif APPLE)
+  # Homebrew SDL2 (CI) — pkg-config like Linux.
   add_library(SDL2 INTERFACE)
-  find_library(SDL2_LIBRARY SDL2 REQUIRED)
-  target_include_directories(SDL2 INTERFACE "${SDL2_LIBRARY}/Headers")
-  target_link_libraries(SDL2 INTERFACE "${SDL2_LIBRARY}")
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(SDL2_PKG REQUIRED sdl2)
+  target_include_directories(SDL2 INTERFACE ${SDL2_PKG_INCLUDE_DIRS})
+  target_link_libraries(SDL2 INTERFACE ${SDL2_PKG_LDFLAGS})
+  target_compile_options(SDL2 INTERFACE ${SDL2_PKG_CFLAGS_OTHER})
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # Use system SDL2 on Linux
   add_library(SDL2 INTERFACE)
@@ -880,7 +882,7 @@ if(WIN32)
 else()
   target_compile_definitions(miniupnp PRIVATE _GNU_SOURCE)
   execute_process(
-    COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/updateminiupnpcstrings.sh
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/updateminiupnpcstrings.sh
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc
   )
 endif()

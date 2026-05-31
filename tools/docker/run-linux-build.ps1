@@ -15,7 +15,13 @@ $Src = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 
 function Ensure-Binfmt {
     # Register qemu handlers so linux/arm64 containers run on an x86_64 host.
-    docker run --privileged --rm tonistiigi/binfmt --install arm64 2>$null | Out-Null
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        docker run --privileged --rm tonistiigi/binfmt --install arm64 2>$null | Out-Null
+    } finally {
+        $ErrorActionPreference = $prev
+    }
 }
 
 function Ensure-Docker {
