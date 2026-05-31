@@ -15,7 +15,7 @@
 #include "xenia/base/subsystem_tracer.h"
 #include "xenia/base/threading.h"
 
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
 #include "xenia/apu/sdl/sdl_audio_driver.h"
 #endif
 
@@ -599,7 +599,7 @@ bool AudioMediaPlayer::SetupDriver(uint32_t sample_rate, uint32_t channels) {
     return false;
   }
 
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
   // Edge: use SDL for XMP to avoid ALSA exclusive-mode conflicts with main APU.
   driver_ = std::unique_ptr<AudioDriver>(new xe::apu::sdl::SDLAudioDriver(
       driver_semaphore_.get(), sample_rate, channels, false));

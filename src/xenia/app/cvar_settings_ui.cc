@@ -350,7 +350,8 @@ bool DrawPathCvar(::cvar::IConfigVar* config_var, Emulator* emulator,
       file_picker->set_type(ui::FilePicker::Type::kFile);
     }
     if (file_picker->Show() && !file_picker->selected_files().empty()) {
-      const auto& picked = file_picker->selected_files().front();
+      const std::filesystem::path picked =
+          file_picker->selected_files().front();
       OverrideConfigCvar<std::filesystem::path>(config_var->name().c_str(),
                                                 picked);
       if (per_game_mode && emulator && emulator->is_title_open()) {
