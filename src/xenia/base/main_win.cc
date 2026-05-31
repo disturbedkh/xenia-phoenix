@@ -40,6 +40,10 @@ DEFINE_bool(
     "prioritized access to CPU resources",
     "Win32");
 
+// Defined in storage_cvars.cc (shared across all platform entry points).
+DECLARE_path(storage_root);
+DECLARE_bool(portable);
+
 namespace xe {
 
 static void RequestWin32HighResolutionTimer() {
