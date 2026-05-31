@@ -10,6 +10,7 @@
 #include "xenia/base/clock.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/platform.h"
 #include "xenia/base/string_util.h"
 #include "xenia/config.h"
 #include "xenia/kernel/kernel_state.h"
@@ -30,6 +31,8 @@
 #include "xenia/ui/window.h"
 #include "xenia/ui/windowed_app_context.h"
 #include "xenia/xbox.h"
+
+#include <thread>
 
 #include "third_party/fmt/include/fmt/format.h"
 #include "third_party/fmt/include/fmt/xchar.h"
@@ -552,7 +555,11 @@ void XamLoaderLaunchTitle_entry(lpstring_t raw_name_ptr, dword_t flags) {
           auto dialog = xe::ui::ImGuiDialog::ShowMessageBox(
               imgui_drawer, title.c_str(), message.c_str());
 
+#if !XE_PLATFORM_ANDROID
           std::jthread([dialog]() {
+#else
+          std::thread([dialog]() {
+#endif
             while (!dialog->IsClosing()) {
               std::this_thread::yield();
             }

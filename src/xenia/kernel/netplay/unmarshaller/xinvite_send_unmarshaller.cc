@@ -8,6 +8,7 @@
  */
 
 #include "xenia/kernel/netplay/unmarshaller/xinvite_send_unmarshaller.h"
+#include "third_party/fmt/include/fmt/format.h"
 
 namespace xe {
 namespace kernel {
@@ -28,7 +29,7 @@ X_HRESULT XInviteSendUnmarshaller::Deserialize() {
 
   if (GetAsyncTask().GetXLiveAsyncTask()->results_ptr ||
       GetAsyncTask().GetXLiveAsyncTask()->results_size) {
-    assert_always(std::format("{} results unexpected!", __func__));
+    assert_always(fmt::format("{} results unexpected!", __func__));
   }
 
   user_index_ = ReadSwap<uint32_t>();
@@ -49,7 +50,7 @@ X_HRESULT XInviteSendUnmarshaller::Deserialize() {
 
   if (GetPosition() !=
       GetAsyncTask().GetXLiveAsyncTask()->marshalled_request_size) {
-    assert_always(std::format("{} deserialization incomplete", __func__));
+    assert_always(fmt::format("{} deserialization incomplete", __func__));
   }
 
   if (display_string_size_ > X_ONLINE_MAX_XINVITE_DISPLAY_STRING) {

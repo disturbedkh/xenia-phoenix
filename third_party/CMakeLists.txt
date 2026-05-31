@@ -447,7 +447,7 @@ if(WIN32)
   )
   target_include_directories(SDL2 PUBLIC SDL2/include)
   target_link_libraries(SDL2 PRIVATE setupapi winmm imm32 version)
-#elif APPLE)
+elseif(APPLE)
   # Homebrew SDL2 (CI) — pkg-config like Linux.
   add_library(SDL2 INTERFACE)
   find_package(PkgConfig REQUIRED)

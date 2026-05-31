@@ -8,6 +8,7 @@
  */
 
 #include "xenia/kernel/xam/xam_ui.h"
+#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/app/emulator_window.h"
 #include "xenia/base/png_utils.h"
 #include "xenia/base/system.h"
@@ -993,7 +994,7 @@ bool xeDrawFriendContent(xe::ui::ImGuiDrawer* imgui_drawer,
     presense_string =
         std::regex_replace(presense_string, std::regex("\\n"), ", ");
 
-    ImGui::TextWrapped(fmt::format("Status: {}", presense_string).c_str());
+    ImGui::TextUnformatted(fmt::format("Status: {}", presense_string).c_str());
 
     index++;
   }
@@ -1011,11 +1012,11 @@ bool xeDrawFriendContent(xe::ui::ImGuiDrawer* imgui_drawer,
   bool is_self = profile->GetOnlineXUID() == presence.XUID();
 
   const std::string join_label =
-      std::format("Join Session##{}", friend_xuid_str);
+      fmt::format("Join Session##{}", friend_xuid_str);
 
-  const std::string remove_label = std::format("Remove##{}", friend_xuid_str);
+  const std::string remove_label = fmt::format("Remove##{}", friend_xuid_str);
 
-  const std::string add_label = std::format("Add##{}", friend_xuid_str);
+  const std::string add_label = fmt::format("Add##{}", friend_xuid_str);
 
   const bool same_title = title_id == kernel_state()->title_id();
 
@@ -1122,9 +1123,9 @@ bool xeDrawFriendContent(xe::ui::ImGuiDrawer* imgui_drawer,
         ImVec2(start_drawing_position.x + 2, start_drawing_position.y));
 
     const std::string selectable_label =
-        std::format("##Selectable{}", friend_xuid_str);
+        fmt::format("##Selectable{}", friend_xuid_str);
     const std::string context_label =
-        std::format("Friend Menu##{}", friend_xuid_str);
+        fmt::format("Friend Menu##{}", friend_xuid_str);
 
     auto selectable_area =
         ImVec2(buttons_row_size.x - (xe::ui::default_image_icon_size.x + 14),
@@ -1240,7 +1241,7 @@ bool xeDrawAddFriend(xe::ui::ImGuiDrawer* imgui_drawer, UserProfile* profile,
     ImGui::SetCursorPosX((ImGui::GetCursorPosX() + window_width -
                           ImGui::CalcTextSize(friends_count.c_str()).x));
 
-    ImGui::Text(friends_count.c_str());
+    ImGui::TextUnformatted(friends_count.c_str());
 
     if (!args.add_friend_first_draw && std::string(args.add_xuid_).empty()) {
       args.add_friend_first_draw = true;
@@ -1421,7 +1422,7 @@ bool xeDrawFriendsContent(
 
     ImGui::SetCursorPosX((ImGui::GetCursorPosX() + window_width -
                           ImGui::CalcTextSize(friends_count.c_str()).x));
-    ImGui::Text(friends_count.c_str());
+    ImGui::TextUnformatted(friends_count.c_str());
 
     ImGui::SetCursorPosY((ImGui::GetCursorPosY() - ImGui::GetTextLineHeight()) -
                          4);
@@ -1533,7 +1534,7 @@ bool xeDrawFriendsContent(
       ImVec2 desc_size = ImGui::CalcTextSize(desc.c_str());
 
       ImGui::SetCursorPosX((ImGui::GetWindowWidth() - desc_size.x) * 0.5f);
-      ImGui::Text(desc.c_str());
+      ImGui::TextUnformatted(desc.c_str());
       ImGui::Separator();
 
       if (ImGui::Button("Yes", btn_size)) {
@@ -1594,28 +1595,30 @@ bool xeDrawSessionContent(xe::ui::ImGuiDrawer* imgui_drawer,
   uint32_t num_players =
       session->FilledPublicSlotsCount() + session->FilledPrivateSlotsCount();
 
-  ImGui::Text(fmt::format("Players: {}", num_players).c_str());
+  ImGui::TextUnformatted(fmt::format("Players: {}", num_players).c_str());
 
   if (!session->Version().empty()) {
-    ImGui::Text(fmt::format("Version: {}", session->Version()).c_str());
+    ImGui::TextUnformatted(
+        fmt::format("Version: {}", session->Version()).c_str());
   }
 
   if (!session->MediaID().empty()) {
-    ImGui::Text(fmt::format("Media ID: {}", session->MediaID()).c_str());
+    ImGui::TextUnformatted(
+        fmt::format("Media ID: {}", session->MediaID()).c_str());
   }
 
-  ImGui::Text(fmt::format("Open Private Slots: {}",
-                          session->OpenPrivateSlotsCount().get())
-                  .c_str());
-  ImGui::Text(fmt::format("Open Public Slots: {}",
-                          session->OpenPublicSlotsCount().get())
-                  .c_str());
+  ImGui::TextUnformatted(fmt::format("Open Private Slots: {}",
+                                     session->OpenPrivateSlotsCount().get())
+                             .c_str());
+  ImGui::TextUnformatted(fmt::format("Open Public Slots: {}",
+                                     session->OpenPublicSlotsCount().get())
+                             .c_str());
 
   ImGui::Spacing();
   ImGui::Spacing();
 
   const std::string join_label =
-      std::format("Join Session##{}", session->SessionID());
+      fmt::format("Join Session##{}", session->SessionID());
 
   bool caller = MacAddress(session->MacAddress()) == GetConsoleMacAddress();
 
@@ -1695,14 +1698,14 @@ bool xeDrawSessionsContent(
     bool in_game = kernel_state()->emulator()->title_id();
 
     if (in_game) {
-      ImGui::Text(
+      ImGui::TextUnformatted(
           fmt::format("{}", kernel_state()->emulator()->title_name()).c_str());
     }
 
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Text(
+    ImGui::TextUnformatted(
         fmt::format("Available Sessions: {}", sessions->size()).c_str());
 
     ImGui::Spacing();
@@ -1788,7 +1791,7 @@ bool xeDrawMyDeletedProfiles(
     ImVec2 desc_size = ImGui::CalcTextSize(desc.c_str());
 
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - desc_size.x) * 0.5f);
-    ImGui::Text(desc.c_str());
+    ImGui::TextUnformatted(desc.c_str());
     ImGui::Separator();
     ImGui::Spacing();
 
@@ -1799,8 +1802,8 @@ bool xeDrawMyDeletedProfiles(
       std::string xuid_str = fmt::format("XUID: {:016X}", xuid);
       std::string gamertag_str = fmt::format("Gamertag: {}", gamertag);
 
-      ImGui::Text(xuid_str.c_str());
-      ImGui::Text(gamertag_str.c_str());
+      ImGui::TextUnformatted(xuid_str.c_str());
+      ImGui::TextUnformatted(gamertag_str.c_str());
 
       ImGui::Separator();
     }
@@ -1822,7 +1825,7 @@ void xeDrawUPnPAndPorts(xe::ui::ImGuiDrawer* imgui_drawer,
   auto centre_text = [](std::string text) {
     ImVec2 text_size = ImGui::CalcTextSize(text.c_str());
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - text_size.x) * 0.5f);
-    ImGui::Text(text.c_str());
+    ImGui::TextUnformatted(text.c_str());
     ImGui::Separator();
   };
 
@@ -1950,10 +1953,11 @@ void xeDrawUPnPAndPorts(xe::ui::ImGuiDrawer* imgui_drawer,
                 ImGui::TableNextRow();
 
                 ImGui::TableNextColumn();
-                ImGui::Text(protocol.c_str());
+                ImGui::TextUnformatted(protocol.c_str());
 
                 ImGui::TableNextColumn();
-                ImGui::Text(fmt::format("{}", internal_port).c_str());
+                ImGui::TextUnformatted(
+                    fmt::format("{}", internal_port).c_str());
               }
             }
             ImGui::EndTable();
@@ -2021,13 +2025,14 @@ void xeDrawUPnPAndPorts(xe::ui::ImGuiDrawer* imgui_drawer,
                 ImGui::TableNextRow();
 
                 ImGui::TableNextColumn();
-                ImGui::Text(protocol.c_str());
+                ImGui::TextUnformatted(protocol.c_str());
 
                 ImGui::TableNextColumn();
-                ImGui::Text(fmt::format("{}", internal_port).c_str());
+                ImGui::TextUnformatted(
+                    fmt::format("{}", internal_port).c_str());
 
                 ImGui::TableNextColumn();
-                ImGui::Text(fmt::format("{}", error_code).c_str());
+                ImGui::TextUnformatted(fmt::format("{}", error_code).c_str());
 
                 ImGui::TableNextColumn();
                 std::string error_status;

@@ -8,6 +8,7 @@
  */
 
 #include "xenia/kernel/netplay/unmarshaller/xstorage_delete_unmarshaller.h"
+#include "third_party/fmt/include/fmt/format.h"
 
 namespace xe {
 namespace kernel {
@@ -28,7 +29,7 @@ X_HRESULT XStorageDeleteUnmarshaller::Deserialize() {
 
   if (GetAsyncTask().GetXLiveAsyncTask()->results_ptr ||
       GetAsyncTask().GetXLiveAsyncTask()->results_size) {
-    assert_always(std::format("{} results unexpected!", __func__));
+    assert_always(fmt::format("{} results unexpected!", __func__));
   }
 
   user_index_ = ReadSwap<uint32_t>();
@@ -37,7 +38,7 @@ X_HRESULT XStorageDeleteUnmarshaller::Deserialize() {
 
   if (GetPosition() !=
       GetAsyncTask().GetXLiveAsyncTask()->marshalled_request_size) {
-    assert_always(std::format("{} deserialization incomplete", __func__));
+    assert_always(fmt::format("{} deserialization incomplete", __func__));
   }
 
   if (ServerPathLength() > X_ONLINE_MAX_PATHNAME_LENGTH) {

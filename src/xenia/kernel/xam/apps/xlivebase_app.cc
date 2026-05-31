@@ -8,6 +8,7 @@
  */
 
 #include <span>
+#include "third_party/fmt/include/fmt/format.h"
 
 #include "xenia/kernel/xam/apps/xlivebase_app.h"
 
@@ -1267,7 +1268,7 @@ X_HRESULT XLiveBaseApp::XStorageEnumerate(uint32_t buffer_ptr) {
 
       // Path must use /
       std::u16string backend_item_path = xe::to_utf16(
-          std::format("{}{}", kernel_state_->GetXboxLiveAPI()->GetApiAddress(),
+          fmt::format("{}{}", kernel_state_->GetXboxLiveAPI()->GetApiAddress(),
                       entry.FilePath()));
 
       char16_t* item_path_ptr =
@@ -1389,7 +1390,7 @@ X_HRESULT XLiveBaseApp::XStorageEnumerate(uint32_t buffer_ptr) {
     for (uint32_t item_index = unmarshaller.StartingIndex();
          const auto entry : entries) {
       std::string symlink_item_path =
-          std::format("{}\\{}", item_parent, entry->name());
+          fmt::format("{}\\{}", item_parent, entry->name());
 
       // Path must use /
       // Keep server return consistent with XStorageBuildServerPath
@@ -2231,7 +2232,7 @@ std::string XLiveBaseApp::ConvertServerPathToXStorageSymlink(
 
   std::string location = symlink_path.substr(backend_domain_prefix.size());
 
-  symlink_path = std::format("{}{}", xstorage_symboliclink, location);
+  symlink_path = fmt::format("{}{}", xstorage_symboliclink, location);
   symlink_path = utf8::fix_guest_path_separators(symlink_path);
 
   return symlink_path;
@@ -2247,7 +2248,7 @@ std::string XLiveBaseApp::ConvertXStorageSymlinkToServerPath(
   std::string backend_domain_prefix = fmt::format(
       "{}xstorage", kernel_state_->GetXboxLiveAPI()->GetApiAddress());
 
-  server_path = std::format("{}/{}", backend_domain_prefix, server_path);
+  server_path = fmt::format("{}/{}", backend_domain_prefix, server_path);
 
   return server_path;
 }

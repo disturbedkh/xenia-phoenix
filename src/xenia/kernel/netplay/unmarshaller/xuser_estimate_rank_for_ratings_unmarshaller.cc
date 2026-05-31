@@ -8,6 +8,7 @@
  */
 
 #include "xenia/kernel/netplay/unmarshaller/xuser_estimate_rank_for_ratings_unmarshaller.h"
+#include "third_party/fmt/include/fmt/format.h"
 
 namespace xe {
 namespace kernel {
@@ -49,7 +50,7 @@ X_HRESULT XUserEstimateRankForRatingUnmarshaller::Deserialize() {
 
   if (GetPosition() !=
       GetAsyncTask().GetXLiveAsyncTask()->marshalled_request_size) {
-    assert_always(std::format("{} deserialization incomplete", __func__));
+    assert_always(fmt::format("{} deserialization incomplete", __func__));
   }
 
   return X_E_SUCCESS;

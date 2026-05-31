@@ -1049,6 +1049,7 @@ dword_result_t NetDll_XNetDnsLookup_entry(dword_t caller, lpstring_t host,
 
   *dns_ptr = dns_address;
 
+#if !XE_PLATFORM_ANDROID
   auto run = [=](std::stop_token stop_token) {
     if (stop_token.stop_requested()) {
       dns->status = X_ERROR_SUCCESS;
@@ -1104,6 +1105,62 @@ dword_result_t NetDll_XNetDnsLookup_entry(dword_t caller, lpstring_t host,
   dns_lookup_threads[dns_address] = dns_lookup_thread.get_stop_source();
 
   dns_lookup_thread.detach();
+#else
+  auto cancel = std::make_shared<std::atomic<bool>>(false);
+  auto run = [=]() {
+    if (cancel->load(std::memory_order_relaxed)) {
+      dns->status = X_ERROR_SUCCESS;
+      xboxkrnl::xeNtSetEvent(event_handle, nullptr);
+      return;
+    }
+
+#ifdef XE_PLATFORM_WIN32
+    ADDRINFOA hints = {.ai_family = XSocket::X_AF_INET};
+    PADDRINFOA addr_info = {};
+#else
+    struct addrinfo hints = {};
+    hints.ai_family = XSocket::X_AF_INET;
+    struct addrinfo* addr_info = nullptr;
+#endif
+
+    const int status = getaddrinfo(host, nullptr, &hints, &addr_info);
+
+    if (status) {
+      XELOGI("DNS Lookup: Failed");
+      dns->status = XSocket::GetLastWSAError();
+      xboxkrnl::xeNtSetEvent(event_handle, nullptr);
+      return;
+    }
+
+    XELOGI("DNS Lookup: Success");
+
+    uint32_t address_index = 0;
+#ifdef XE_PLATFORM_WIN32
+    PADDRINFOA info = addr_info;
+#else
+    struct addrinfo* info = addr_info;
+#endif
+
+    while (info && address_index < std::size(dns->aina) &&
+           !cancel->load(std::memory_order_relaxed)) {
+      dns->aina[address_index] = *reinterpret_cast<in_addr*>(info->ai_addr);
+      info = info->ai_next;
+      address_index++;
+    }
+
+    freeaddrinfo(addr_info);
+
+    dns->cina = address_index;
+    dns->status = XSocket::GetLastWSAError();
+
+    xboxkrnl::xeNtSetEvent(event_handle, nullptr);
+  };
+
+  std::thread(std::move(run)).detach();
+
+  std::unique_lock lock(dns_lookup_mutex);
+  dns_lookup_threads[dns_address] = cancel;
+#endif
 
   return X_ERROR_SUCCESS;
 }
@@ -1126,7 +1183,11 @@ dword_result_t NetDll_XNetDnsRelease_entry(dword_t caller,
     return X_ERROR_SUCCESS;
   }
 
+#if !XE_PLATFORM_ANDROID
   dns_lookup_threads.at(dns_address).request_stop();
+#else
+  dns_lookup_threads.at(dns_address)->store(true, std::memory_order_relaxed);
+#endif
 
   kernel_memory()->SystemHeapFree(dns_ptr.guest_address());
 
@@ -1153,6 +1214,7 @@ dword_result_t NetDll_XNetQosServiceLookup_entry(dword_t caller, dword_t flags,
 
   qos->count_pending = 1;
 
+#if !XE_PLATFORM_ANDROID
   auto run = [=](std::stop_token stop_token) {
     if (stop_token.stop_requested()) {
       return;
@@ -1187,6 +1249,38 @@ dword_result_t NetDll_XNetQosServiceLookup_entry(dword_t caller, dword_t flags,
   qos_lookup_threads[qos_address] = qos_lookup_thread.get_stop_source();
 
   qos_lookup_thread.detach();
+#else
+  auto cancel = std::make_shared<std::atomic<bool>>(false);
+  auto run = [=]() {
+    if (cancel->load(std::memory_order_relaxed)) {
+      return;
+    }
+
+    qos->info[0].probes_xmit = 8;
+    qos->info[0].probes_recv = 8;
+    qos->info[0].data_len = 0;
+    qos->info[0].data_ptr = 0;
+    qos->info[0].rtt_min_in_msecs = 10;
+    qos->info[0].rtt_med_in_msecs = 10;
+
+    qos->info[0].up_bits_per_sec = static_cast<uint32_t>(5_MiB);
+    qos->info[0].down_bits_per_sec = static_cast<uint32_t>(5_MiB);
+
+    qos->info[0].flags = XNET_XNQOSINFO::COMPLETE |
+                         XNET_XNQOSINFO::PARTIAL_COMPLETE |
+                         XNET_XNQOSINFO::TARGET_CONTACTED;
+
+    qos->count_pending = 0;
+    qos->count = 1;
+
+    xboxkrnl::xeNtSetEvent(event_handle, nullptr);
+  };
+
+  std::thread(std::move(run)).detach();
+
+  std::unique_lock lock(qos_lookup_mutex);
+  qos_lookup_threads[qos_address] = cancel;
+#endif
 
   return X_ERROR_SUCCESS;
 }
@@ -1209,7 +1303,11 @@ dword_result_t NetDll_XNetQosRelease_entry(dword_t caller,
     return X_ERROR_SUCCESS;
   }
 
+#if !XE_PLATFORM_ANDROID
   qos_lookup_threads.at(qos_address).request_stop();
+#else
+  qos_lookup_threads.at(qos_address)->store(true, std::memory_order_relaxed);
+#endif
 
   for (uint32_t i = 0; i < qos_ptr->count; i++) {
     const XNQOSINFO& qos_info = qos_ptr->info[i];
@@ -1391,6 +1489,7 @@ dword_result_t NetDll_XNetQosLookup_entry(
   // cause QoS lookup spam.
   qos->count_pending = count;
 
+#if !XE_PLATFORM_ANDROID
   auto run = [=, shared_session_ids = session_ids](std::stop_token stop_token) {
     for (uint32_t i = 0; i < count && !stop_token.stop_requested(); i++) {
       XNQOSINFO& qos_info = qos->info[i];
@@ -1442,14 +1541,71 @@ dword_result_t NetDll_XNetQosLookup_entry(
   std::unique_lock lock(qos_lookup_mutex);
   qos_lookup_threads[qos_address] = qos_lookup_thread.get_stop_source();
 
-  // 5345081A expects QoS results immediately on return, assume this behavior is
-  // expected due to probes count of 0.
   if (probes_count) {
     qos_lookup_thread.detach();
   } else {
     XELOGI("XNetQosLookup: Sync Lookup!");
     qos_lookup_thread.join();
   }
+#else
+  auto cancel = std::make_shared<std::atomic<bool>>(false);
+  auto run = [=, shared_session_ids = session_ids]() {
+    for (uint32_t i = 0; i < count && !cancel->load(std::memory_order_relaxed);
+         i++) {
+      XNQOSINFO& qos_info = qos->info[i];
+
+      response_data chunk = {.http_code = HTTP_STATUS_CODE::HTTP_NO_CONTENT};
+
+      if (i < shared_session_ids->size()) {
+        const uint64_t session_id = shared_session_ids->at(i).as_uintBE64();
+        chunk = kernel_state()->GetXboxLiveAPI()->QoSGet(session_id);
+      }
+
+      if (chunk.http_code == HTTP_STATUS_CODE::HTTP_OK) {
+        if (chunk.response && chunk.size) {
+          uint32_t data_ptr = kernel_memory()->SystemHeapAlloc(
+              static_cast<uint16_t>(chunk.size));
+          uint8_t* data = kernel_memory()->TranslateVirtual<uint8_t*>(data_ptr);
+
+          std::memcpy(data, chunk.response, chunk.size);
+
+          qos_info.data_ptr = data_ptr;
+          qos_info.data_len = static_cast<uint16_t>(chunk.size);
+          qos_info.flags |= XNET_XNQOSINFO::DATA_RECEIVED;
+        }
+      }
+
+      qos_info.probes_xmit = probes_count.value();
+      qos_info.probes_recv = probes_count.value();
+      qos_info.rtt_min_in_msecs = 10;
+      qos_info.rtt_med_in_msecs = 10;
+      qos_info.up_bits_per_sec = static_cast<uint32_t>(5_MiB);
+      qos_info.down_bits_per_sec = static_cast<uint32_t>(5_MiB);
+      qos_info.flags |=
+          XNET_XNQOSINFO::COMPLETE | XNET_XNQOSINFO::TARGET_CONTACTED;
+
+      qos->count_pending =
+          std::max(static_cast<int32_t>(qos->count_pending - 1), 0);
+      qos->count++;
+    }
+
+    if (qos->count > 0) {
+      xboxkrnl::xeNtSetEvent(event_handle, nullptr);
+    }
+  };
+
+  std::thread qos_lookup_thread(std::move(run));
+
+  std::unique_lock lock(qos_lookup_mutex);
+  qos_lookup_threads[qos_address] = cancel;
+
+  if (probes_count) {
+    qos_lookup_thread.detach();
+  } else {
+    XELOGI("XNetQosLookup: Sync Lookup!");
+    qos_lookup_thread.join();
+  }
+#endif
 
   return X_ERROR_SUCCESS;
 }

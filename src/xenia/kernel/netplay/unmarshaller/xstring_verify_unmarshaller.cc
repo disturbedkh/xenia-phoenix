@@ -8,6 +8,7 @@
  */
 
 #include "xenia/kernel/netplay/unmarshaller/xstring_verify_unmarshaller.h"
+#include "third_party/fmt/include/fmt/format.h"
 
 namespace xe {
 namespace kernel {
@@ -55,7 +56,7 @@ X_HRESULT XStringVerifyUnmarshaller::Deserialize() {
 
   if (GetPosition() !=
       GetAsyncTask().GetXLiveAsyncTask()->marshalled_request_size) {
-    assert_always(std::format("{} deserialization incomplete", __func__));
+    assert_always(fmt::format("{} deserialization incomplete", __func__));
   }
 
   if (LocaleSize() > X_ONLINE_MAX_XSTRING_VERIFY_LOCALE) {

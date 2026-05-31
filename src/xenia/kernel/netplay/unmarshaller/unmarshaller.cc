@@ -8,6 +8,7 @@
  */
 
 #include "xenia/kernel/netplay/unmarshaller/unmarshaller.h"
+#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/kernel/kernel_state.h"
 
 namespace xe {
@@ -36,7 +37,7 @@ std::span<uint8_t> Unmarshaller::Advance(size_t count) {
   const size_t offset = position_ + count;
 
   if (offset > async_task_.data_ptr_.size()) {
-    assert_always(std::format("{}: Out of Bounds Span!", __func__));
+    assert_always(fmt::format("{}: Out of Bounds Span!", __func__));
 
     return std::span<uint8_t>();
   }

@@ -274,8 +274,13 @@ else()
     add_compile_options(
       $<$<COMPILE_LANGUAGE:CXX>:-Wno-shorten-64-to-32>
       -Wno-deprecated-declarations
-      -Wno-character-conversion
     )
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND
+       CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21)
+      add_compile_options(
+        $<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>
+      )
+    endif()
     add_link_options(-Wl,-no_warn_duplicate_libraries)
     link_libraries(
       "-framework CoreFoundation"

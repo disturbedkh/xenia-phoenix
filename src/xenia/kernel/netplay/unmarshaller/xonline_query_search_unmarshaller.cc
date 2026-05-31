@@ -8,6 +8,7 @@
  */
 
 #include "xenia/kernel/netplay/unmarshaller/xonline_query_search_unmarshaller.h"
+#include "third_party/fmt/include/fmt/format.h"
 #include "xenia/base/logging.h"
 
 namespace xe {
@@ -52,7 +53,7 @@ X_HRESULT XQuerySearchUnmarshaller::Deserialize() {
 
   if (GetPosition() !=
       GetAsyncTask().GetXLiveAsyncTask()->marshalled_request_size) {
-    assert_always(std::format("{} deserialization incomplete", __func__));
+    assert_always(fmt::format("{} deserialization incomplete", __func__));
   }
 
   if (results_pre_page_ == 0) {
