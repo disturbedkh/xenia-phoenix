@@ -26,6 +26,8 @@
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/kernel/xam/friends_util.h"
 
+#include "third_party/fmt/include/fmt/format.h"
+
 DEFINE_string(api_address, "192.168.0.1:36000/",
               "Xenia Server Address e.g. IP:PORT", "Live");
 
@@ -2484,7 +2486,7 @@ XLiveAPI::GetOfflineFriendsPresence(uint64_t xuid) {
 
   for (uint32_t count = 1; const auto& xuid : user_profile->GetFriendsXUIDs()) {
     FriendPresenceObjectJSON peer = {};
-    peer.Gamertag(std::format("Friend {}", count));
+    peer.Gamertag(fmt::format("Friend {}", count));
     peer.XUID(xuid);
 
     count++;
