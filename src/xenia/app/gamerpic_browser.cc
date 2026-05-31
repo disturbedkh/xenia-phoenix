@@ -18,6 +18,7 @@
 #include "xenia/app/gamerpic_browser.h"
 #include "xenia/base/jpeg_utils.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/platform.h"
 #include "xenia/base/png_utils.h"
 #include "xenia/base/system.h"
 #include "xenia/kernel/netplay/xlive_api.h"
@@ -86,7 +87,7 @@ void TitleGamerpicBrowser::CleanupTitleImagesThreads() {
   load_title_images_worker_threads_.erase(
       std::remove_if(load_title_images_worker_threads_.begin(),
                      load_title_images_worker_threads_.end(),
-                     [](const std::stop_source& source) {
+                     [](const XeStopSource& source) {
                        return source.stop_requested();
                      }),
       load_title_images_worker_threads_.end());
@@ -203,8 +204,7 @@ void TitleGamerpicBrowser::OnDraw(ImGuiIO& io) {
 
       // We need to use a separate thread otherwise window will freeze.
       if (ImGui::TextLink(lbl_actual_source.c_str())) {
-        std::jthread open_link(LaunchWebBrowser, lbl_actual_source);
-        open_link.detach();
+        std::thread(LaunchWebBrowser, lbl_actual_source).detach();
       }
       ImGui::SetCursorPos(pos);
 
@@ -1116,10 +1116,11 @@ TitleGamerpicBrowser::LoadLastPage() {
 
 void TitleGamerpicBrowser::LoadGameImagesAsync(
     xe::kernel::PageGamerpicsObjectJSON page_info) {
-  std::stop_source thread_source = {};
+  XeStopSource thread_source = {};
 
   load_title_images_worker_threads_.push_back(thread_source);
 
+#if !XE_PLATFORM_ANDROID
   std::jthread thread(
       std::bind_front(&TitleGamerpicBrowser::LoadGameImages, this),
       thread_source.get_token(), thread_source, page_info, title_images_,
@@ -1127,10 +1128,18 @@ void TitleGamerpicBrowser::LoadGameImagesAsync(
       std::move(emulator_window_->imgui_drawer_shared()));
 
   thread.detach();
+#else
+  std::thread(
+      std::bind_front(&TitleGamerpicBrowser::LoadGameImages, this),
+      thread_source.get_token(), thread_source, page_info, title_images_,
+      immediate_title_images_,
+      std::move(emulator_window_->imgui_drawer_shared()))
+      .detach();
+#endif
 }
 
 void TitleGamerpicBrowser::LoadGameImages(
-    std::stop_token stoken, std::stop_source ssource,
+    XeStopToken stoken, XeStopSource ssource,
     xe::kernel::PageGamerpicsObjectJSON page_info,
     std::shared_ptr<AtomicTitlesMap> title_images,
     std::shared_ptr<AtomicImmediateTitlesMap> immediate_title_images,
@@ -1213,6 +1222,7 @@ void TitleGamerpicBrowser::LoadGameImages(
 
 void TitleGamerpicBrowser::LoadDashboardGamerpicsAsync(
     xe::kernel::GameTitle game) {
+#if !XE_PLATFORM_ANDROID
   std::jthread thread(
       std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this), game,
       title_gamerpics_, immediate_title_gamerpics_,
@@ -1221,9 +1231,19 @@ void TitleGamerpicBrowser::LoadDashboardGamerpicsAsync(
   load_dashboard_gamerpics_worker_thread_ = thread.get_stop_source();
 
   thread.detach();
+#else
+  load_dashboard_gamerpics_worker_thread_ = XeStopSource();
+  std::thread(
+      std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this),
+      load_dashboard_gamerpics_worker_thread_->get_token(), game,
+      title_gamerpics_, immediate_title_gamerpics_,
+      std::move(emulator_window_->imgui_drawer_shared()))
+      .detach();
+#endif
 }
 
 void TitleGamerpicBrowser::LoadGamerpicsAsync(xe::kernel::GameTitle game) {
+#if !XE_PLATFORM_ANDROID
   std::jthread thread(
       std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this), game,
       title_gamerpics_, immediate_title_gamerpics_,
@@ -1232,10 +1252,19 @@ void TitleGamerpicBrowser::LoadGamerpicsAsync(xe::kernel::GameTitle game) {
   load_gamerpics_worker_thread_ = thread.get_stop_source();
 
   thread.detach();
+#else
+  load_gamerpics_worker_thread_ = XeStopSource();
+  std::thread(
+      std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this),
+      load_gamerpics_worker_thread_->get_token(), game, title_gamerpics_,
+      immediate_title_gamerpics_,
+      std::move(emulator_window_->imgui_drawer_shared()))
+      .detach();
+#endif
 }
 
 void TitleGamerpicBrowser::LoadGamerpics(
-    std::stop_token stoken, xe::kernel::GameTitle game,
+    XeStopToken stoken, xe::kernel::GameTitle game,
     std::shared_ptr<AtomicGamerpicsMap> title_gamerpics,
     std::shared_ptr<AtomicImmediateTitleGamerpics> immediate_title_gamerpics,
     std::shared_ptr<ui::ImGuiDrawer> imgui_drawer) {

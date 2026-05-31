@@ -13,6 +13,7 @@
 #include <future>
 #include <vector>
 
+#include "xenia/base/stop_token_compat.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/netplay/json/page_gamerpics_object_json.h"
 #include "xenia/kernel/netplay/json/title_gamerpics_object_json.h"
@@ -138,7 +139,7 @@ class TitleGamerpicBrowser final : public ui::ImGuiDialog {
   void LoadGameImagesAsync(const xe::kernel::PageGamerpicsObjectJSON page_info);
 
   void LoadGameImages(
-      std::stop_token stoken, std::stop_source ssource,
+      XeStopToken stoken, XeStopSource ssource,
       const xe::kernel::PageGamerpicsObjectJSON page_info,
       std::shared_ptr<AtomicTitlesMap> title_images,
       std::shared_ptr<AtomicImmediateTitlesMap> immediate_title_images,
@@ -157,7 +158,7 @@ class TitleGamerpicBrowser final : public ui::ImGuiDialog {
   void LoadGamerpicsAsync(const xe::kernel::GameTitle game);
 
   void LoadGamerpics(
-      std::stop_token stoken, xe::kernel::GameTitle game,
+      XeStopToken stoken, xe::kernel::GameTitle game,
       std::shared_ptr<AtomicGamerpicsMap> title_gamerpics,
       std::shared_ptr<AtomicImmediateTitleGamerpics> immediate_title_gamerpics,
       std::shared_ptr<ui::ImGuiDrawer> imgui_drawer);
@@ -196,9 +197,9 @@ class TitleGamerpicBrowser final : public ui::ImGuiDialog {
   std::shared_ptr<AtomicGamerpicsMap> title_gamerpics_;
   std::shared_ptr<AtomicImmediateTitleGamerpics> immediate_title_gamerpics_;
 
-  std::vector<std::stop_source> load_title_images_worker_threads_;
-  std::optional<std::stop_source> load_gamerpics_worker_thread_;
-  std::optional<std::stop_source> load_dashboard_gamerpics_worker_thread_;
+  std::vector<XeStopSource> load_title_images_worker_threads_;
+  std::optional<XeStopSource> load_gamerpics_worker_thread_;
+  std::optional<XeStopSource> load_dashboard_gamerpics_worker_thread_;
 
   bool page_changed_ = true;
 
