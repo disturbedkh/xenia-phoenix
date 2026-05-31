@@ -1043,9 +1043,9 @@ bool xeDrawFriendContent(xe::ui::ImGuiDrawer* imgui_drawer,
       if (kernel_state()->title_id() == 0 || title_id == 0 || same_title) {
         ImGui::SetTooltip("Join gaming session");
       } else {
-        ImGui::SetTooltip(
-            fmt::format("{} is playing a different game", presence.Gamertag())
-                .c_str());
+        ImGui::SetTooltip("%s", fmt::format("{} is playing a different game",
+                                            presence.Gamertag())
+                                    .c_str());
       }
     }
   }
@@ -2048,7 +2048,7 @@ void xeDrawUPnPAndPorts(xe::ui::ImGuiDrawer* imgui_drawer,
                   }
                 }
 
-                ImGui::TextWrapped(error_status.c_str());
+                ImGui::TextWrapped("%s", error_status.c_str());
 
                 ImGui::TableNextColumn();
 

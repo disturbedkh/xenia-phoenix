@@ -61,7 +61,8 @@ void GameDetailPanel::Draw(float width) {
     ImGui::TextDisabled("Type: %s", entry_->media_type.c_str());
   }
   if (entry_->play_seconds > 0) {
-    ImGui::Text("Play time: %llu min", entry_->play_seconds / 60);
+    ImGui::Text("Play time: %llu min",
+                static_cast<unsigned long long>(entry_->play_seconds / 60));
   }
 
   if (auto meta = metadata_.Lookup(entry_->title_id)) {

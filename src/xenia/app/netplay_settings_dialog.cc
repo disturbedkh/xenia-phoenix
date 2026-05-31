@@ -7,6 +7,8 @@
  ******************************************************************************
  */
 
+#include <thread>
+
 #include "xenia/app/netplay_settings_dialog.h"
 #include "xenia/app/discord/discord_presence.h"
 #include "xenia/app/emulator_window.h"
@@ -293,7 +295,7 @@ void NetplaySettingsDialog::OnDraw(ImGuiIO& io) {
       ImVec2 desc_size = ImGui::CalcTextSize(desc.c_str());
 
       ImGui::SetCursorPosX((ImGui::GetWindowWidth() - desc_size.x) * 0.5f);
-      ImGui::Text(desc.c_str());
+      ImGui::TextUnformatted(desc.c_str());
 
       ImGui::Separator();
 
@@ -561,23 +563,22 @@ void NetplayStatusDialog::OnDraw(ImGuiIO& io) {
       upnp_state = "UPnP: Disabled";
     }
 
-    ImGui::Text(xlive_api_state.c_str());
+    ImGui::TextUnformatted(xlive_api_state.c_str());
     ImGui::Spacing();
 
-    ImGui::Text(upnp_state.c_str());
+    ImGui::TextUnformatted(upnp_state.c_str());
     ImGui::Spacing();
 
     if (is_failed) {
       ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(240, 50, 50, 255));
     }
 
-    ImGui::Text(api_server_state.c_str());
+    ImGui::TextUnformatted(api_server_state.c_str());
 
     if (!is_pending) {
       // We need to use a separate thread otherwise window will freeze.
       if (ImGui::TextLink(cvars::api_address.c_str())) {
-        std::jthread open_link(LaunchWebBrowser, cvars::api_address);
-        open_link.detach();
+        std::thread(LaunchWebBrowser, cvars::api_address).detach();
       }
     }
 

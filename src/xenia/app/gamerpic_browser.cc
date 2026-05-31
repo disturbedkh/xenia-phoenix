@@ -231,7 +231,7 @@ void TitleGamerpicBrowser::OnDraw(ImGuiIO& io) {
 
         ImGui::TableNextColumn();
 
-        ImGui::Text(lbl_games_pre_page.c_str());
+        ImGui::TextUnformatted(lbl_games_pre_page.c_str());
 
         ImGui::TableNextColumn();
         ImGui::SetNextItemWidth(item_width);
@@ -478,7 +478,7 @@ void TitleGamerpicBrowser::OnDraw(ImGuiIO& io) {
                 fmt::format("##TitleContainer{:08X}", title.id).c_str(),
                 ImVec2(-1, 30))) {
           ImGui::SetWindowFontScale(1.1f);
-          ImGui::TextWrapped(title.name.c_str());
+          ImGui::TextWrapped("%s", title.name.c_str());
           ImGui::SetWindowFontScale(1.0f);
         }
         ImGui::EndChild();

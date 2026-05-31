@@ -915,7 +915,7 @@ bool Updater::UpdateAndRestart(const std::filesystem::path& zip_path) {
   ShExecInfo.nShow = SW_HIDE;
 
   return ShellExecuteEx(&ShExecInfo);
-#elif XE_PLATFORM_LINUX
+#elif XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
   std::filesystem::permissions(update_script_filename,
                                std::filesystem::perms::owner_exec |
                                    std::filesystem::perms::group_exec |
@@ -925,6 +925,9 @@ bool Updater::UpdateAndRestart(const std::filesystem::path& zip_path) {
   std::string exec = fmt::format("./{}", update_script_filename);
   // Doesn't return
   execlp("/bin/bash", "/bin/bash", "-c", exec.c_str(), nullptr);
+  return false;
+#else
+  // Android (and other platforms) update out-of-band; no self-relaunch.
   return false;
 #endif
 }

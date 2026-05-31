@@ -10,11 +10,15 @@
 #include <ctime>
 #include <regex>
 
+#include "xenia/base/platform.h"
+
+#if !XE_PLATFORM_ANDROID
 extern "C" {
 #include "third_party/FFmpeg/libavutil/base64.h"
 }
 
 #include "third_party/discord-rpc/include/discord_rpc.h"
+#endif
 
 #include "xenia/app/discord/discord_presence.h"
 #include "xenia/base/string.h"
@@ -24,6 +28,36 @@ DEFINE_bool(discord, true, "Enable Discord rich presence", "General");
 // TODO: This library has been deprecated in favor of Discord's GameSDK.
 namespace xe {
 namespace discord {
+
+#if XE_PLATFORM_ANDROID
+
+// Android has no discord-rpc / FFmpeg base64 backend; rich presence is a no-op.
+void DiscordPresence::Initialize() {}
+void DiscordPresence::Update() {}
+void DiscordPresence::NotPlaying() {}
+void DiscordPresence::PlayingTitle(const std::string_view game_title,
+                                   const std::string_view state) {}
+void DiscordPresence::UpdateSession(uint32_t title_id,
+                                    const kernel::XSESSION_INFO* session_info,
+                                    uint32_t party_size, uint32_t party_max,
+                                    uint64_t host_xuid) {}
+
+std::optional<kernel::X_INVITE_INFO> DiscordPresence::DecodeJoinSecret(
+    const std::string join_secret) {
+  return std::nullopt;
+}
+
+void DiscordPresence::SetJoinRequestHandler(
+    std::function<void(kernel::X_INVITE_INFO)> handler) {}
+void DiscordPresence::ProcessJoinSecret(const char* join_secret) {}
+void DiscordPresence::UpdatePresence() {}
+void DiscordPresence::Shutdown() {}
+
+void DiscordPresence::SetDiscordState(const bool state) {
+  OVERRIDE_bool(discord, state);
+}
+
+#else
 
 static void HandleDiscordReady(const DiscordUser* request) {}
 static void HandleDiscordError(int errorCode, const char* message) {}
@@ -203,6 +237,8 @@ void DiscordPresence::Shutdown() {
 void DiscordPresence::SetDiscordState(bool state) {
   OVERRIDE_bool(discord, state);
 }
+
+#endif  // XE_PLATFORM_ANDROID
 
 }  // namespace discord
 }  // namespace xe

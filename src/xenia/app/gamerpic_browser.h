@@ -13,6 +13,7 @@
 #include <future>
 #include <vector>
 
+#include "xenia/base/atomic_shared_ptr.h"
 #include "xenia/base/stop_token_compat.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/netplay/json/page_gamerpics_object_json.h"
@@ -85,12 +86,11 @@ class TitleGamerpicBrowser final : public ui::ImGuiDialog {
   using GamerpicsMap = std::map<uint32_t, TitlesMap>;
   using ImmediateGamerpicsMap = std::map<uint32_t, ImmediateTitleMap>;
 
-  using AtomicTitlesMap = std::atomic<std::shared_ptr<const TitlesMap>>;
-  using AtomicImmediateTitlesMap =
-      std::atomic<std::shared_ptr<const ImmediateTitleMap>>;
-  using AtomicGamerpicsMap = std::atomic<std::shared_ptr<const GamerpicsMap>>;
+  using AtomicTitlesMap = xe::AtomicSharedPtr<const TitlesMap>;
+  using AtomicImmediateTitlesMap = xe::AtomicSharedPtr<const ImmediateTitleMap>;
+  using AtomicGamerpicsMap = xe::AtomicSharedPtr<const GamerpicsMap>;
   using AtomicImmediateTitleGamerpics =
-      std::atomic<std::shared_ptr<const ImmediateGamerpicsMap>>;
+      xe::AtomicSharedPtr<const ImmediateGamerpicsMap>;
 
   void Initalize();
 

@@ -606,13 +606,13 @@ void ManagerDialog::OnDraw(ImGuiIO& io) {
       ImVec2 desc2_size = ImGui::CalcTextSize(desc2.c_str());
 
       ImGui::SetCursorPosX((ImGui::GetWindowWidth() - desc_size.x) * 0.5f);
-      ImGui::Text(desc.c_str());
+      ImGui::TextUnformatted(desc.c_str());
 
       if (!is_profile_signed_in) {
         ImGui::Spacing();
 
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - desc2_size.x) * 0.5f);
-        ImGui::Text(desc2.c_str());
+        ImGui::TextUnformatted(desc2.c_str());
       }
 
       ImGui::Separator();
