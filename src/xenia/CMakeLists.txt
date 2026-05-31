@@ -18,9 +18,9 @@ endif()
 if(XE_TARGET_AARCH64)
   add_subdirectory(cpu/backend/a64)
 endif()
-if(NOT ANDROID)
-  add_subdirectory(debug)
-endif()
+# Phoenix localhost probe builds everywhere; the ImGui debug UI under debug/ui
+# is excluded on Android inside debug/CMakeLists.txt.
+add_subdirectory(debug)
 add_subdirectory(apu)
 add_subdirectory(apu/nop)
 add_subdirectory(gpu)
@@ -34,9 +34,10 @@ add_subdirectory(patcher)
 add_subdirectory(ui)
 add_subdirectory(ui/vulkan)
 add_subdirectory(vfs)
-if(NOT ANDROID)
-  add_subdirectory(app/discord)
-endif()
+# Discord presence: real discord-rpc backend on desktop, no-op stub on Android
+# (discord-rpc + FFmpeg base64 are desktop-only). Built everywhere so the
+# kernel/app link references resolve.
+add_subdirectory(app/discord)
 add_subdirectory(app)
 
 # SDL-based modules (desktop Linux / Windows only — not Android)
