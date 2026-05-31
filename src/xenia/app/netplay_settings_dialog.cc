@@ -9,9 +9,9 @@
 
 #include <thread>
 
-#include "xenia/app/netplay_settings_dialog.h"
 #include "xenia/app/discord/discord_presence.h"
 #include "xenia/app/emulator_window.h"
+#include "xenia/app/netplay_settings_dialog.h"
 #include "xenia/base/logging.h"
 #include "xenia/base/system.h"
 

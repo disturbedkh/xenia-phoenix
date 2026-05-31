@@ -85,11 +85,10 @@ void TitleGamerpicBrowser::OnClose() {
 
 void TitleGamerpicBrowser::CleanupTitleImagesThreads() {
   load_title_images_worker_threads_.erase(
-      std::remove_if(load_title_images_worker_threads_.begin(),
-                     load_title_images_worker_threads_.end(),
-                     [](const XeStopSource& source) {
-                       return source.stop_requested();
-                     }),
+      std::remove_if(
+          load_title_images_worker_threads_.begin(),
+          load_title_images_worker_threads_.end(),
+          [](const XeStopSource& source) { return source.stop_requested(); }),
       load_title_images_worker_threads_.end());
 }
 
@@ -1129,11 +1128,10 @@ void TitleGamerpicBrowser::LoadGameImagesAsync(
 
   thread.detach();
 #else
-  std::thread(
-      std::bind_front(&TitleGamerpicBrowser::LoadGameImages, this),
-      thread_source.get_token(), thread_source, page_info, title_images_,
-      immediate_title_images_,
-      std::move(emulator_window_->imgui_drawer_shared()))
+  std::thread(std::bind_front(&TitleGamerpicBrowser::LoadGameImages, this),
+              thread_source.get_token(), thread_source, page_info,
+              title_images_, immediate_title_images_,
+              std::move(emulator_window_->imgui_drawer_shared()))
       .detach();
 #endif
 }
@@ -1233,11 +1231,10 @@ void TitleGamerpicBrowser::LoadDashboardGamerpicsAsync(
   thread.detach();
 #else
   load_dashboard_gamerpics_worker_thread_ = XeStopSource();
-  std::thread(
-      std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this),
-      load_dashboard_gamerpics_worker_thread_->get_token(), game,
-      title_gamerpics_, immediate_title_gamerpics_,
-      std::move(emulator_window_->imgui_drawer_shared()))
+  std::thread(std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this),
+              load_dashboard_gamerpics_worker_thread_->get_token(), game,
+              title_gamerpics_, immediate_title_gamerpics_,
+              std::move(emulator_window_->imgui_drawer_shared()))
       .detach();
 #endif
 }
@@ -1254,11 +1251,10 @@ void TitleGamerpicBrowser::LoadGamerpicsAsync(xe::kernel::GameTitle game) {
   thread.detach();
 #else
   load_gamerpics_worker_thread_ = XeStopSource();
-  std::thread(
-      std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this),
-      load_gamerpics_worker_thread_->get_token(), game, title_gamerpics_,
-      immediate_title_gamerpics_,
-      std::move(emulator_window_->imgui_drawer_shared()))
+  std::thread(std::bind_front(&TitleGamerpicBrowser::LoadGamerpics, this),
+              load_gamerpics_worker_thread_->get_token(), game,
+              title_gamerpics_, immediate_title_gamerpics_,
+              std::move(emulator_window_->imgui_drawer_shared()))
       .detach();
 #endif
 }
