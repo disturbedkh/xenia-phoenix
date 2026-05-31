@@ -1,6 +1,6 @@
 /**
  ******************************************************************************
- * JSON builders for Phoenix Probe /netplay/* endpoints.
+ * JSON builders for Phoenix Probe netplay HTTP endpoints.
  ******************************************************************************
  */
 

@@ -37,6 +37,7 @@
 #include <WS2tcpip.h>
 #else
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/select.h>
@@ -177,8 +178,8 @@ struct XNQOSLISTENSTATS {
 static_assert_size(XNQOSLISTENSTATS, 0x1C);
 
 struct X_TIMEVAL {
-  xe::be<long> tv_sec;
-  xe::be<long> tv_usec;
+  xe::be<int32_t> tv_sec;
+  xe::be<int32_t> tv_usec;
 };
 static_assert_size(X_TIMEVAL, 0x8);
 
@@ -1055,8 +1056,14 @@ dword_result_t NetDll_XNetDnsLookup_entry(dword_t caller, lpstring_t host,
       return;
     }
 
+#ifdef XE_PLATFORM_WIN32
     ADDRINFOA hints = {.ai_family = XSocket::X_AF_INET};
     PADDRINFOA addr_info = {};
+#else
+    struct addrinfo hints = {};
+    hints.ai_family = XSocket::X_AF_INET;
+    struct addrinfo* addr_info = nullptr;
+#endif
 
     const int status = getaddrinfo(host, nullptr, &hints, &addr_info);
 
@@ -1070,14 +1077,20 @@ dword_result_t NetDll_XNetDnsLookup_entry(dword_t caller, lpstring_t host,
     XELOGI("DNS Lookup: Success");
 
     uint32_t address_index = 0;
-    addrinfo* info = addr_info;
+#ifdef XE_PLATFORM_WIN32
+    PADDRINFOA info = addr_info;
+#else
+    struct addrinfo* info = addr_info;
+#endif
 
     while (info && address_index < std::size(dns->aina) &&
            !stop_token.stop_requested()) {
       dns->aina[address_index] = *reinterpret_cast<in_addr*>(info->ai_addr);
-      info = addr_info->ai_next;
+      info = info->ai_next;
       address_index++;
     }
+
+    freeaddrinfo(addr_info);
 
     dns->cina = address_index;
     dns->status = XSocket::GetLastWSAError();

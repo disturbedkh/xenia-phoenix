@@ -16,10 +16,19 @@
 
 #if XE_PLATFORM_WIN32
 #include <Iphlpapi.h>
+#include <WinSock2.h>
 #else
+#include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <net/if_arp.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#define INVALID_SOCKET (-1)
+#define SOCKET_ERROR (-1)
+typedef int SOCKET;
+inline int closesocket(SOCKET s) { return close(s); }
 #endif
 
 DEFINE_string(network_guid, "", "Network Interface GUID", "Live");
