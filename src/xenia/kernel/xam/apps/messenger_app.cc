@@ -10,7 +10,6 @@
 #include "xenia/kernel/xam/apps/messenger_app.h"
 
 #include "xenia/base/logging.h"
-#include "xenia/kernel/util/stub_trace.h"
 
 namespace xe {
 namespace kernel {
@@ -20,9 +19,10 @@ namespace apps {
 MessengerApp::MessengerApp(KernelState* kernel_state)
     : App(kernel_state, 0xF7) {}
 
-X_RESULT MessengerApp::DispatchMessageSync(uint32_t message,
-                                           uint32_t buffer_ptr,
-                                           uint32_t buffer_length) {
+X_HRESULT MessengerApp::ExecuteDispatchMessage(uint32_t message,
+                                               uint32_t buffer_ptr,
+                                               uint32_t buffer_length,
+                                               uint32_t* extended_error) {
   // NOTE: buffer_length may be zero or valid.
   auto buffer = memory_->TranslateVirtual(buffer_ptr);
   switch (message) {
@@ -55,8 +55,6 @@ X_RESULT MessengerApp::DispatchMessageSync(uint32_t message,
       return X_E_FAIL;
     }
   }
-  LogKernelStubHit("xam", "MessengerApp::DispatchMessage",
-                   "unimplemented message");
   XELOGE(
       "Unimplemented Messenger message app={:08X}, msg={:08X}, arg1={:08X}, "
       "arg2={:08X}",

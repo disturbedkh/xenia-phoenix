@@ -15,18 +15,10 @@ export ANDROID_NDK_ROOT=/opt/android-ndk-r26c
 cd /src
 git submodule update --init --recursive
 if [[ "${ANDROID_BUILD_CLEAN:-0}" == "1" ]]; then
-  rm -rf build-android-arm64
+  rm -rf Build/Android
 fi
 
-cmake -S . -B build-android-arm64 -G Ninja \
-  -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
-  -DANDROID_ABI=arm64-v8a \
-  -DANDROID_PLATFORM=android-26 \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DXENIA_BUILD_TESTS=OFF \
-  -DXENIA_BUILD_MISC=OFF
+python3 xenia-build.py build --target-os android --config=release --target app
 
-cmake --build build-android-arm64 --target xenia-app -j"$(nproc)"
-
-test -f build-android-arm64/bin/Android/libxenia-app.so
+test -f Build/Android/Release/libxenia-app.so
 echo "OK: libxenia-app.so"

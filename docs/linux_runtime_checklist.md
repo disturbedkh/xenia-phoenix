@@ -5,7 +5,7 @@ Manual sign-off on **bare-metal Ubuntu 24.04** (or equivalent). Automated gates 
 ## Prerequisites
 
 ```bash
-./scripts/xenia-phoenix-linux.sh --help   # or build/bin/Linux/Release/xenia_canary
+./scripts/xenia-phoenix-linux.sh --help   # or Build/Linux/x64/Release/xenia_canary
 export GDK_BACKEND=x11
 # VULKAN_SDK set by launcher if ~/vulkan-sdk exists; else install LunarG SDK
 ```

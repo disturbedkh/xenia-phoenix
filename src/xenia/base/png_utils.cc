@@ -8,11 +8,28 @@
  */
 
 #include "xenia/base/png_utils.h"
+
 #include "xenia/base/filesystem.h"
 
 #include "third_party/stb/stb_image.h"
 
 namespace xe {
+
+bool IsDataPngImage(std::span<const uint8_t> png_data) {
+  const uint32_t start_offset = 1;
+  const uint32_t magic_size = 3;
+  const uint32_t size = start_offset + magic_size;
+
+  if (png_data.empty() || png_data.size() < size) {
+    return false;
+  }
+
+  const auto magic = png_data.subspan(start_offset, magic_size);
+  const std::string png_magic =
+      std::string(reinterpret_cast<const char*>(magic.data()), magic_size);
+
+  return png_magic == "PNG";
+}
 
 bool IsFilePngImage(const std::filesystem::path& file_path) {
   FILE* file = xe::filesystem::OpenFile(file_path, "rb");
@@ -23,16 +40,13 @@ bool IsFilePngImage(const std::filesystem::path& file_path) {
   constexpr uint8_t magic_size = 4;
   char magic[magic_size];
   if (fread(&magic, 1, magic_size, file) != magic_size) {
+    fclose(file);
     return false;
   }
 
   fclose(file);
 
-  if (magic[1] != 'P' || magic[2] != 'N' || magic[3] != 'G') {
-    return false;
-  }
-
-  return true;
+  return magic[1] == 'P' && magic[2] == 'N' && magic[3] == 'G';
 }
 
 std::pair<uint16_t, uint16_t> GetImageResolution(
@@ -44,11 +58,12 @@ std::pair<uint16_t, uint16_t> GetImageResolution(
 
   int width, height, channels;
   if (!stbi_info_from_file(file, &width, &height, &channels)) {
+    fclose(file);
     return {};
   }
 
   fclose(file);
-  return {width, height};
+  return {static_cast<uint16_t>(width), static_cast<uint16_t>(height)};
 }
 
 std::vector<uint8_t> ReadPngFromFile(const std::filesystem::path& file_path) {

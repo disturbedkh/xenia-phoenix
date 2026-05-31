@@ -1389,6 +1389,7 @@ void Thread::Exit(int exit_code) {
 }
 
 void set_name(const std::string_view name) {
+  set_current_thread_name_storage(name);
   pthread_setname_np(pthread_self(), std::string(name).c_str());
 #if XE_PLATFORM_ANDROID
   if (!android_pthread_getname_np_ && current_thread_) {

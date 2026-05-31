@@ -180,6 +180,18 @@ void ImGuiDrawer::Initialize() {
   InitializeFonts(font_size);
   InitializeFonts(title_font_size);
 
+  const std::filesystem::path nxe_font_candidates[] = {
+      std::filesystem::path("src/xenia/app/assets/dashboard/fonts/X360.ttf"),
+      std::filesystem::path("assets/dashboard/fonts/X360.ttf"),
+  };
+  for (const auto& candidate : nxe_font_candidates) {
+    std::error_code ec;
+    if (std::filesystem::exists(candidate, ec)) {
+      LoadNxeDisplayFont(candidate, 48.f);
+      break;
+    }
+  }
+
 #if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
   io.SetClipboardTextFn = SetClipboardText;
   io.GetClipboardTextFn = GetClipboardText;
@@ -535,6 +547,30 @@ void ImGuiDrawer::InitializeFonts(const float font_size) {
   }
 
   LoadJapaneseFont(io, font_size);
+}
+
+void ImGuiDrawer::LoadNxeDisplayFont(const std::filesystem::path& ttf_path,
+                                     float display_size) {
+  LoadNxeDisplayFontInternal(ttf_path, display_size);
+}
+
+void ImGuiDrawer::LoadNxeDisplayFontInternal(
+    const std::filesystem::path& ttf_path, float display_size) {
+  auto& io = ImGui::GetIO();
+  std::error_code ec;
+  if (!std::filesystem::exists(ttf_path, ec)) {
+    return;
+  }
+  ImFontConfig font_config;
+  font_config.OversampleH = font_config.OversampleV = 2;
+  font_config.PixelSnapH = true;
+  display_font_ = io.Fonts->AddFontFromFileTTF(
+      xe::path_to_utf8(ttf_path).c_str(), display_size, &font_config,
+      font_glyph_ranges);
+  io.Fonts->Build();
+  if (display_font_ && !display_font_->IsLoaded()) {
+    display_font_ = nullptr;
+  }
 }
 
 void ImGuiDrawer::SetupFontTexture() {

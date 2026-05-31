@@ -31,9 +31,9 @@ python tools/tier0/list_smoke_patches.py --title-id 4D5307D1 5454082B
 The script uses heuristics only (description keywords, NOP/branch patterns in
 patch data). **All category D rows need human review** before filing issues.
 
-## Top root-cause themes (2026-05-16 — `game-patches` clone)
+## Top root-cause themes (2026-05-30 � `game-patches` clone)
 
-Counts: **C=988**, **D=80**, **B=536**, **A=83** (`docs/patch_debt_dashboard_data.json`).
+Counts: **C=598**, **D=61**, **B=945**, **A=83** (`docs/patch_debt_dashboard_data.json`). (2026-05-30 full `game-patches` tree.)
 
 1. **GPU / post-processing** — lens flare, motion blur, DoF, shadow/LOD hacks (often category C mis-tagged as visual QoL; verify on hardware).
 2. **Input / UI cosmetics** — PS3 button prompts, widescreen patches (many are B, not emu debt).

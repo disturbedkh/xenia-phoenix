@@ -12,8 +12,10 @@
 #include "xenia/apu/audio_system.h"
 #include "xenia/apu/xma_context.h"
 #include "xenia/base/logging.h"
+#include "xenia/base/subsystem_tracer.h"
+#include "xenia/base/threading.h"
 
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
 #include "xenia/apu/sdl/sdl_audio_driver.h"
 #endif
 
@@ -151,15 +153,52 @@ AudioMediaPlayer::AudioMediaPlayer(apu::AudioSystem* audio_system,
     : audio_system_(audio_system),
       kernel_state_(kernel_state),
       active_playlist_(nullptr),
-      active_song_(nullptr) {};
+      active_song_(nullptr) {
+  XE_SUBSYSTEM_TRACE("APU::AudioMediaPlayer", "ctor");
+}
 
-AudioMediaPlayer::~AudioMediaPlayer() {
+void AudioMediaPlayer::Shutdown() {
+  XE_SUBSYSTEM_TRACE("APU::AudioMediaPlayer", "Shutdown");
+  // Idempotent: short-circuit if the worker was never started or already
+  // joined.
+  if (!worker_thread_) {
+    worker_running_ = false;
+    return;
+  }
+
+  XELOGI("AudioMediaPlayer::Shutdown: stopping playback and joining worker");
+
+  // 1) Stop any active playback so the worker's inner loops see active_song_ ==
+  //    null and unwind out of Play() / ProcessAudioLoop quickly.
   Stop();
-  // Edge: stop worker before fences get destroyed; worker waits on
-  // resume_fence_.
+
+  // 2) Tell the worker to exit and unblock it from resume_fence_.Wait().
   worker_running_ = false;
   resume_fence_.Signal();
+
+  // 3) Wait for the worker thread to actually exit BEFORE the
+  //    AudioMediaPlayer's members (and the kernel_state_ pointer it captured)
+  //    are destroyed. This is the critical step: without it the worker keeps
+  //    running detached and can dereference kernel_state_->file_system() after
+  //    Emulator::Shutdown has nulled the kernel state.
+  auto wait_result = xe::threading::Wait(worker_thread_.get(), false);
+  if (wait_result != xe::threading::WaitResult::kSuccess) {
+    XELOGW(
+        "AudioMediaPlayer::Shutdown: worker thread wait returned {} (expected "
+        "kSuccess); destroying handle anyway",
+        static_cast<int>(wait_result));
+  }
   worker_thread_.reset();
+  XELOGI("AudioMediaPlayer::Shutdown: worker joined");
+}
+
+AudioMediaPlayer::~AudioMediaPlayer() {
+  XE_SUBSYSTEM_TRACE("APU::AudioMediaPlayer", "dtor");
+  // Belt-and-braces: Emulator::ShutdownSubsystems should already have called
+  // Shutdown() while the kernel_state_/audio_system_ pointers were still
+  // valid, but if someone destructs us directly we still need to stop the
+  // worker thread before tearing down our owned resources.
+  Shutdown();
   DeleteDriver();
 };
 
@@ -181,6 +220,7 @@ void AudioMediaPlayer::WorkerThreadMain() {
 }
 
 void AudioMediaPlayer::Setup() {
+  XE_SUBSYSTEM_TRACE("APU::AudioMediaPlayer", "Setup");
   if (!cvars::enable_xmp) {
     return;
   }
@@ -229,6 +269,13 @@ X_STATUS AudioMediaPlayer::Play(uint32_t playlist_handle, uint32_t song_handle,
 }
 
 void AudioMediaPlayer::Play() {
+  // Defensive: if Shutdown has been requested, don't start a fresh decode
+  // session. This avoids racing with Emulator::ShutdownSubsystems destroying
+  // kernel_state_/audio_system_ underneath us.
+  if (!worker_running_.load(std::memory_order_acquire) || !kernel_state_) {
+    return;
+  }
+
   std::span<uint8_t> song_buffer = LoadSongToMemory();
   if (song_buffer.empty()) {
     return;
@@ -409,6 +456,12 @@ std::span<uint8_t> AudioMediaPlayer::LoadSongToMemory() {
   if (!active_song_) {
     return {};
   }
+  // Defensive: never touch kernel_state_ once a Shutdown has been requested or
+  // if the pointer has been invalidated by Emulator teardown.
+  if (!worker_running_.load(std::memory_order_acquire) || !kernel_state_ ||
+      !kernel_state_->file_system()) {
+    return {};
+  }
 
   // Find file based on provided path?
   vfs::File* vfs_file;
@@ -546,7 +599,7 @@ bool AudioMediaPlayer::SetupDriver(uint32_t sample_rate, uint32_t channels) {
     return false;
   }
 
-#if XE_PLATFORM_LINUX
+#if XE_PLATFORM_LINUX && !XE_PLATFORM_ANDROID
   // Edge: use SDL for XMP to avoid ALSA exclusive-mode conflicts with main APU.
   driver_ = std::unique_ptr<AudioDriver>(new xe::apu::sdl::SDLAudioDriver(
       driver_semaphore_.get(), sample_rate, channels, false));

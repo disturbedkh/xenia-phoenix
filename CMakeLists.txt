@@ -77,13 +77,18 @@ else()
   set(XE_PLATFORM_NAME "Linux")
 endif()
 
-# Output directories — strip any vs-* nesting from CMAKE_BINARY_DIR so that
-# VS and Ninja builds for the same architecture share an output directory,
-# while different architectures (build/ vs build-arm64/) stay separate.
-string(REGEX REPLACE "/vs-[^/]+$" "" XE_OUTPUT_ROOT "${CMAKE_BINARY_DIR}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${XE_OUTPUT_ROOT}/bin/${XE_PLATFORM_NAME}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${XE_OUTPUT_ROOT}/bin/${XE_PLATFORM_NAME}")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/obj/${XE_PLATFORM_NAME}")
+# Output directories — strip any /vs* suffix so the devenv VS solution shares
+# the Ninja output tree.  Artifacts land at <Build/OS/arch>/<Config>/.
+string(REGEX REPLACE "/vs[^/]*$" "" XE_OUTPUT_ROOT "${CMAKE_BINARY_DIR}")
+get_property(_is_multi GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(_is_multi)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${XE_OUTPUT_ROOT}")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${XE_OUTPUT_ROOT}")
+else()
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${XE_OUTPUT_ROOT}/${CMAKE_BUILD_TYPE}")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${XE_OUTPUT_ROOT}/${CMAKE_BUILD_TYPE}")
+endif()
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/obj")
 
 # Create scratch/ if needed
 file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/scratch")
@@ -130,6 +135,9 @@ add_compile_definitions($<$<NOT:$<CONFIG:Checked>>:IMGUI_USE_STB_SPRINTF>)
 
 # Static library define
 add_compile_definitions(_LIB)
+
+# Netplay REST client (libcurl static linkage)
+add_compile_definitions(CURL_STATICLIB)
 
 # ==============================================================================
 # Platform-specific global settings
@@ -266,8 +274,13 @@ else()
     add_compile_options(
       $<$<COMPILE_LANGUAGE:CXX>:-Wno-shorten-64-to-32>
       -Wno-deprecated-declarations
-      -Wno-character-conversion
     )
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND
+       CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21)
+      add_compile_options(
+        $<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>
+      )
+    endif()
     add_link_options(-Wl,-no_warn_duplicate_libraries)
     link_libraries(
       "-framework CoreFoundation"

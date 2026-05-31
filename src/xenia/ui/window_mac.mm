@@ -166,7 +166,8 @@ bool MacWindow::OpenImpl() {
   WindowDestructionReceiver destruction_receiver(this);
   CAMetalLayer* layer = (CAMetalLayer*)view.layer;
   OnActualSizeUpdate(uint32_t(layer.drawableSize.width),
-                     uint32_t(layer.drawableSize.height), destruction_receiver);
+                     uint32_t(layer.drawableSize.height),
+                     WindowResizeAction::kManual, destruction_receiver);
   OnFocusUpdate(true, destruction_receiver);
   return true;
 }
@@ -222,7 +223,8 @@ void MacWindow::OnMacClose() { RequestClose(); }
 
 void MacWindow::OnMacResize(uint32_t width, uint32_t height) {
   WindowDestructionReceiver destruction_receiver(this);
-  OnActualSizeUpdate(width, height, destruction_receiver);
+  OnActualSizeUpdate(width, height, WindowResizeAction::kManual,
+                     destruction_receiver);
 }
 
 void MacWindow::OnMacFocus(bool focused) {

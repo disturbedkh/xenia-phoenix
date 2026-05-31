@@ -12,6 +12,7 @@
 
 #include <cstdarg>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 
 #include "third_party/fmt/include/fmt/format.h"
@@ -74,6 +75,13 @@ class DebugPrintLogSink final : public LogSink {
 // Initializes the logging system and any outputs requested.
 // Must be called on startup.
 void InitializeLogging(const std::string_view app_name);
+// Attach (or reattach) the primary file log sink under log_dir.
+// When log_file cvar is empty, creates log_dir/<app>_<timestamp>.log.
+// Safe to call once; subsequent calls are ignored.
+void AttachFileLogSink(const std::filesystem::path& log_dir,
+                       const std::string_view app_name);
+std::filesystem::path GetActiveLogFilePath();
+std::filesystem::path GetLogDirectory();
 void ShutdownLogging();
 void FlushLog();
 
@@ -129,6 +137,11 @@ XE_FORCEINLINE static void AppendLogLineFormat(uint32_t log_src_mask,
 void AppendLogLine(LogLevel log_level, const char prefix_char,
                    const std::string_view str,
                    uint32_t log_mask = LogSrc::Uncategorized);
+
+// Write a sibling crash report next to the active session log.
+// exception_pointers is platform-specific (EXCEPTION_POINTERS* on Win32).
+void WriteCrashSidecar(const char* category, const std::string_view body,
+                       const void* exception_pointers = nullptr);
 
 template <LogLevel ll>
 struct LoggerBatch {

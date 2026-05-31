@@ -11,7 +11,6 @@
 
 #include "xenia/base/logging.h"
 #include "xenia/kernel/kernel_state.h"
-#include "xenia/kernel/util/stub_trace.h"
 #include "xenia/kernel/xam/xam_content_device.h"
 #include "xenia/kernel/xenumerator.h"
 
@@ -31,8 +30,9 @@ namespace apps {
 
 XamApp::XamApp(KernelState* kernel_state) : App(kernel_state, 0xFE) {}
 
-X_HRESULT XamApp::DispatchMessageSync(uint32_t message, uint32_t buffer_ptr,
-                                      uint32_t buffer_length) {
+X_HRESULT XamApp::ExecuteDispatchMessage(uint32_t message, uint32_t buffer_ptr,
+                                         uint32_t buffer_length,
+                                         uint32_t* extended_error) {
   // NOTE: buffer_length may be zero or valid.
   auto buffer = memory_->TranslateVirtual(buffer_ptr);
   switch (message) {
@@ -181,7 +181,6 @@ X_HRESULT XamApp::DispatchMessageSync(uint32_t message, uint32_t buffer_ptr,
       return is_pc_enabled ? X_E_ACCESS_DENIED : X_E_SUCCESS;
     }
   }
-  LogKernelStubHit("xam", "XamApp::DispatchMessage", "unimplemented message");
   XELOGE(
       "Unimplemented XAM message app={:08X}, msg={:08X}, arg1={:08X}, "
       "arg2={:08X}",

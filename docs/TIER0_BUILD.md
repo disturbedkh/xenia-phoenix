@@ -29,11 +29,11 @@ Optional flags:
 ```powershell
 git submodule update --init --recursive
 cmake --preset default -DXENIA_BUILD_TESTS=ON -DXENIA_BUILD_MISC=ON
-cmake --build build --config Release --parallel
-cmake --build build --config Checked --parallel
+cmake --build Build/Windows/x64/vs --config Release --parallel
+cmake --build Build/Windows/x64/vs --config Checked --parallel
 ```
 
-Outputs are under `build/bin/Windows/` (see root `CMakeLists.txt` `CMAKE_RUNTIME_OUTPUT_DIRECTORY`).
+Outputs are under `Build/Windows/x64/` (see root `CMakeLists.txt` `CMAKE_RUNTIME_OUTPUT_DIRECTORY`).
 
 ## Binaries used by Tier 0
 

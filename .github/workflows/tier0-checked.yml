@@ -2,6 +2,7 @@
 name: Tier0 Checked (Windows)
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 jobs:
@@ -17,10 +18,10 @@ jobs:
         run: cmake --preset vs -DXENIA_BUILD_TESTS=ON
 
       - name: Build Checked xenia-cpu-tests
-        run: cmake --build build --config Checked --parallel --target xenia-cpu-tests
+        run: cmake --build Build/Windows/x64/vs --config Checked --parallel --target xenia-cpu-tests
 
       - name: Run xenia-cpu-tests (Checked)
         shell: pwsh
         run: |
-          Set-Location build/bin/Windows/Checked
+          Set-Location Build/Windows/x64/Checked
           ./xenia-cpu-tests.exe

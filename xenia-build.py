@@ -25,6 +25,8 @@ __author__ = "ben.vanik@gmail.com (Ben Vanik)"
 
 
 self_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(self_path, "tools", "build"))
+import xenia_paths as xp
 
 # TODO: Automate getting these entries
 XENIA_TARGETS = [
@@ -444,9 +446,11 @@ def shell_call(command, throw_on_error=True, stdout_path=None, stderr_path=None,
     return result
 
 
-def generate_version_h(build_dir="build"):
+def generate_version_h(build_dir=None):
     """Generates version.h in the given build directory with current git info.
     """
+    if build_dir is None:
+        build_dir = get_build_dir()
     os.makedirs(build_dir, exist_ok=True)
     header_file = os.path.join(build_dir, "version.h")
     pr_number = None
@@ -704,25 +708,86 @@ def is_amd64():
     return normalize_target_arch(platform.machine()) in ("x64", "x86_64", "amd64", "x86")
 
 def is_arm():
-    return normalize_target_arch(platform.machine()) in ("x64", "x86_64", "amd64", "x86")
+    return normalize_target_arch(platform.machine()) == "arm64"
 
-def get_build_dir(target_arch=None):
-    """Returns the Ninja build directory for the given target architecture.
+def get_build_dir(target_arch=None, os_name=None):
+    """Returns the CMake binary directory for the given target architecture."""
+    return xp.get_build_dir(os_name=os_name, target_arch=target_arch)
 
-    Uses a separate directory when cross-compiling to avoid cache conflicts.
+
+def iter_cmake_build_dirs():
+    """Yield directories that contain a CMake cache (Build/ tree + legacy)."""
+    seen = set()
+    for legacy in xp.legacy_build_dirs():
+        cache = os.path.join(legacy, "CMakeCache.txt")
+        if os.path.isfile(cache):
+            norm = os.path.normpath(legacy)
+            if norm not in seen:
+                seen.add(norm)
+                yield legacy
+    if not os.path.isdir(xp.BUILD_ROOT):
+        return
+    skip = frozenset({
+        "Release", "Debug", "Checked", "obj", "bin", "CMakeFiles",
+        "src", "third_party", "tools", "gputest",
+    })
+    for root, dirs, files in os.walk(xp.BUILD_ROOT):
+        if "CMakeCache.txt" in files:
+            norm = os.path.normpath(root)
+            if norm not in seen:
+                seen.add(norm)
+                yield root
+        dirs[:] = [d for d in dirs if d not in skip]
+
+
+def run_cmake_configure_android(build_type="Release", extra_args=None):
+    """Configures an Android NDK (arm64-v8a) build into Build/Android.
+
+    Requires ANDROID_NDK_ROOT (or ANDROID_NDK_HOME) pointing at an NDK (r26c).
+    Uses single-config Ninja so artifacts land at Build/Android/<Config>.
     """
-    is_native_arm64 = platform.machine() in ("ARM64", "aarch64")
-    if target_arch == "arm64" and not is_native_arm64:
-        return "build-arm64"
-    if target_arch == "x64" and is_native_arm64:
-        return "build-x64"
-    return "build"
+    ndk = os.environ.get("ANDROID_NDK_ROOT") or os.environ.get("ANDROID_NDK_HOME")
+    if not ndk or not os.path.isdir(ndk):
+        print_error(
+            "ANDROID_NDK_ROOT is not set or does not exist.\n"
+            "  Install Android NDK r26c and set ANDROID_NDK_ROOT to its root.")
+        return 1
+    toolchain = os.path.join(ndk, "build", "cmake", "android.toolchain.cmake")
+    if not os.path.isfile(toolchain):
+        print_error(f"NDK toolchain not found at {toolchain}.")
+        return 1
+
+    build_dir = get_build_dir(os_name="Android")
+    args = [
+        "cmake",
+        "-S", ".",
+        "-B", build_dir,
+        "-G", "Ninja",
+        f"-DCMAKE_TOOLCHAIN_FILE={toolchain.replace(os.sep, '/')}",
+        "-DANDROID_ABI=arm64-v8a",
+        "-DANDROID_PLATFORM=android-26",
+        f"-DCMAKE_BUILD_TYPE={build_type}",
+        "-DXENIA_BUILD_TESTS=OFF",
+        "-DXENIA_BUILD_MISC=OFF",
+    ]
+    if has_bin("sccache"):
+        args += [
+            "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
+            "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache",
+        ]
+    if extra_args:
+        args += extra_args
+
+    ret = subprocess.call(args)
+    if ret == 0:
+        generate_version_h(build_dir)
+    return ret
 
 
 def run_cmake_configure(build_type="Release", cc=None, build_tests=False,
                         extra_args=None, target_arch=None,
                         enable_itrace=False, enable_dtrace=False,
-                        enable_ftrace=False):
+                        enable_ftrace=False, target_os=None):
     """Runs cmake configure on the project.
 
     Args:
@@ -731,10 +796,14 @@ def run_cmake_configure(build_type="Release", cc=None, build_tests=False,
       build_tests: If True, enables building test suites.
       extra_args: Additional arguments to pass to cmake (e.g. -D flags).
       target_arch: Target architecture override (e.g. 'arm64' for cross-compile).
+      target_os: Target OS override ('android') for cross-OS builds.
 
     Returns:
       Return code from cmake.
     """
+    if target_os == "android":
+        return run_cmake_configure_android(build_type=build_type, extra_args=extra_args)
+
     # Cross-compilation via --target-arch is only supported on Windows where
     # we can locate the MSVC cross-compiler automatically.  On Linux it would
     # silently produce a native build in a differently-named directory.
@@ -812,6 +881,11 @@ def run_cmake_configure(build_type="Release", cc=None, build_tests=False,
             return 1
     if build_tests:
         args += ["-DXENIA_BUILD_TESTS=ON"]
+    if has_bin("sccache"):
+        args += [
+            "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
+            "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache",
+        ]
     args += [f"-DXENIA_ENABLE_ITRACE={'ON' if enable_itrace else 'OFF'}"]
     args += [f"-DXENIA_ENABLE_DTRACE={'ON' if enable_dtrace else 'OFF'}"]
     args += [f"-DXENIA_ENABLE_FTRACE={'ON' if enable_ftrace else 'OFF'}"]
@@ -827,20 +901,10 @@ def run_cmake_configure(build_type="Release", cc=None, build_tests=False,
 
 
 def get_build_bin_path(args):
-    """Returns the path of the bin/ path with build results based on the
-    configuration specified in the parsed arguments.
-
-    Args:
-      args: Parsed arguments.
-
-    Returns:
-      A full path for the bin folder.
-    """
+    """Returns the absolute path to built binaries for the parsed arguments."""
     config = args["config"].title()
-    platform = "Windows" if sys.platform == "win32" else "Linux"
-    build_dir = get_build_dir(args.get("target_arch"))
-    # Multi-config: <build_dir>/bin/<Platform>/<Config>
-    return os.path.join(self_path, build_dir, "bin", platform, config)
+    rel = xp.get_bin_dir(target_arch=args.get("target_arch"), config=config)
+    return os.path.join(self_path, rel)
 
 
 def create_clion_workspace():
@@ -890,9 +954,9 @@ def create_clion_workspace():
         # Write CMakeSettings
         f.write("""  <component name="CMakeSettings">\n""")
         f.write("    <configurations>\n")
-        f.write("""      <configuration PROFILE_NAME="default - debug" ENABLED="true" FROM_PRESET="true" GENERATION_DIR="$PROJECT_DIR$/build" />\n""")
-        f.write("""      <configuration PROFILE_NAME="default - release" ENABLED="true" FROM_PRESET="true" GENERATION_DIR="$PROJECT_DIR$/build" />\n""")
-        f.write("""      <configuration PROFILE_NAME="default - checked" ENABLED="true" FROM_PRESET="true" GENERATION_DIR="$PROJECT_DIR$/build" />\n""")
+        f.write("""      <configuration PROFILE_NAME="default - debug" ENABLED="true" FROM_PRESET="true" GENERATION_DIR="$PROJECT_DIR$/Build/Windows/x64" />\n""")
+        f.write("""      <configuration PROFILE_NAME="default - release" ENABLED="true" FROM_PRESET="true" GENERATION_DIR="$PROJECT_DIR$/Build/Windows/x64" />\n""")
+        f.write("""      <configuration PROFILE_NAME="default - checked" ENABLED="true" FROM_PRESET="true" GENERATION_DIR="$PROJECT_DIR$/Build/Windows/x64" />\n""")
         f.write("    </configurations>\n")
         f.write("  </component>\n")
 
@@ -1020,39 +1084,6 @@ def _doctor_check_spirv_opt():
     )
 
 
-def discover_commands(subparsers):
-    """Looks for all commands and returns a dictionary of them.
-    In the future commands could be discovered on disk.
-
-    Args:
-      subparsers: Argument subparsers parent used to add command parsers.
-
-    Returns:
-      A dictionary containing name-to-Command mappings.
-    """
-    commands = {
-        "doctor": DoctorCommand(subparsers),
-        "setup": SetupCommand(subparsers),
-        "pull": PullCommand(subparsers),
-        "premake": PremakeCommand(subparsers),
-        "build": BuildCommand(subparsers),
-        "buildshaders": BuildShadersCommand(subparsers),
-        "devenv": DevenvCommand(subparsers),
-        "gentests": GenTestsCommand(subparsers),
-        "test": TestCommand(subparsers),
-        "gputest": GpuTestCommand(subparsers),
-        "clean": CleanCommand(subparsers),
-        "nuke": NukeCommand(subparsers),
-        "cleangenerated": CleanGeneratedCommand(subparsers),
-        "lint": LintCommand(subparsers),
-        "format": FormatCommand(subparsers),
-        "style": StyleCommand(subparsers),
-        "tidy": TidyCommand(subparsers),
-        "stub": StubCommand(subparsers),
-        }
-    return commands
-
-
 class Command(object):
     """Base type for commands.
     """
@@ -1090,8 +1121,66 @@ class Command(object):
         return 1
 
 
+def _doctor_check_vs_windows():
+    if not vs_version:
+        return False, "Visual Studio 2022 not found (install the Native Desktop C++ workload)."
+    return True, f"Visual Studio {vs_version} detected."
+
+
+def _doctor_check_clang_format():
+    candidates = ["clang-format"]
+    for v in range(21, 18, -1):
+        candidates.append(f"clang-format-{v}")
+    if sys.platform == "win32" and "VCINSTALLDIR" in os.environ:
+        candidates.append(os.path.join(
+            os.environ["VCINSTALLDIR"], "Tools", "Llvm", "x64", "bin", "clang-format.exe"))
+    for c in candidates:
+        if has_bin(c) or os.path.isfile(c):
+            return True, f"{c} found."
+    return False, "clang-format not found (needed for `xb lint`/`format`)."
+
+
+def _doctor_check_docker():
+    if not has_bin("docker"):
+        return False, "not found (needed for Linux matrix cells via xb matrix)."
+    try:
+        r = subprocess.run(["docker", "info"], capture_output=True, text=True)
+        if r.returncode == 0:
+            return True, "daemon reachable."
+        return False, "installed but daemon not running."
+    except Exception as exc:
+        return False, f"check failed: {exc}"
+
+
+def _doctor_check_gh():
+    if not has_bin("gh"):
+        return False, "not found (needed for `xb ci`; https://cli.github.com/)."
+    try:
+        r = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True)
+        if r.returncode == 0:
+            return True, "authenticated."
+        return False, "present but not authenticated (run: gh auth login)."
+    except Exception as exc:
+        return False, f"check failed: {exc}"
+
+
+def _doctor_check_msvc_arm64():
+    cl = sorted(glob(
+        r"C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\arm64\cl.exe"))
+    if cl:
+        return True, "cross tools present."
+    return False, "not installed (needed for the Windows ARM64 cell)."
+
+
+def _doctor_check_ndk():
+    ndk = os.environ.get("ANDROID_NDK_ROOT") or os.environ.get("ANDROID_NDK_HOME")
+    if ndk and os.path.isdir(ndk):
+        return True, f"{ndk}"
+    return False, "ANDROID_NDK_ROOT not set (needed for the Android cell)."
+
+
 class DoctorCommand(Command):
-    """'doctor' command — verify Linux build dependencies."""
+    """'doctor' command — verify build dependencies on all platforms."""
 
     def __init__(self, subparsers, *args, **kwargs):
         super(DoctorCommand, self).__init__(
@@ -1103,10 +1192,15 @@ class DoctorCommand(Command):
 
     def execute(self, args, pass_args, cwd):
         print("Xenia build environment check\n")
-        if sys.platform == "win32":
-            print("On Windows, use Visual Studio 2022 + Vulkan SDK. Limited checks here.\n")
         checks = []
-        if sys.platform != "win32":
+        if sys.platform == "win32":
+            checks.append(("Visual Studio 2022", _doctor_check_vs_windows()))
+            checks.append(("cmake", _doctor_check_bin("cmake", "cmake")))
+            checks.append(("ninja", _doctor_check_bin("ninja", "ninja-build")))
+            ok_vk = setup_vulkan_sdk()
+            checks.append(("Vulkan SDK", (ok_vk, "configured" if ok_vk else "install from https://vulkan.lunarg.com/")))
+            checks.append(("clang-format", _doctor_check_clang_format()))
+        else:
             checks.append(("clang", _doctor_check_clang()))
             checks.append(("lld", _doctor_check_bin("ld.lld", "lld-20")))
             checks.append(("cmake", _doctor_check_bin("cmake", "cmake")))
@@ -1119,9 +1213,7 @@ class DoctorCommand(Command):
             checks.append(("x11-xcb", _doctor_check_pkg_config("x11-xcb", "libx11-xcb-dev")))
             setup_vulkan_sdk()
             checks.append(("spirv-opt / VULKAN_SDK", _doctor_check_spirv_opt()))
-        else:
-            ok_vk = setup_vulkan_sdk()
-            checks.append(("Vulkan SDK", (ok_vk, "configured" if ok_vk else "install from https://vulkan.lunarg.com/")))
+            checks.append(("clang-format", _doctor_check_clang_format()))
 
         failed = 0
         for name, (ok, detail) in checks:
@@ -1130,6 +1222,20 @@ class DoctorCommand(Command):
             print(f"  [{color}{status}{bcolors.ENDC}] {name}: {detail}")
             if not ok:
                 failed += 1
+
+        # Optional matrix / CI prerequisites — warn-only, never affect exit code.
+        print("\nMatrix / CI prerequisites (optional):")
+        warn_checks = [
+            ("docker", _doctor_check_docker()),
+            ("gh CLI", _doctor_check_gh()),
+        ]
+        if sys.platform == "win32":
+            warn_checks.append(("MSVC ARM64 tools", _doctor_check_msvc_arm64()))
+        warn_checks.append(("Android NDK", _doctor_check_ndk()))
+        for name, (ok, detail) in warn_checks:
+            status = "OK" if ok else "warn"
+            color = bcolors.OKCYAN if ok else bcolors.WARNING
+            print(f"  [{color}{status}{bcolors.ENDC}] {name}: {detail}")
 
         if sys.platform != "win32" and failed:
             print(
@@ -1251,6 +1357,29 @@ class PremakeCommand(Command):
         return ret
 
 
+# Friendly target aliases for `xb build <alias>`.
+TARGET_ALIASES = {
+    "app": ["xenia-app"],
+    "tests": ["xenia-cpu-tests", "xenia-base-tests", "xenia-kernel-tests"],
+    "fuzz": ["vmx128-fuzz"],
+    "trace": ["xenia-gpu-d3d12-trace-dump"],
+    "xma2": ["xma2-diff"],
+}
+_TEST_TARGETS = {"xenia-cpu-tests", "xenia-base-tests", "xenia-kernel-tests"}
+_MISC_TARGETS = {
+    "vmx128-fuzz", "xma2-diff",
+    "xenia-gpu-d3d12-trace-dump", "xenia-gpu-vulkan-trace-dump",
+}
+
+
+def expand_target_aliases(targets):
+    """Expands friendly aliases (app/tests/fuzz/trace/xma2) to real targets."""
+    expanded = []
+    for t in targets:
+        expanded.extend(TARGET_ALIASES.get(t, [t]))
+    return expanded
+
+
 class BaseBuildCommand(Command):
     """Base command for things that require building.
     """
@@ -1262,11 +1391,12 @@ class BaseBuildCommand(Command):
         self.parser.add_argument(
             "--cc", choices=["clang", "gcc", "msc"], default=None, help="Compiler toolchain")
         self.parser.add_argument(
-            "--config", choices=["checked", "debug", "release"], default="debug",
+            "--config", choices=["checked", "debug", "release"], default="release",
             type=str.lower, help="Chooses the build configuration.")
         self.parser.add_argument(
             "--target", action="append", default=[],
-            help="Builds only the given target(s).")
+            help="Builds only the given target(s). Aliases: app, tests, fuzz, "
+                 "trace, xma2 (auto-enable tests/misc as needed).")
         self.parser.add_argument(
             "--force", action="store_true",
             help="Forces a full rebuild.")
@@ -1298,37 +1428,50 @@ class BaseBuildCommand(Command):
         self.parser.add_argument(
             "--target-arch", type=normalize_target_arch, default=None,
             help="Target architecture (arm64/aarch64, x64/amd64/x86_64/x86).")
+        self.parser.add_argument(
+            "--target-os", choices=["android"], default=None,
+            help="Cross-build for another OS (currently: android, into Build/Android).")
 
     def execute(self, args, pass_args, cwd):
         config = args["config"].title()
+        target_os = args.get("target_os")
+        os_name = "Android" if target_os == "android" else None
+
+        targets = expand_target_aliases(args["target"])
 
         extra_args = [f"-D{d}" for d in args["cmake_defines"]]
+        # Auto-enable the cmake options implied by the requested targets.
+        # (Android forces TESTS/MISC off, so skip inference there.)
+        build_tests = args["build_tests"] or (
+            target_os is None and any(t in _TEST_TARGETS for t in targets))
+        if target_os is None and any(t in _MISC_TARGETS for t in targets):
+            extra_args.append("-DXENIA_BUILD_MISC=ON")
 
         if not args["no_premake"]:
             print("- running cmake configure...")
             ret = run_cmake_configure(build_type=config, cc=args["cc"],
-                                      build_tests=args["build_tests"],
+                                      build_tests=build_tests,
                                       target_arch=args["target_arch"],
                                       extra_args=extra_args,
                                       enable_itrace=args["enable_itrace"],
                                       enable_dtrace=args["enable_dtrace"],
-                                      enable_ftrace=args["enable_ftrace"])
+                                      enable_ftrace=args["enable_ftrace"],
+                                      target_os=target_os)
             if ret:
                 return ret
             print("")
 
-        build_dir = get_build_dir(args.get("target_arch"))
+        build_dir = get_build_dir(args.get("target_arch"), os_name=os_name)
         print("- building (%s):%s..." % (
-            "all" if not len(args["target"]) else ", ".join(args["target"]),
+            "all" if not len(targets) else ", ".join(targets),
             args["config"]))
         build_args = [
             "cmake",
             "--build", build_dir,
             "--config", config,
         ]
-        if args["target"]:
-            for target in args["target"]:
-                build_args += ["--target", target]
+        for target in targets:
+            build_args += ["--target", target]
         if args["force"]:
             build_args += ["--clean-first"]
         result = subprocess.call(build_args + pass_args)
@@ -1354,6 +1497,8 @@ class BuildCommand(BaseBuildCommand):
         result = super(BuildCommand, self).execute(args, pass_args, cwd)
 
         print_status(ResultStatus.SUCCESS if not result else ResultStatus.FAILURE)
+        if not result:
+            print(f"Output: {get_build_bin_path(args)}")
 
         return result
 
@@ -1733,7 +1878,8 @@ class GpuTestCommand(BaseBuildCommand):
                 print_error(f"Unable to find {test_targets[i]} - build it.")
                 return 1
 
-        output_path = os.path.join(self_path, "build", "gputest")
+        output_path = os.path.join(
+            self_path, get_build_dir(args.get("target_arch")), "gputest")
         if os.path.isdir(output_path):
             rmtree(output_path)
         os.makedirs(output_path)
@@ -1778,13 +1924,10 @@ class CleanCommand(Command):
 
     def execute(self, args, pass_args, cwd):
         print("Cleaning build artifacts...")
-        # Clean all build directories
-        for build_dir in ["build", "build-arm64"]:
-            if os.path.isdir(build_dir):
-                print(f"- cleaning {build_dir}...")
-                subprocess.call(["cmake", "--build", build_dir, "--target", "clean"])
+        for build_dir in iter_cmake_build_dirs():
+            print(f"- cleaning {build_dir}...")
+            subprocess.call(["cmake", "--build", build_dir, "--target", "clean"])
 
-        # Also clean generated files
         clean_generated_files()
 
         print_status(ResultStatus.SUCCESS)
@@ -1818,14 +1961,15 @@ class NukeCommand(Command):
         super(NukeCommand, self).__init__(
             subparsers,
             name="nuke",
-            help_short="Removes all build/ output.",
+            help_short="Removes all Build/ output.",
             *args, **kwargs)
 
     def execute(self, args, pass_args, cwd):
-        print("Cleaning build artifacts...\n"
-              "- removing build/...")
-        if os.path.isdir("build/"):
-            rmtree("build/")
+        print("Cleaning build artifacts...\n")
+        for path in xp.all_build_dirs():
+            if os.path.isdir(path):
+                print(f"- removing {path}/...")
+                rmtree(path)
 
         # Clean generated files
         clean_generated_files()
@@ -2069,6 +2213,27 @@ class StyleCommand(Command):
 
 
 # TODO(benvanik): merge into linter, or as lint --anal?
+def changed_source_files(base, exts=(".cc", ".c", ".h", ".inl", ".inc")):
+    """Returns source files changed vs base (merge-base...HEAD) that still exist."""
+    out = None
+    for rev in (f"{base}...HEAD", base):
+        try:
+            out = subprocess.check_output(
+                ["git", "diff", "--name-only", "--diff-filter=ACMR", rev],
+                text=True, stderr=subprocess.DEVNULL)
+            break
+        except Exception:
+            continue
+    if out is None:
+        return []
+    files = []
+    for line in out.splitlines():
+        line = line.strip()
+        if line.endswith(tuple(exts)) and os.path.isfile(line):
+            files.append(os.path.normpath(line))
+    return files
+
+
 class TidyCommand(Command):
     """'tidy' command.
     """
@@ -2082,25 +2247,30 @@ class TidyCommand(Command):
         self.parser.add_argument(
             "--fix", action="store_true",
             help="Applies suggested fixes, where possible.")
+        self.parser.add_argument(
+            "--changed", action="store_true",
+            help="Only tidy .cc files changed vs --base (fast, for CI/pre-push).")
+        self.parser.add_argument(
+            "--base", default=f"origin/{default_branch}",
+            help=f"Base ref for --changed (default origin/{default_branch}).")
 
     def execute(self, args, pass_args, cwd):
         # Run cmake configure to generate compile_commands.json for clang-tidy.
-        # Use Ninja generator which produces compile_commands.json by default.
+        # The Ninja generator emits compile_commands.json at the build root.
         run_cmake_configure()
+        tool_root = get_build_dir()
 
-        if sys.platform == "darwin":
-            platform_name = "darwin"
-        elif sys.platform == "win32":
-            platform_name = "windows"
+        if args["changed"]:
+            all_files = [f for f in changed_source_files(args["base"], exts=(".cc",))
+                         if not f.endswith("_test.cc")
+                         and (f.startswith("src" + os.sep) or f.startswith("src/"))]
+            if not all_files:
+                print(f"No changed .cc files vs {args['base']}; nothing to tidy.")
+                return 0
         else:
-            platform_name = "linux"
-        tool_root = f"build/llvm_tools/debug_{platform_name}"
-
-        all_files = [file_path for file_path in find_xenia_source_files()
-                     if not file_path.endswith("_test.cc")]
-        # Tidy only likes .cc files.
-        all_files = [file_path for file_path in all_files
-                     if file_path.endswith(".cc")]
+            all_files = [file_path for file_path in find_xenia_source_files()
+                         if not file_path.endswith("_test.cc")
+                         and file_path.endswith(".cc")]
 
         any_errors = False
         for file in all_files:
@@ -2226,7 +2396,7 @@ class DevenvCommand(Command):
                 vs_arch = "x64"
 
             is_cross = (vs_arch == "ARM64" and not is_native_arm64)
-            vs_build_dir = os.path.join(get_build_dir(target_arch), "vs-" + vs_arch.lower())
+            vs_build_dir = os.path.join(get_build_dir(target_arch), "vs")
 
             cmake_args = [
                 "cmake",
@@ -2316,6 +2486,435 @@ class DevenvCommand(Command):
         print("")
 
         return 0
+
+
+class WhereCommand(Command):
+    """'where' / 'binpath' command — print resolved build output directory."""
+
+    def __init__(self, subparsers, name="where", *args, **kwargs):
+        super(WhereCommand, self).__init__(
+            subparsers,
+            name=name,
+            help_short="Print resolved build output directory.",
+            help_long="Prints the absolute path to built binaries for the given config/arch.",
+            *args, **kwargs)
+        self.parser.add_argument(
+            "--config", choices=["checked", "debug", "release"], default="release",
+            type=str.lower, help="Build configuration.")
+        self.parser.add_argument(
+            "--target-arch", type=normalize_target_arch, default=None,
+            help="Target architecture (arm64/aarch64, x64/amd64/x86_64/x86).")
+
+    def execute(self, args, pass_args, cwd):
+        print(get_build_bin_path(args))
+        return 0
+
+
+class MigrateBuildCommand(Command):
+    """'migrate-build' command — remove legacy build dirs after layout change."""
+
+    def __init__(self, subparsers, *args, **kwargs):
+        super(MigrateBuildCommand, self).__init__(
+            subparsers,
+            name="migrate-build",
+            help_short="Remove legacy build/ directories (post Build/ consolidation).",
+            *args, **kwargs)
+
+    def execute(self, args, pass_args, cwd):
+        print("Removing legacy build directories...\n")
+        for path in xp.legacy_build_dirs():
+            if os.path.isdir(path):
+                print(f"- removing {path}/...")
+                rmtree(path)
+        print("\nReconfigure with: python xenia-build.py setup")
+        print("Then build:       python xenia-build.py build --config=release")
+        print_status(ResultStatus.SUCCESS)
+        return 0
+
+
+class RunCommand(Command):
+    """'run' command — launch xenia_canary from the resolved output directory."""
+
+    def __init__(self, subparsers, *args, **kwargs):
+        super(RunCommand, self).__init__(
+            subparsers,
+            name="run",
+            help_short="Run xenia_canary from the resolved build output directory.",
+            *args, **kwargs)
+        self.parser.add_argument(
+            "--config", choices=["checked", "debug", "release"], default="release",
+            type=str.lower, help="Build configuration.")
+        self.parser.add_argument(
+            "--target-arch", type=normalize_target_arch, default=None,
+            help="Target architecture (arm64/aarch64, x64/amd64/x86_64/x86).")
+
+    def execute(self, args, pass_args, cwd):
+        bin_dir = get_build_bin_path(args)
+        if sys.platform == "win32":
+            exe = os.path.join(bin_dir, "xenia_canary.exe")
+        else:
+            exe = os.path.join(bin_dir, "xenia_canary")
+        if not os.path.isfile(exe):
+            print_error(f"Missing {exe} — build xenia-app first.")
+            return 1
+        print(f"- {exe}")
+        return subprocess.call([exe] + pass_args)
+
+
+def _check_commit_tags(base=None):
+    """Mirrors Check_commit_message.yml: every commit subject vs base needs a [Tag]."""
+    import re as _re
+    base = base or f"origin/{default_branch}"
+    try:
+        out = subprocess.check_output(
+            ["git", "log", "--format=%s", f"{base}..HEAD"],
+            text=True, stderr=subprocess.DEVNULL)
+    except Exception:
+        return True, f"could not diff vs {base}; skipped"
+    bad = [line.strip() for line in out.splitlines()
+           if line.strip() and not _re.match(r"^\[.+?\]", line.strip())]
+    if bad:
+        return False, f"{len(bad)} commit(s) missing [Tag]: e.g. {bad[0]!r}"
+    return True, ""
+
+
+class PreflightCommand(Command):
+    """'preflight' / 'green' — local CI parity checks before push."""
+
+    def __init__(self, subparsers, name="preflight", *args, **kwargs):
+        super(PreflightCommand, self).__init__(
+            subparsers,
+            name=name,
+            help_short="Run local Tier0-style checks (predict GitHub-green).",
+            *args, **kwargs)
+        self.parser.add_argument(
+            "--skip-build", action="store_true",
+            help="Skip configure/build; only run tests against existing binaries.")
+        self.parser.add_argument(
+            "--config", choices=["checked", "debug", "release"], default="release",
+            type=str.lower, help="Build configuration.")
+
+    def execute(self, args, pass_args, cwd):
+        print("Phoenix preflight (local CI parity)\n")
+        failed = 0
+        build_args = {
+            "config": args["config"],
+            "target_arch": None,
+        }
+
+        def step(name, ok, detail=""):
+            nonlocal failed
+            color = bcolors.OKCYAN if ok else bcolors.FAIL
+            status = "OK" if ok else "FAIL"
+            suffix = f": {detail}" if detail else ""
+            print(f"  [{color}{status}{bcolors.ENDC}] {name}{suffix}")
+            if not ok:
+                failed += 1
+
+        guard = subprocess.call(
+            [sys.executable, os.path.join("tools", "build", "check_build_paths.py")])
+        step("path guard", guard == 0)
+
+        # clang-format lint (PR-blocking gate); skip cleanly if clang-format absent.
+        if _doctor_check_clang_format()[0]:
+            lret = subprocess.call([sys.executable, "xenia-build.py", "lint"])
+            step("clang-format lint", lret == 0)
+        else:
+            step("clang-format lint", True, "skipped (clang-format not found)")
+
+        # commit-message [Tag] prefix (mirrors Check_commit_message.yml).
+        ok_tags, tag_detail = _check_commit_tags()
+        step("commit-message [Tag]", ok_tags, tag_detail)
+
+        if not args["skip_build"]:
+            ret = run_cmake_configure(
+                build_type=args["config"].title(),
+                build_tests=True,
+                extra_args=["-DXENIA_BUILD_MISC=ON"],
+            )
+            step("cmake configure", ret == 0)
+            if ret == 0:
+                build_dir = get_build_dir()
+                bret = subprocess.call([
+                    "cmake", "--build", build_dir,
+                    "--config", args["config"].title(),
+                    "--target", "xenia-cpu-tests", "vmx128-fuzz", "xma2-diff",
+                ])
+                step("cmake build (tier0 targets)", bret == 0)
+        else:
+            step("cmake build (tier0 targets)", True, "skipped")
+
+        bin_dir = get_build_bin_path(build_args)
+        cpu_name = "xenia-cpu-tests.exe" if sys.platform == "win32" else "xenia-cpu-tests"
+        cpu = get_bin(os.path.join(bin_dir, cpu_name))
+        if cpu:
+            cret = subprocess.call([cpu])
+            step("xenia-cpu-tests", cret == 0)
+        else:
+            step("xenia-cpu-tests", False, "binary missing")
+
+        fuzz_name = "vmx128-fuzz.exe" if sys.platform == "win32" else "vmx128-fuzz"
+        fuzz = get_bin(os.path.join(bin_dir, fuzz_name))
+        if fuzz:
+            fret = subprocess.call([
+                fuzz, "--vmx128_fuzz_iters=50000", "--vmx128_fuzz_seed=3735928559",
+            ])
+            step("vmx128-fuzz 50k", fret == 0)
+        else:
+            step("vmx128-fuzz 50k", False, "binary missing")
+
+        if sys.platform == "win32":
+            gret = subprocess.call([
+                sys.executable, "tools/gpu_replay_ci/run.py",
+                "--build-dir", get_build_dir(),
+                "--cross-path", "d3d12",
+            ])
+            step("gpu replay (RTV/ROV)", gret == 0)
+        else:
+            step("gpu replay (RTV/ROV)", True, "skipped on non-Windows")
+
+        pytest = subprocess.call([
+            sys.executable, "-m", "pytest", "tools/phoenixctl/tests", "-q",
+        ], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        step("phoenixctl tests", pytest == 0)
+
+        print("")
+        if failed:
+            print_error(f"preflight: {failed} check(s) failed")
+            return 1
+        print_status(ResultStatus.SUCCESS)
+        return 0
+
+
+def _powershell_argv():
+    exe = "powershell" if sys.platform == "win32" else "pwsh"
+    return [exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"]
+
+
+class MatrixCommand(Command):
+    """'matrix' — build + check every locally-buildable cell (universal build)."""
+
+    ALL_CELLS = [
+        "windows-x64", "windows-arm64", "android", "linux-x64", "linux-arm64", "macos",
+    ]
+
+    def __init__(self, subparsers, *args, **kwargs):
+        super(MatrixCommand, self).__init__(
+            subparsers,
+            name="matrix",
+            help_short="Build + check every local cell (Win x64/ARM64, Android, Linux x64/ARM64).",
+            help_long="Drives each cell through the existing per-cell build path and prints an "
+                      "aggregated OK/FAIL/SKIP table. macOS is CI-only off a non-mac host (use xb ci).",
+            *args, **kwargs)
+        self.parser.add_argument(
+            "--cells", default=None,
+            help="Comma-separated subset of: " + ", ".join(self.ALL_CELLS) + ".")
+        self.parser.add_argument(
+            "--config", choices=["checked", "debug", "release"], default="release",
+            type=str.lower, help="Build configuration.")
+        self.parser.add_argument(
+            "--build-only", action="store_true",
+            help="Build each cell but skip its checks (faster).")
+
+    def execute(self, args, pass_args, cwd):
+        config = args["config"].title()
+        build_only = args["build_only"]
+        if args["cells"]:
+            cells = [c.strip() for c in args["cells"].split(",") if c.strip()]
+            unknown = [c for c in cells if c not in self.ALL_CELLS]
+            if unknown:
+                print_error(f"unknown cell(s): {', '.join(unknown)}")
+                return 1
+        else:
+            cells = list(self.ALL_CELLS)
+
+        print(f"Phoenix build matrix ({config})\n")
+        results = []
+        for cell in cells:
+            print(f"=== {cell} ===")
+            status, detail = self._run_cell(cell, config, build_only)
+            results.append((cell, status, detail))
+            print("")
+
+        print("Matrix results:")
+        any_fail = False
+        for cell, status, detail in results:
+            if status == "OK":
+                color = bcolors.OKCYAN
+            elif status == "SKIP":
+                color = bcolors.WARNING
+            else:
+                color = bcolors.FAIL
+                any_fail = True
+            suffix = f" - {detail}" if detail else ""
+            print(f"  [{color}{status}{bcolors.ENDC}] {cell}{suffix}")
+
+        print("")
+        if any_fail:
+            print_error("matrix: one or more local cells failed.")
+            return 1
+        print_status(ResultStatus.SUCCESS)
+        return 0
+
+    def _xb(self, argv):
+        return subprocess.call([sys.executable, "xenia-build.py"] + argv)
+
+    def _run_cell(self, cell, config, build_only):
+        cfg = config.lower()
+        if cell == "windows-x64":
+            if sys.platform != "win32":
+                return ("SKIP", "host is not Windows")
+            if self._xb(["build", f"--config={cfg}", "--target", "app",
+                         "--target", "tests", "--target", "fuzz"]) != 0:
+                return ("FAIL", "build")
+            if build_only:
+                return ("OK", "build-only")
+            bin_dir = os.path.join(self_path, xp.get_bin_dir(config=config))
+            cpu = os.path.join(bin_dir, "xenia-cpu-tests.exe")
+            if os.path.isfile(cpu) and subprocess.call([cpu]) != 0:
+                return ("FAIL", "cpu-tests")
+            fuzz = os.path.join(bin_dir, "vmx128-fuzz.exe")
+            if os.path.isfile(fuzz) and subprocess.call(
+                    [fuzz, "--vmx128_fuzz_iters=50000", "--vmx128_fuzz_seed=3735928559"]) != 0:
+                return ("FAIL", "vmx128")
+            return ("OK", "")
+
+        if cell == "windows-arm64":
+            if sys.platform != "win32":
+                return ("SKIP", "host is not Windows")
+            if not _doctor_check_msvc_arm64()[0]:
+                return ("SKIP", "MSVC ARM64 tools not installed")
+            if self._xb(["build", "--target-arch", "arm64", f"--config={cfg}",
+                         "--target", "app", "--target", "tests"]) != 0:
+                return ("FAIL", "build")
+            if build_only:
+                return ("OK", "build-only")
+            rc = subprocess.call(_powershell_argv() +
+                                 [os.path.join("tools", "tier0", "arm64-verify.ps1"),
+                                  "-Config", config])
+            return ("OK" if rc == 0 else "FAIL", "" if rc == 0 else "verify")
+
+        if cell == "android":
+            ndk = os.environ.get("ANDROID_NDK_ROOT") or os.environ.get("ANDROID_NDK_HOME")
+            if not ndk:
+                return ("SKIP", "ANDROID_NDK_ROOT not set")
+            if self._xb(["build", "--target-os", "android", f"--config={cfg}",
+                         "--target", "app"]) != 0:
+                return ("FAIL", "build")
+            so = os.path.join(self_path, xp.get_bin_dir(os_name="Android", config=config),
+                              "libxenia-app.so")
+            return ("OK", "") if os.path.isfile(so) else ("FAIL", "missing libxenia-app.so")
+
+        if cell in ("linux-x64", "linux-arm64"):
+            ok_docker, why = _doctor_check_docker()
+            if not ok_docker:
+                return ("SKIP", f"docker unavailable ({why})")
+            arch = "x64" if cell == "linux-x64" else "arm64"
+            script = os.path.join("tools", "docker", "run-linux-build.ps1")
+            ps = _powershell_argv() + [script, "-Config", cfg, "-Arch", arch]
+            if build_only or arch == "arm64":
+                ps.append("-SkipVerify")
+            rc = subprocess.call(ps)
+            return ("OK" if rc == 0 else "FAIL", "" if rc == 0 else "docker build")
+
+        if cell == "macos":
+            if sys.platform != "darwin":
+                return ("SKIP", "CI-only off macOS host -> run xb ci")
+            if self._xb(["build", f"--config={cfg}", "--target", "app", "--target", "tests"]) != 0:
+                return ("FAIL", "build")
+            if build_only:
+                return ("OK", "build-only")
+            rc = subprocess.call(["bash", os.path.join("tools", "tier0", "macos-verify.sh")])
+            return ("OK" if rc == 0 else "FAIL", "" if rc == 0 else "verify")
+
+        return ("SKIP", "unknown cell")
+
+
+class CiCommand(Command):
+    """'ci' — trigger the GitHub Actions Orchestrator and watch it green/red."""
+
+    def __init__(self, subparsers, *args, **kwargs):
+        super(CiCommand, self).__init__(
+            subparsers,
+            name="ci",
+            help_short="Trigger + watch the GitHub matrix (true GitHub-green, incl. macOS).",
+            *args, **kwargs)
+        self.parser.add_argument(
+            "--ref", default=None, help="Branch/ref to run (default: current branch).")
+        self.parser.add_argument(
+            "--workflow", default="Orchestrator.yml", help="Workflow file to dispatch.")
+        self.parser.add_argument(
+            "--no-watch", action="store_true", help="Dispatch only; do not watch.")
+
+    def execute(self, args, pass_args, cwd):
+        if not has_bin("gh"):
+            print_error("gh CLI not found. Install https://cli.github.com/ then: gh auth login")
+            return 1
+        ref = args["ref"]
+        if not ref:
+            try:
+                ref = subprocess.check_output(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True).strip()
+            except Exception:
+                print_error("could not determine current branch; pass --ref.")
+                return 1
+        wf = args["workflow"]
+        print(f"- dispatching {wf} on {ref}...")
+        if subprocess.call(["gh", "workflow", "run", wf, "--ref", ref]) != 0:
+            print_error("gh workflow run failed (needs workflow_dispatch + push access).")
+            return 1
+        if args["no_watch"]:
+            print("Dispatched. Watch with: gh run watch")
+            return 0
+        import time
+        time.sleep(6)
+        try:
+            run_id = subprocess.check_output(
+                ["gh", "run", "list", "--workflow", wf, "--branch", ref,
+                 "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId"],
+                text=True).strip()
+        except Exception:
+            run_id = ""
+        if not run_id:
+            print("Dispatched, but could not resolve the run id; check: gh run list")
+            return 0
+        print(f"- watching run {run_id} (Ctrl-C stops watching; the run keeps going)...")
+        rc = subprocess.call(["gh", "run", "watch", run_id, "--exit-status"])
+        print_status(ResultStatus.SUCCESS if rc == 0 else ResultStatus.FAILURE)
+        return rc
+
+
+def discover_commands(subparsers):
+    """Looks for all commands and returns a dictionary of them."""
+    commands = {
+        "doctor": DoctorCommand(subparsers),
+        "setup": SetupCommand(subparsers),
+        "pull": PullCommand(subparsers),
+        "premake": PremakeCommand(subparsers),
+        "build": BuildCommand(subparsers),
+        "buildshaders": BuildShadersCommand(subparsers),
+        "devenv": DevenvCommand(subparsers),
+        "gentests": GenTestsCommand(subparsers),
+        "test": TestCommand(subparsers),
+        "gputest": GpuTestCommand(subparsers),
+        "clean": CleanCommand(subparsers),
+        "nuke": NukeCommand(subparsers),
+        "cleangenerated": CleanGeneratedCommand(subparsers),
+        "lint": LintCommand(subparsers),
+        "format": FormatCommand(subparsers),
+        "style": StyleCommand(subparsers),
+        "tidy": TidyCommand(subparsers),
+        "stub": StubCommand(subparsers),
+        "where": WhereCommand(subparsers, "where"),
+        "binpath": WhereCommand(subparsers, "binpath"),
+        "run": RunCommand(subparsers),
+        "preflight": PreflightCommand(subparsers, "preflight"),
+        "green": PreflightCommand(subparsers, "green"),
+        "matrix": MatrixCommand(subparsers),
+        "ci": CiCommand(subparsers),
+        "migrate-build": MigrateBuildCommand(subparsers),
+        }
+    return commands
 
 
 if __name__ == "__main__":

@@ -448,11 +448,13 @@ if(WIN32)
   target_include_directories(SDL2 PUBLIC SDL2/include)
   target_link_libraries(SDL2 PRIVATE setupapi winmm imm32 version)
 elseif(APPLE)
-  # Use system SDL2 framework on macOS
+  # Homebrew SDL2 (CI) — pkg-config like Linux.
   add_library(SDL2 INTERFACE)
-  find_library(SDL2_LIBRARY SDL2 REQUIRED)
-  target_include_directories(SDL2 INTERFACE "${SDL2_LIBRARY}/Headers")
-  target_link_libraries(SDL2 INTERFACE "${SDL2_LIBRARY}")
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(SDL2_PKG REQUIRED sdl2)
+  target_include_directories(SDL2 INTERFACE ${SDL2_PKG_INCLUDE_DIRS})
+  target_link_libraries(SDL2 INTERFACE ${SDL2_PKG_LDFLAGS})
+  target_compile_options(SDL2 INTERFACE ${SDL2_PKG_CFLAGS_OTHER})
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # Use system SDL2 on Linux
   add_library(SDL2 INTERFACE)
@@ -824,3 +826,63 @@ if(WIN32)
 endif()
 target_link_libraries(libavformat PRIVATE libavutil libavcodec)
 ffmpeg_common(libavformat)
+
+# ==============================================================================
+# libcurl (netplay REST API client) — upstream CMake generates curl_config.h
+# ==============================================================================
+set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(CURL_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
+set(HTTP_ONLY ON CACHE BOOL "" FORCE)
+set(CURL_USE_LIBPSL OFF CACHE BOOL "" FORCE)
+set(USE_LIBIDN2 OFF CACHE BOOL "" FORCE)
+set(CURL_USE_LIBSSH2 OFF CACHE BOOL "" FORCE)
+set(CURL_USE_LIBSSH OFF CACHE BOOL "" FORCE)
+set(ENABLE_ARES OFF CACHE BOOL "" FORCE)
+if(WIN32)
+  set(CURL_USE_SCHANNEL ON CACHE BOOL "" FORCE)
+elseif(ANDROID)
+  set(CURL_ENABLE_SSL OFF CACHE BOOL "" FORCE)
+else()
+  set(CURL_USE_OPENSSL ON CACHE BOOL "" FORCE)
+endif()
+add_subdirectory(libcurl EXCLUDE_FROM_ALL)
+if(NOT TARGET libcurl AND TARGET libcurl_static)
+  add_library(libcurl ALIAS libcurl_static)
+endif()
+
+# ==============================================================================
+# miniupnp (UPnP NAT traversal for netplay)
+# ==============================================================================
+add_library(miniupnp STATIC
+  miniupnp/miniupnpc/src/addr_is_reserved.c
+  miniupnp/miniupnpc/src/connecthostport.c
+  miniupnp/miniupnpc/src/igd_desc_parse.c
+  miniupnp/miniupnpc/src/minisoap.c
+  miniupnp/miniupnpc/src/minissdpc.c
+  miniupnp/miniupnpc/src/miniupnpc.c
+  miniupnp/miniupnpc/src/miniwget.c
+  miniupnp/miniupnpc/src/minixml.c
+  miniupnp/miniupnpc/src/portlistingparse.c
+  miniupnp/miniupnpc/src/receivedata.c
+  miniupnp/miniupnpc/src/upnpcommands.c
+  miniupnp/miniupnpc/src/upnpdev.c
+  miniupnp/miniupnpc/src/upnperrors.c
+  miniupnp/miniupnpc/src/upnpreplyparse.c
+)
+target_include_directories(miniupnp PRIVATE miniupnp/miniupnpc PUBLIC miniupnp/miniupnpc/include)
+target_compile_definitions(miniupnp PRIVATE MINIUPNP_STATICLIB)
+if(WIN32)
+  target_link_libraries(miniupnp PRIVATE ws2_32 iphlpapi)
+  execute_process(
+    COMMAND cscript //NoLogo ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/msvc/genminiupnpcstrings.vbs
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/msvc
+  )
+else()
+  target_compile_definitions(miniupnp PRIVATE _GNU_SOURCE)
+  execute_process(
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc/updateminiupnpcstrings.sh
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/miniupnp/miniupnpc
+  )
+endif()

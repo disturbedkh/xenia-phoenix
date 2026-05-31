@@ -1210,17 +1210,13 @@ uint32_t Processor::StepToGuestSafePoint(uint32_t thread_id, bool ignore_host) {
         return StepToGuestSafePoint(thread_id, true);
       }
     } else {
-      // We've managed to catch a thread before it called into the guest.
-      // Set a breakpoint on its startup procedure and capture it there.
-      // TODO(DrChat): Reimplement
-      assert_always("Unimplemented");
-      /*
-      auto creation_params = thread->creation_params();
-      pc = creation_params->xapi_thread_startup
-               ? creation_params->xapi_thread_startup
-               : creation_params->start_address;
-      StepToGuestAddress(thread_id, pc);
-      */
+      // Thread is in host code with no guest stack frame (e.g. not yet entered
+      // guest). Caller should force-terminate instead of relying on safe-point.
+      XELOGW(
+          "StepToGuestSafePoint: no guest frame for thread {:08X}; caller "
+          "should force-terminate",
+          thread_id);
+      return 0;
     }
   }
 

@@ -1,6 +1,6 @@
 # Smoke: develop preset creates events JSONL (requires built xenia + short run).
 param(
-    [string]$XeniaExe = "build\bin\Windows\Release\xenia_canary.exe",
+    [string]$XeniaExe = "",
     [string]$TelemetryDir = "telemetry",
     [int]$TimeoutSec = 8
 )
@@ -8,6 +8,10 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+if (-not $XeniaExe) {
+    $XeniaExe = Join-Path (Get-XeniaBinDir -Config Release) "xenia_canary.exe"
+}
 
 $eventsLog = Join-Path $TelemetryDir "00000000_events.jsonl"
 Remove-Item -Force -ErrorAction SilentlyContinue $eventsLog

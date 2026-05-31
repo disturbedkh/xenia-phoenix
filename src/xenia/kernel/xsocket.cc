@@ -7,32 +7,18 @@
  ******************************************************************************
  */
 
-#include "xenia/kernel/xsocket.h"
+#include "src/xenia/kernel/xsocket.h"
 
 #include <cstring>
 
-#include "xenia/base/logging.h"
+#include "xenia/base/platform.h"
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/kernel/xam/xam_module.h"
-#include "xenia/kernel/xevent.h"
+#include "xenia/kernel/xboxkrnl/xboxkrnl_threading.h"
 
-#ifdef XE_PLATFORM_WIN32
-// clang-format off
-#include "xenia/base/platform_win.h"
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-// clang-format on
-#else
-#include <cerrno>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
+DECLARE_bool(bind_interface);
+
+using namespace std::chrono_literals;
 
 namespace xe {
 namespace kernel {
@@ -59,119 +45,50 @@ const std::map<uint32_t, uint32_t> supported_levels = {{0xFFFF, SOL_SOCKET},
 const std::map<uint32_t, uint32_t> supported_controls = {
     {0x8004667E, FIONBIO}, {0x4004667F, FIONREAD}};
 
-namespace {
-
-// Winsock FD_* network event flags (WSAEventSelect).
-constexpr uint32_t kFD_READ = 1;
-constexpr uint32_t kFD_WRITE = 2;
-constexpr uint32_t kFD_OOB = 4;
-constexpr uint32_t kFD_ACCEPT = 8;
-constexpr uint32_t kFD_CONNECT = 16;
-constexpr uint32_t kFD_CLOSE = 32;
-
-#if !XE_PLATFORM_WIN32
-uint32_t PosixErrnoToWSAError(int err) {
-  switch (err) {
-    case EINTR:
-      return 10004;  // WSAEINTR
-    case EACCES:
-      return 10013;  // WSAEACCES
-    case EFAULT:
-      return 10014;  // WSAEFAULT
-    case EINVAL:
-      return 10022;  // WSAEINVAL
-    case EMFILE:
-      return 10024;  // WSAEMFILE
-    case EWOULDBLOCK:
-#ifdef EAGAIN
-    case EAGAIN:
-#endif
-      return 10035;  // WSAEWOULDBLOCK
-    case EINPROGRESS:
-      return 10036;  // WSAEINPROGRESS
-    case EALREADY:
-      return 10037;  // WSAEALREADY
-    case ENOTSOCK:
-      return 10038;  // WSAENOTSOCK
-    case EDESTADDRREQ:
-      return 10039;  // WSAEDESTADDRREQ
-    case EMSGSIZE:
-      return 10040;  // WSAEMSGSIZE
-    case EPROTOTYPE:
-      return 10041;  // WSAEPROTOTYPE
-    case ENOPROTOOPT:
-      return 10042;  // WSAENOPROTOOPT
-    case EPROTONOSUPPORT:
-      return 10043;  // WSAEPROTONOSUPPORT
-    case EOPNOTSUPP:
-      return 10045;  // WSAEOPNOTSUPP
-    case EAFNOSUPPORT:
-      return 10047;  // WSAEAFNOSUPPORT
-    case EADDRINUSE:
-      return 10048;  // WSAEADDRINUSE
-    case EADDRNOTAVAIL:
-      return 10049;  // WSAEADDRNOTAVAIL
-    case ENETDOWN:
-      return 10050;  // WSAENETDOWN
-    case ENETUNREACH:
-      return 10051;  // WSAENETUNREACH
-    case ENETRESET:
-      return 10052;  // WSAENETRESET
-    case ECONNABORTED:
-      return 10053;  // WSAECONNABORTED
-    case ECONNRESET:
-      return 10054;  // WSAECONNRESET
-    case ENOBUFS:
-      return 10055;  // WSAENOBUFS
-    case EISCONN:
-      return 10056;  // WSAEISCONN
-    case ENOTCONN:
-      return 10057;  // WSAENOTCONN
-    case ESHUTDOWN:
-      return 10058;  // WSAESHUTDOWN
-    case ETIMEDOUT:
-      return 10060;  // WSAETIMEDOUT
-    case ECONNREFUSED:
-      return 10061;  // WSAECONNREFUSED
-    case EHOSTUNREACH:
-      return 10065;  // WSAEHOSTUNREACH
-    default:
-      return static_cast<uint32_t>(err);
-  }
-}
-#endif
-
-}  // namespace
-
-void XSocket::MaybeSignalSelectedEvent(uint32_t fd_flags) {
-  std::lock_guard<std::mutex> lock(select_mutex_);
-  if (!selected_event_ || selected_event_flags_ == 0) {
-    return;
-  }
-  if ((fd_flags & selected_event_flags_) != 0) {
-    selected_event_->Set(0, false);
-  }
-}
-
 XSocket::XSocket(KernelState* kernel_state)
     : XObject(kernel_state, kObjectType) {}
 
 XSocket::XSocket(KernelState* kernel_state, uint64_t native_handle)
     : XObject(kernel_state, kObjectType), native_handle_(native_handle) {}
 
-XSocket::~XSocket() { Close(); }
+XSocket::~XSocket() {
+  if (!socket_closed_) {
+    Close();
+  }
+}
 
 X_STATUS XSocket::Initialize(AddressFamily af, Type type, Protocol proto) {
   af_ = af;
   type_ = type;
   proto_ = proto;
+  vdp_ = false;
 
-  if (proto == Protocol::XE_IPPROTO_VDP) {
-    // VDP is a layer on top of UDP.
-    proto = Protocol::XE_IPPROTO_UDP;
+  if (!type) {
+    if (proto == X_IPPROTO_UDP || proto == X_IPPROTO_VDP) {
+      type_ = X_SOCK_DGRAM;
+    } else if (proto == X_IPPROTO_TCP) {
+      type_ = X_SOCK_STREAM;
+    }
   }
 
-  native_handle_ = socket(af, type, proto);
+  if (!proto) {
+    if (type_ == X_SOCK_DGRAM) {
+      proto_ = X_IPPROTO_UDP;
+    } else if (type_ == X_SOCK_STREAM) {
+      proto_ = X_IPPROTO_TCP;
+    }
+  } else if (proto == X_IPPROTO_VDP) {
+    // VDP is a layer on top of UDP.
+    proto_ = X_IPPROTO_UDP;
+    vdp_ = true;
+  }
+
+  if (!type && !proto) {
+    type_ = X_SOCK_STREAM;
+    proto_ = X_IPPROTO_TCP;
+  }
+
+  native_handle_ = socket(af, type_, proto_);
   if (native_handle_ == -1) {
     return X_STATUS_UNSUCCESSFUL;
   }
@@ -180,15 +97,25 @@ X_STATUS XSocket::Initialize(AddressFamily af, Type type, Protocol proto) {
 }
 
 X_STATUS XSocket::Close() {
+  std::unique_lock lock(receive_mutex_);
+  if (active_overlapped_ && !(active_overlapped_->offset_high & 1)) {
+    active_overlapped_->offset_high |= 2;
+  }
+  lock.unlock();
+
+  std::unique_lock socket_lock(receive_socket_mutex_);
 #if XE_PLATFORM_WIN32
   int ret = closesocket(native_handle_);
 #else
   int ret = close(native_handle_);
 #endif
+  socket_lock.unlock();
 
   if (ret != 0) {
     return X_STATUS_UNSUCCESSFUL;
   }
+
+  socket_closed_ = true;
 
   return X_STATUS_SUCCESS;
 }
@@ -198,18 +125,40 @@ X_STATUS XSocket::GetOption(uint32_t level, uint32_t optname, void* optval_ptr,
   int ret =
       getsockopt(native_handle_, level, optname, static_cast<char*>(optval_ptr),
                  reinterpret_cast<socklen_t*>(optlen));
+
+  // Because values provided in optval_ptr are in LE we must to somehow save
+  // them in BE.
+  switch (*optlen) {
+    case 1:
+      xe::copy_and_swap<uint8_t>((uint8_t*)optval_ptr, (uint8_t*)optval_ptr, 1);
+      break;
+    case 4:
+      xe::copy_and_swap<uint32_t>((uint32_t*)optval_ptr, (uint32_t*)optval_ptr,
+                                  1);
+      break;
+    case 8:
+      xe::copy_and_swap<uint64_t>((uint64_t*)optval_ptr, (uint64_t*)optval_ptr,
+                                  1);
+      break;
+    default:
+      XELOGE("XSocket::GetOption - Unhandled optlen: {}", *optlen);
+      break;
+  }
+
   if (ret < 0) {
     // TODO: WSAGetLastError()
     return X_STATUS_UNSUCCESSFUL;
   }
   return X_STATUS_SUCCESS;
 }
-X_STATUS XSocket::SetOption(uint32_t level, uint32_t optname, void* optval_ptr,
-                            uint32_t optlen) {
-  if (level == 0xFFFF && (optname == 0x5801 || optname == 0x5802)) {
+
+int XSocket::SetOption(uint32_t level, uint32_t optname, void* optval_ptr,
+                       uint32_t optlen) {
+  if (level == 0xFFFF && (optname == SO_MARKINSECURE || optname == SO_PRIVATE ||
+                          optname == SO_GRANTINSECURE)) {
     // Disable socket encryption
     secure_ = false;
-    return X_STATUS_SUCCESS;
+    return X_ERROR_SUCCESS;
   }
 
   int native_level = level;
@@ -238,25 +187,42 @@ X_STATUS XSocket::SetOption(uint32_t level, uint32_t optname, void* optval_ptr,
     }
   }
 
+  void* proper_ptr =
+      GetOptValueWithProperEndianness(optval_ptr, optname, optlen);
+
   int ret = setsockopt(native_handle_, native_level, native_optname,
-                       static_cast<char*>(optval_ptr), optlen);
+                       static_cast<const char*>(proper_ptr), optlen);
+
+  // Cheezy way to check if we created some additional allocation.
+  if (optval_ptr != proper_ptr) {
+    free(proper_ptr);
+  }
+
   if (ret < 0) {
     // TODO: WSAGetLastError()
     XELOGE("XSocket::SetOption: failed with error {:08X}", GetLastWSAError());
-    return X_STATUS_UNSUCCESSFUL;
+    return -1;
   }
 
-  // SO_BROADCAST
   if (level == 0xFFFF && optname == 0x0020) {
     broadcast_socket_ = true;
   }
 
-  return X_STATUS_SUCCESS;
+  return X_ERROR_SUCCESS;
 }
 
-X_STATUS XSocket::IOControl(uint32_t cmd, uint8_t* arg_ptr) {
+X_STATUS XSocket::IOControl(uint32_t cmd, uint32_t* arg_ptr) {
 #ifdef XE_PLATFORM_WIN32
-  int ret = ioctlsocket(native_handle_, cmd, (u_long*)arg_ptr);
+  const u_long initial_param = xe::load_and_swap<uint32_t>(arg_ptr);
+  u_long param = initial_param;
+
+  int ret = ioctlsocket(native_handle_, cmd, &param);
+
+  // Parameter was written to therefore byte swap output
+  if (initial_param != param) {
+    xe::store_and_swap(arg_ptr, static_cast<uint32_t>(param));
+  }
+
   if (ret < 0) {
     // TODO: Get last error
     return X_STATUS_UNSUCCESSFUL;
@@ -281,54 +247,89 @@ X_STATUS XSocket::IOControl(uint32_t cmd, uint8_t* arg_ptr) {
 #endif
 }
 
-X_STATUS XSocket::Connect(N_XSOCKADDR* name, int name_len) {
-  int ret = connect(native_handle_, (sockaddr*)name, name_len);
+X_STATUS XSocket::Connect(const XSOCKADDR_IN* name, int name_len) {
+  XSOCKADDR_IN sa_in = *name;
+
+  const auto upnp = kernel_state()->emulator()->GetUPnP();
+
+  if (upnp) {
+    sa_in.address_port = upnp->GetMappedConnectPort(name->address_port);
+  }
+
+  sockaddr addr = sa_in.to_host();
+
+  int ret = connect(native_handle_, &addr, name_len);
+
+  // Implicit Bind
+  bound_port_ = sa_in.address_port;
+  bound_ = true;
+
   if (ret < 0) {
-#if !XE_PLATFORM_WIN32
-    const int err = errno;
-    if (err != EINPROGRESS && err != EWOULDBLOCK
-#ifdef EAGAIN
-        && err != EAGAIN
-#endif
-    ) {
-      return X_STATUS_UNSUCCESSFUL;
-    }
-#else
-    const int err = WSAGetLastError();
-    if (err != WSAEWOULDBLOCK && err != WSAEINPROGRESS) {
-      return X_STATUS_UNSUCCESSFUL;
-    }
-#endif
     return X_STATUS_UNSUCCESSFUL;
   }
 
-  MaybeSignalSelectedEvent(kFD_CONNECT);
   return X_STATUS_SUCCESS;
 }
 
-X_STATUS XSocket::Bind(N_XSOCKADDR_IN* name, int name_len) {
-  // On Linux and Windows (when running under Wine), ports < 1024 require root
-  // privileges. Remap to port + 10000 to avoid privilege issues.
-  // Note: sin_port is xe::be<uint16_t> which automatically handles endianness,
-  // so we use it directly without ntohs/htons.
-  const uint16_t original_port = uint16_t(name->sin_port);
-  if (original_port < 1024) {
-    uint16_t new_port = original_port + 10000;
-    name->sin_port = new_port;
-    XELOGW("XSocket::Bind: port {} requires privileges, remapping to port {}",
-           original_port, new_port);
+X_STATUS XSocket::Bind(const XSOCKADDR_IN* name, int name_len) {
+  XSOCKADDR_IN sa_in = *name;
+
+  const auto upnp = kernel_state()->emulator()->GetUPnP();
+
+  if (upnp) {
+    sa_in.address_port = upnp->GetMappedBindPort(name->address_port);
   }
 
-  int ret = bind(native_handle_, (sockaddr*)name, name_len);
+  sockaddr addr = sa_in.to_host();
 
+  // Force socket to bind to the IP of the selected interface
+  if (cvars::bind_interface) {
+    sockaddr_in* addr_in = reinterpret_cast<sockaddr_in*>(&addr);
+
+    const auto network_adapter =
+        kernel_state()->emulator()->GetNetworkAdapterManager();
+
+    const in_addr interface_addr =
+        network_adapter->GetSelectedAdapterLocalIP().sin_addr;
+
+    // Title wants to bind to and interface but is it our bound interface?
+    if (name->address_ip.s_addr) {
+      assert_true(name->address_ip.s_addr == interface_addr.s_addr);
+    }
+
+    addr_in->sin_addr = interface_addr;
+  } else {
+    // Check if title tried to bind an interface
+    assert_zero(name->address_ip.s_addr);
+  }
+
+  int ret = bind(native_handle_, &addr, name_len);
   if (ret < 0) {
     return X_STATUS_UNSUCCESSFUL;
   }
 
+  bound_port_ = sa_in.address_port;
+
+  if (!bound_port_) {
+    bound_port_ = GetImplicitlyBoundPort();
+  }
+
   bound_ = true;
-  bound_port_ = name->sin_port;
 
   return X_STATUS_SUCCESS;
+}
+
+uint16_t XSocket::GetImplicitlyBoundPort() const {
+  sockaddr_in sock_name = {};
+  socklen_t sock_name_len = sizeof(sockaddr);
+
+  if (!getsockname(native_handle_, reinterpret_cast<sockaddr*>(&sock_name),
+                   &sock_name_len)) {
+    return xe::byte_swap(sock_name.sin_port);
+  }
+
+  assert_always();
+  return 0;
 }
 
 X_STATUS XSocket::Listen(int backlog) {
@@ -340,154 +341,390 @@ X_STATUS XSocket::Listen(int backlog) {
   return X_STATUS_SUCCESS;
 }
 
-object_ref<XSocket> XSocket::Accept(N_XSOCKADDR* name, int* name_len) {
-  sockaddr n_sockaddr;
-  socklen_t n_name_len = sizeof(sockaddr);
-  uintptr_t ret = accept(native_handle_, &n_sockaddr, &n_name_len);
-  if (ret == -1) {
-    std::memset(name, 0, *name_len);
-    *name_len = 0;
+object_ref<XSocket> XSocket::Accept(XSOCKADDR_IN* name, int* name_len) {
+  sockaddr sa = {};
+  socklen_t addrlen = 0;
+  const bool is_name_and_name_len_available = name && name_len;
+
+  if (is_name_and_name_len_available) {
+    addrlen = xe::byte_swap(*name_len);
+  }
+
+  const uint64_t socket_handle = accept(native_handle_, name ? &sa : nullptr,
+                                        name_len ? &addrlen : nullptr);
+  if (socket_handle == -1) {
     return nullptr;
   }
 
-  std::memcpy(name, &n_sockaddr, n_name_len);
-  *name_len = n_name_len;
+  if (is_name_and_name_len_available) {
+    name->to_guest(&sa);
+    *name_len = xe::byte_swap(addrlen);
+  }
 
   // Create a kernel object to represent the new socket, and copy parameters
   // over.
-  auto socket = object_ref<XSocket>(new XSocket(kernel_state_, ret));
+  auto socket = object_ref<XSocket>(new XSocket(kernel_state_, socket_handle));
   socket->af_ = af_;
   socket->type_ = type_;
   socket->proto_ = proto_;
+  socket->vdp_ = vdp_;
 
-  MaybeSignalSelectedEvent(kFD_ACCEPT);
+  sockaddr_in sock_name = {};
+  socklen_t sock_name_len = sizeof(sockaddr);
+
+  // Implicit Bind
+  socket->bound_port_ = bound_port_ = GetImplicitlyBoundPort();
+  socket->bound_ = true;
+
   return socket;
 }
 
 int XSocket::Shutdown(int how) { return shutdown(native_handle_, how); }
 
 int XSocket::Recv(uint8_t* buf, uint32_t buf_len, uint32_t flags) {
-  int ret =
-      recv(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags);
-  if (ret > 0) {
-    MaybeSignalSelectedEvent(kFD_READ);
-  } else if (ret == 0) {
-    MaybeSignalSelectedEvent(kFD_CLOSE);
-  }
-  return ret;
+  return recv(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags);
 }
 
 int XSocket::RecvFrom(uint8_t* buf, uint32_t buf_len, uint32_t flags,
-                      N_XSOCKADDR_IN* from, uint32_t* from_len) {
-  // Pop from secure packets first
-  // TODO(DrChat): Enable when I commit XNet
-  /*
+                      XSOCKADDR_IN* from, socklen_t* from_len) {
+  sockaddr sa = {};
+
+  if (from) {
+    sa = from->to_host();
+  }
+
+  int ret = recvfrom(native_handle_, reinterpret_cast<char*>(buf), buf_len,
+                     flags, from ? &sa : nullptr, from_len);
+
+  // TCP ignores from and from_len.
+  // 555307EE expects port even with TCP, include IP anyway.
+  // Verified on console.
+  if (proto_ == X_IPPROTO_TCP) {
+    socklen_t peer_addar_len = sizeof(sockaddr);
+    getpeername(native_handle_, &sa, &peer_addar_len);
+  }
+
+  if (from) {
+    from->to_guest(&sa);
+  }
+
+  return ret;
+}
+
+struct WSARecvFromData {
+  XWSABUF* buffers;
+  uint32_t num_buffers;
+  uint32_t flags;
+  XSOCKADDR_IN* from;
+  xe::be<uint32_t>* from_len;
+  XWSAOVERLAPPED* overlapped;
+};
+
+int XSocket::PollWSARecvFrom(bool wait, WSARecvFromData receive_async_data) {
+  receive_async_data.overlapped->internal_high = 0;
+
+  struct pollfd fds[1];
+  fds->fd = native_handle_;
+  fds->events = POLLIN;
+
+#ifdef XE_PLATFORM_WIN32
+  DWORD bytes_received = 0;
+  DWORD flags = 0;
+  WSABUF* buffers = nullptr;
+#else
+  uint32_t flags = 0;
+  iovec* buffers = nullptr;
+  sockaddr addr = {};
+  socklen_t addr_len = 0;
+  msghdr msg = {};
+#endif
+
+  int ret;
+  do {
+#ifdef XE_PLATFORM_WIN32
+    ret = WSAPoll(fds, 1, wait ? 1000 : 0);
+#else
+    ret = poll(fds, 1, wait ? 1000 : 0);
+#endif
+
+    if (receive_async_data.overlapped->offset_high & 2) {
+      receive_async_data.overlapped->internal_high =
+          (uint32_t)X_WSAError::X_WSA_OPERATION_ABORTED;
+      ret = -1;
+      goto threadexit;
+    }
+  } while (ret == 0 && wait);
+
+  if (ret < 0) {
+    receive_async_data.overlapped->internal_high = GetLastWSAError();
+    XELOGE("XSocket receive thread failed polling with error {}",
+           static_cast<uint32_t>(receive_async_data.overlapped->internal_high));
+    goto threadexit;
+  } else if (ret == 0) {
+    receive_async_data.overlapped->internal_high =
+        (uint32_t)X_WSAError::X_WSAEWOULDBLOCK;
+    ret = -1;
+    goto threadexit;
+  }
+
+#ifdef XE_PLATFORM_WIN32
+  flags = receive_async_data.flags;
+  buffers = new WSABUF[receive_async_data.num_buffers];
+
+  for (auto i = 0u; i < receive_async_data.num_buffers; i++) {
+    buffers[i].len = receive_async_data.buffers[i].len;
+    buffers[i].buf =
+        reinterpret_cast<CHAR*>(kernel_state()->memory()->TranslateVirtual(
+            receive_async_data.buffers[i].buf_ptr));
+  }
+
   {
-    std::lock_guard<std::mutex> lock(incoming_packet_mutex_);
-    if (incoming_packets_.size()) {
-      packet* pkt = (packet*)incoming_packets_.front();
-      int data_len = pkt->data_len;
-      std::memcpy(buf, pkt->data, std::min((uint32_t)pkt->data_len, buf_len));
+    std::unique_lock socket_lock(receive_socket_mutex_);
 
-      from->sin_family = 2;
-      from->sin_addr = pkt->src_ip;
-      from->sin_port = pkt->src_port;
+    sockaddr* sa = nullptr;
+    if (receive_async_data.from) {
+      sockaddr addr = receive_async_data.from->to_host();
+      sa = const_cast<sockaddr*>(&addr);
+    }
 
-      incoming_packets_.pop();
-      uint8_t* pkt_ui8 = (uint8_t*)pkt;
-      delete[] pkt_ui8;
+    ret = ::WSARecvFrom(native_handle_, buffers, receive_async_data.num_buffers,
+                        &bytes_received, &flags, sa,
+                        (LPINT)receive_async_data.from_len, nullptr, nullptr);
+    if (ret < 0) {
+      receive_async_data.overlapped->internal_high = GetLastWSAError();
+    } else {
+      receive_async_data.overlapped->internal = bytes_received;
+    }
+    receive_async_data.from->to_guest(sa);
+    socket_lock.unlock();
+  }
 
-      return data_len;
+  receive_async_data.overlapped->offset = flags;
+#else
+  flags = receive_async_data.flags;
+  buffers = new iovec[receive_async_data.num_buffers];
+  for (auto i = 0u; i < receive_async_data.num_buffers; i++) {
+    buffers[i].iov_len = receive_async_data.buffers[i].len;
+    buffers[i].iov_base = kernel_state()->memory()->TranslateVirtual(
+        receive_async_data.buffers[i].buf_ptr);
+  }
+
+  addr = {};
+  addr_len = sizeof(addr);
+  std::memset(&msg, 0, sizeof(msg));
+  msg.msg_name = receive_async_data.from ? &addr : nullptr;
+  msg.msg_namelen = receive_async_data.from ? addr_len : 0;
+  msg.msg_iov = buffers;
+  msg.msg_iovlen = receive_async_data.num_buffers;
+
+  {
+    std::unique_lock socket_lock(receive_socket_mutex_);
+    ret = recvmsg(native_handle_, &msg, receive_async_data.flags);
+    if (ret < 0) {
+      receive_async_data.overlapped->internal_high = GetLastWSAError();
+    } else {
+      receive_async_data.overlapped->internal = ret;
+    }
+    socket_lock.unlock();
+  }
+
+  if (receive_async_data.from && ret >= 0) {
+    receive_async_data.from->to_guest(&addr);
+    if (receive_async_data.from_len) {
+      *receive_async_data.from_len = static_cast<uint32_t>(msg.msg_namelen);
     }
   }
-  */
 
-  sockaddr_in nfrom;
-  socklen_t nfromlen = sizeof(sockaddr_in);
-  int ret = recvfrom(native_handle_, reinterpret_cast<char*>(buf), buf_len,
-                     flags, (sockaddr*)&nfrom, &nfromlen);
-  if (from) {
-    from->sin_family = nfrom.sin_family;
-    from->sin_addr = ntohl(nfrom.sin_addr.s_addr);  // BE <- BE
-    from->sin_port = nfrom.sin_port;
-    std::memset(from->x_sin_zero, 0, sizeof(from->x_sin_zero));
+  flags = 0;
+  if (msg.msg_flags & MSG_TRUNC) {
+    flags |= 0x8000;  // Winsock MSG_PARTIAL
+  }
+  if (msg.msg_flags & MSG_OOB) {
+    flags |= MSG_OOB;
+  }
+  receive_async_data.overlapped->offset = flags;
+
+  if (ret >= 0) {
+    SetLastWSAError((X_WSAError)0);
+    ret = 0;
+  }
+#endif
+  if (buffers) {
+    delete[] buffers;
   }
 
-  if (from_len) {
-    *from_len = nfromlen;
+threadexit:
+  std::unique_lock lock(receive_mutex_);
+  if (wait) {
+    delete[] receive_async_data.buffers;
   }
 
-  if (ret > 0) {
-    MaybeSignalSelectedEvent(kFD_READ);
-  } else if (ret == 0) {
-    MaybeSignalSelectedEvent(kFD_CLOSE);
+  receive_async_data.overlapped->offset_high |= 1;
+
+  if (wait && receive_async_data.overlapped->event_handle) {
+    xboxkrnl::xeNtSetEvent(receive_async_data.overlapped->event_handle,
+                           nullptr);
   }
+
+  receive_cv_.notify_all();
+  lock.unlock();
 
   return ret;
 }
 
-int XSocket::Send(const uint8_t* buf, uint32_t buf_len, uint32_t flags) {
-  int ret = send(native_handle_, reinterpret_cast<const char*>(buf), buf_len,
-                 flags);
-  if (ret > 0) {
-    MaybeSignalSelectedEvent(kFD_WRITE);
-  }
-  return ret;
-}
-
-int XSocket::SendTo(uint8_t* buf, uint32_t buf_len, uint32_t flags,
-                    N_XSOCKADDR_IN* to, uint32_t to_len) {
-  // Send 2 copies of the packet: One to XNet (for network security) and an
-  // unencrypted copy for other Xenia hosts.
-  // TODO(DrChat): Enable when I commit XNet.
-  /*
-  auto xam = kernel_state()->GetKernelModule<xam::XamModule>("xam.xex");
-  auto xnet = xam->xnet();
-  if (xnet) {
-    xnet->SendPacket(this, to, buf, buf_len);
-  }
-  */
-
-  sockaddr_in nto;
-  if (to) {
-    nto.sin_addr.s_addr = to->sin_addr;
-    nto.sin_family = to->sin_family;
-    nto.sin_port = to->sin_port;
-  }
-
-  int ret = sendto(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags,
-                   to ? (sockaddr*)&nto : nullptr, to_len);
-  if (ret > 0) {
-    MaybeSignalSelectedEvent(kFD_WRITE);
-  }
-  return ret;
-}
-
-// Winsock FD_* flags split into asio wait_read / wait_write groups.
-int XSocket::WSAEventSelect(object_ref<XEvent> event, uint32_t flags) {
-  if (native_handle_ == static_cast<uint64_t>(-1)) {
+int XSocket::WSARecvFrom(XWSABUF* buffers, uint32_t num_buffers,
+                         xe::be<uint32_t>* num_bytes_recv_ptr,
+                         xe::be<uint32_t>* flags_ptr, XSOCKADDR_IN* from_ptr,
+                         xe::be<uint32_t>* fromlen_ptr,
+                         XWSAOVERLAPPED* overlapped_ptr) {
+  if (!buffers || !flags_ptr || (from_ptr && !fromlen_ptr)) {
+    SetLastWSAError(X_WSAError::X_WSA_INVALID_PARAMETER);
     return -1;
   }
 
-  std::lock_guard<std::mutex> lock(select_mutex_);
-  selected_event_ = std::move(event);
-  selected_event_flags_ = flags;
+  // On win32 we could pipe all this directly to WSARecvFrom.
+  // We would however need find a way to call the completion callback without
+  // relying on the caller to set the "alertable" flag to true when waiting. We
+  // also need to do our own async handling anyway for Linux so we might as well
+  // make the code paths the same to improve symmetry in behaviour.
 
-  // WSAEventSelect implicitly sets the socket to non-blocking.
-#if XE_PLATFORM_WIN32
-  u_long non_blocking = 1;
-  ioctlsocket(static_cast<SOCKET>(native_handle_), FIONBIO, &non_blocking);
-#else
-  int flags_native = fcntl(static_cast<int>(native_handle_), F_GETFL, 0);
-  if (flags_native >= 0) {
-    fcntl(static_cast<int>(native_handle_), F_SETFL,
-          flags_native | O_NONBLOCK);
+  WSARecvFromData receive_async_data;
+  receive_async_data.buffers = buffers;
+  receive_async_data.num_buffers = num_buffers;
+  receive_async_data.flags = *flags_ptr;
+  receive_async_data.from = from_ptr;
+  receive_async_data.from_len = fromlen_ptr;
+
+  XWSAOVERLAPPED tmp_overlapped;
+  std::memset(&tmp_overlapped, 0, sizeof(tmp_overlapped));
+  receive_async_data.overlapped =
+      overlapped_ptr ? overlapped_ptr : &tmp_overlapped;
+
+  int ret = PollWSARecvFrom(false, receive_async_data);
+
+  if (ret < 0) {
+    auto wsa_error = receive_async_data.overlapped->internal_high.get();
+    SetLastWSAError((X_WSAError)wsa_error);
+
+    if (overlapped_ptr && wsa_error == (uint32_t)X_WSAError::X_WSAEWOULDBLOCK) {
+      receive_mutex_.lock();
+
+      if (!active_overlapped_ || active_overlapped_->offset_high & 1) {
+        // These may have been on the stack - copy them.
+        receive_async_data.buffers = new XWSABUF[num_buffers];
+        std::memcpy(receive_async_data.buffers, buffers,
+                    num_buffers * sizeof(XWSABUF));
+
+        overlapped_ptr->offset_high = 0;
+        if (overlapped_ptr->event_handle) {
+          xboxkrnl::xeNtClearEvent(overlapped_ptr->event_handle);
+        }
+        active_overlapped_ = overlapped_ptr;
+
+        if (!polling_task_.valid()) {
+          polling_task_ =
+              std::async(std::launch::async, &XSocket::PollWSARecvFrom, this,
+                         true, receive_async_data);
+        } else {
+          auto status = polling_task_.wait_for(0ms);
+          if (status == std::future_status::ready) {
+            auto result = polling_task_.get();
+          }
+        }
+        SetLastWSAError(X_WSAError::X_WSA_IO_PENDING);
+      }
+
+      receive_mutex_.unlock();
+    }
+  } else {
+    if (num_bytes_recv_ptr) {
+      *num_bytes_recv_ptr = receive_async_data.overlapped->internal;
+    }
+    *flags_ptr = receive_async_data.overlapped->offset;
   }
-#endif
 
-  // Phoenix uses native BSD sockets; events are signaled poll-on-op from I/O
-  // paths (async_wait deferred until asio socket migration, Phase 2.5).
+  return ret;
+}
+
+bool XSocket::WSAGetOverlappedResult(XWSAOVERLAPPED* overlapped_ptr,
+                                     xe::be<uint32_t>* bytes_transferred,
+                                     bool wait, xe::be<uint32_t>* flags_ptr) {
+  if (!overlapped_ptr || !bytes_transferred || !flags_ptr) {
+    SetLastWSAError(X_WSAError::X_WSA_INVALID_PARAMETER);
+    return false;
+  }
+
+  std::unique_lock lock(receive_mutex_);
+  if (!(overlapped_ptr->offset_high & 1)) {
+    if (wait) {
+      receive_cv_.wait(lock);
+    } else {
+      SetLastWSAError(X_WSAError::X_WSA_IO_INCOMPLETE);
+      return false;
+    }
+  }
+
+  if (overlapped_ptr->internal_high != 0) {
+    SetLastWSAError((X_WSAError)overlapped_ptr->internal_high.get());
+    active_overlapped_ = nullptr;
+    return false;
+  }
+
+  *bytes_transferred = overlapped_ptr->internal;
+  *flags_ptr = overlapped_ptr->offset;
+
+  active_overlapped_ = nullptr;
+
+  return true;
+}
+
+int XSocket::Send(const uint8_t* buf, uint32_t buf_len, uint32_t flags) {
+  return send(native_handle_, reinterpret_cast<const char*>(buf), buf_len,
+              flags);
+}
+
+int XSocket::SendTo(uint8_t* buf, uint32_t buf_len, uint32_t flags,
+                    XSOCKADDR_IN* to, uint32_t to_len) {
+  const auto upnp = kernel_state()->emulator()->GetUPnP();
+
+  if (upnp) {
+    to->address_port = upnp->GetMappedBindPort(to->address_port);
+  }
+
+  sockaddr addr = to->to_host();
+
+  // Ensure the bound interface can route to the loopback interface/itself
+  if (cvars::bind_interface) {
+    sockaddr_in* addr_in = reinterpret_cast<sockaddr_in*>(&addr);
+
+    if (addr_in->sin_addr.s_addr == xe::byte_swap(LOOPBACK)) {
+      const auto network_adapter =
+          kernel_state()->emulator()->GetNetworkAdapterManager();
+
+      addr_in->sin_addr = network_adapter->GetSelectedAdapterLocalIP().sin_addr;
+    }
+  }
+
+  int ret = sendto(native_handle_, reinterpret_cast<char*>(buf), buf_len, flags,
+                   to ? &addr : nullptr, to_len);
+
+  // Implicit Bind
+  if (!bound_port_) {
+    bound_port_ = GetImplicitlyBoundPort();
+    bound_ = true;
+  }
+
+  return ret;
+}
+
+int XSocket::WSAEventSelect(uint64_t socket_handle, uint64_t event_handle,
+                            uint32_t flags) {
+#ifdef XE_PLATFORM_WIN32
+  return ::WSAEventSelect(socket_handle, reinterpret_cast<HANDLE>(event_handle),
+                          flags);
+#else
   return 0;
+#endif
 }
 
 bool XSocket::QueuePacket(uint32_t src_ip, uint16_t src_port,
@@ -506,24 +743,52 @@ bool XSocket::QueuePacket(uint32_t src_ip, uint16_t src_port,
   return true;
 }
 
-X_STATUS XSocket::GetSockName(uint8_t* buf, int* buf_len) {
-  struct sockaddr sa = {};
+X_STATUS XSocket::GetPeerName(XSOCKADDR_IN* name, int* name_len) {
+  sockaddr addr = name->to_host();
+  socklen_t len = name_len ? static_cast<socklen_t>(*name_len) : sizeof(addr);
 
-  int ret = getsockname(native_handle_, &sa, (socklen_t*)buf_len);
+  int ret = getpeername(native_handle_, &addr, &len);
   if (ret < 0) {
     return X_STATUS_UNSUCCESSFUL;
   }
 
-  std::memcpy(buf, &sa, *buf_len);
+  name->to_guest(&addr);
+  if (name_len) {
+    *name_len = static_cast<int>(len);
+  }
   return X_STATUS_SUCCESS;
 }
 
-uint32_t XSocket::GetLastWSAError() const {
+X_STATUS XSocket::GetSockName(XSOCKADDR_IN* name, int* name_len) {
+  sockaddr addr = name->to_host();
+  socklen_t len = name_len ? static_cast<socklen_t>(*name_len) : sizeof(addr);
+
+  int ret = getsockname(native_handle_, &addr, &len);
+  if (ret < 0) {
+    return X_STATUS_UNSUCCESSFUL;
+  }
+
+  name->to_guest(&addr);
+  if (name_len) {
+    *name_len = static_cast<int>(len);
+  }
+  return X_STATUS_SUCCESS;
+}
+
+uint32_t XSocket::GetLastWSAError() {
+  // Todo(Gliniak): Provide error mapping table
+  // Xbox error codes might not match with what we receive from OS
 #ifdef XE_PLATFORM_WIN32
   return WSAGetLastError();
-#else
-  return PosixErrnoToWSAError(errno);
 #endif
+  return errno;
+}
+
+void XSocket::SetLastWSAError(X_WSAError error) const {
+#ifdef XE_PLATFORM_WIN32
+  WSASetLastError((int)error);
+#endif
+  errno = (int)error;
 }
 
 }  // namespace kernel

@@ -14,7 +14,8 @@ if ($Port -le 0) {
     else { $Port = 8765 }
 }
 
-$exe = "build\bin\Windows\$Config\xenia_canary.exe"
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$exe = Join-Path (Get-XeniaBinDir -Config $Config) "xenia_canary.exe"
 if (-not (Test-Path $exe)) {
     Write-Error "Missing $exe - build xenia-app first."
 }

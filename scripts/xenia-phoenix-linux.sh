@@ -17,7 +17,7 @@ if [[ -z "${VULKAN_SDK:-}" ]] && [[ -d "${HOME}/vulkan-sdk" ]]; then
 fi
 
 CONFIG="${XENIA_CONFIG:-Release}"
-BINARY="${ROOT}/build/bin/Linux/${CONFIG}/xenia_canary"
+BINARY="$(python3 "${ROOT}/tools/build/xenia_paths.py" bin --config "${CONFIG}")/xenia_canary"
 
 if [[ ! -x "${BINARY}" ]]; then
   echo "xenia_canary not found at ${BINARY}" >&2

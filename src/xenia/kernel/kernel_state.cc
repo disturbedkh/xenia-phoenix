@@ -16,6 +16,7 @@
 #include "xenia/emulator.h"
 #include "xenia/hid/input_system.h"
 #include "xenia/kernel/kernel_flags.h"
+#include "xenia/kernel/netplay/xlive_api.h"
 #include "xenia/kernel/user_module.h"
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/kernel/util/stub_trace.h"
@@ -88,14 +89,21 @@ KernelState::KernelState(Emulator* emulator)
   }
 }
 
+void KernelState::ShutdownDispatchThread() {
+  if (dispatch_thread_running_) {
+    XELOGI("KernelState::ShutdownDispatchThread: stopping dispatch thread");
+    dispatch_thread_running_ = false;
+    dispatch_cond_.notify_all();
+    if (dispatch_thread_ && dispatch_thread_->thread()) {
+      xe::threading::Wait(dispatch_thread_->thread(), false);
+    }
+  }
+}
+
 KernelState::~KernelState() {
   SetExecutableModule(nullptr);
 
-  if (dispatch_thread_running_) {
-    dispatch_thread_running_ = false;
-    dispatch_cond_.notify_all();
-    dispatch_thread_->Wait(0, 0, 0, nullptr);
-  }
+  ShutdownDispatchThread();
 
   executable_module_.reset();
   user_modules_.clear();
@@ -127,6 +135,10 @@ uint32_t KernelState::title_id() const {
   }
 
   return 0;
+}
+
+XLiveAPI* KernelState::GetXboxLiveAPI() const {
+  return emulator()->GetXboxLiveAPI();
 }
 
 const std::unique_ptr<xam::SpaInfo> KernelState::title_xdbf() const {

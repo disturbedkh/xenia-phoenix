@@ -7,6 +7,7 @@
  ******************************************************************************
  */
 
+#include <chrono>
 #include <ranges>
 
 #include "xenia/emulator.h"
@@ -29,6 +30,7 @@
 #include "xenia/base/mapped_memory.h"
 #include "xenia/base/platform.h"
 #include "xenia/base/string.h"
+#include "xenia/base/subsystem_tracer.h"
 #include "xenia/base/system.h"
 #include "xenia/cpu/backend/code_cache.h"
 #include "xenia/cpu/backend/null_backend.h"
@@ -46,6 +48,7 @@
 #include "xenia/kernel/xam/xdbf/spa_info.h"
 #include "xenia/kernel/xbdm/xbdm_module.h"
 #include "xenia/kernel/xboxkrnl/xboxkrnl_module.h"
+#include "xenia/kernel/xthread.h"
 #include "xenia/memory.h"
 #include "xenia/ui/file_picker.h"
 #include "xenia/ui/imgui_dialog.h"
@@ -60,6 +63,8 @@
 #include "xenia/vfs/devices/null_device.h"
 #include "xenia/vfs/devices/xcontent_container_device.h"
 #include "xenia/vfs/virtual_file_system.h"
+
+#include <fstream>
 
 #if XE_ARCH_AMD64
 #include "xenia/cpu/backend/x64/x64_backend.h"
@@ -86,6 +91,8 @@ DEFINE_bool(allow_game_relative_writes, false,
 
 DECLARE_bool(allow_plugins);
 
+DECLARE_bool(upnp);
+
 DEFINE_int32(priority_class, 0,
              "Forces Xenia to use different process priority than default one. "
              "It might affect performance and cause unexpected bugs. Possible "
@@ -93,6 +100,35 @@ DEFINE_int32(priority_class, 0,
              "General");
 
 namespace xe {
+
+namespace {
+
+const char* LifecycleStateName(LifecycleState state) {
+  switch (state) {
+    case LifecycleState::Bare:
+      return "Bare";
+    case LifecycleState::Ready:
+      return "Ready";
+    case LifecycleState::Launching:
+      return "Launching";
+    case LifecycleState::Running:
+      return "Running";
+    case LifecycleState::Paused:
+      return "Paused";
+    case LifecycleState::Terminating:
+      return "Terminating";
+    case LifecycleState::Relaunching:
+      return "Relaunching";
+    case LifecycleState::Respawning:
+      return "Respawning";
+    case LifecycleState::Exiting:
+      return "Exiting";
+    default:
+      return "Unknown";
+  }
+}
+
+}  // namespace
 using namespace xe::literals;
 
 Emulator::GameConfigLoadCallback::GameConfigLoadCallback(Emulator& emulator)
@@ -111,6 +147,8 @@ Emulator::Emulator(const std::filesystem::path& command_line,
     : on_launch(),
       on_terminate(),
       on_exit(),
+      on_presence_change(),
+      on_session_change(),
       command_line_(command_line),
       storage_root_(storage_root),
       content_root_(content_root),
@@ -131,7 +169,30 @@ Emulator::Emulator(const std::filesystem::path& command_line,
       game_info_database_(),
       paused_(false),
       restoring_(false),
-      restore_fence_() {
+      restore_fence_(),
+      relaunch_complete_event_(
+          xe::threading::Event::CreateManualResetEvent(false)) {
+  lifecycle_state_.store(LifecycleState::Bare, std::memory_order_release);
+  lifecycle_worker_ = std::thread(&Emulator::LifecycleWorkerThreadMain, this);
+
+  xbox_live_api_ = std::make_unique<kernel::XLiveAPI>();
+  network_adapter_manager_ = std::make_unique<kernel::NetworkAdapterManager>();
+  upnp_ = std::make_unique<kernel::UPnP>();
+  network_adapter_manager_->Initialize();
+
+  if (cvars::upnp) {
+    upnp_->Initialize();
+  }
+
+  on_terminate.AddListener([this]() {
+    if (xbox_live_api_) {
+      xbox_live_api_->DeleteAllSessions();
+    }
+    if (upnp_) {
+      upnp_->CloseOpenPorts();
+    }
+  });
+
   if (cvars::priority_class != 0) {
     if (SetProcessPriorityClass(cvars::priority_class)) {
       XELOGI("Higher priority class request: Successful. New priority: {}",
@@ -164,29 +225,211 @@ Emulator::Emulator(const std::filesystem::path& command_line,
 }
 
 Emulator::~Emulator() {
-  // Note that we delete things in the reverse order they were initialized.
+  SetLifecycleState(LifecycleState::Exiting);
+  ShutdownLifecycleWorker();
+  Shutdown();
+}
 
-  // Give the systems time to shutdown before we delete them.
-  if (graphics_system_) {
-    graphics_system_->Shutdown();
+void Emulator::SetLifecycleState(LifecycleState new_state) {
+  LifecycleState old =
+      lifecycle_state_.exchange(new_state, std::memory_order_acq_rel);
+  if (old != new_state) {
+    XELOGW("Lifecycle: {} -> {}", LifecycleStateName(old),
+           LifecycleStateName(new_state));
+    on_lifecycle_change(old, new_state);
   }
-  if (audio_system_) {
-    audio_system_->Shutdown();
+}
+
+void Emulator::LifecycleWorkerThreadMain() {
+  xe::threading::set_name("Lifecycle");
+  while (true) {
+    std::function<void()> work;
+    {
+      std::unique_lock lock(lifecycle_worker_mutex_);
+      lifecycle_worker_cv_.wait(lock, [this]() {
+        return lifecycle_worker_quit_ || !lifecycle_worker_queue_.empty();
+      });
+      if (lifecycle_worker_quit_ && lifecycle_worker_queue_.empty()) {
+        return;
+      }
+      work = std::move(lifecycle_worker_queue_.front());
+      lifecycle_worker_queue_.pop_front();
+    }
+    if (work) {
+      work();
+    }
+  }
+}
+
+void Emulator::PostToLifecycleWorker(std::function<void()> work) {
+  if (!work) {
+    return;
+  }
+  {
+    std::lock_guard lock(lifecycle_worker_mutex_);
+    lifecycle_worker_queue_.push_back(std::move(work));
+  }
+  lifecycle_worker_cv_.notify_one();
+}
+
+void Emulator::ShutdownLifecycleWorker() {
+  {
+    std::lock_guard lock(lifecycle_worker_mutex_);
+    lifecycle_worker_quit_ = true;
+  }
+  lifecycle_worker_cv_.notify_one();
+  if (lifecycle_worker_.joinable()) {
+    lifecycle_worker_.join();
+  }
+}
+
+void Emulator::Shutdown() {
+  XE_SUBSYSTEM_TRACE("Emulator", "Shutdown");
+  XELOGW("Emulator::Shutdown: starting teardown (relaunching={})",
+         relaunching_);
+
+  if (relaunching_) {
+    on_before_shutdown();
   }
 
-  input_system_.reset();
-  graphics_system_.reset();
-  audio_system_.reset();
-  audio_media_player_.reset();
+  ShutdownSubsystems();
 
+  main_thread_ = nullptr;
+
+  if (!relaunching_) {
+    input_system_.reset();
+  }
+
+  patcher_.reset();
+  plugin_loader_.reset();
   kernel_state_.reset();
   file_system_.reset();
 
   processor_.reset();
-
   export_resolver_.reset();
+  memory_.reset();
 
   ExceptionHandler::Uninstall(Emulator::ExceptionCallbackThunk, this);
+
+  title_id_ = std::nullopt;
+  title_name_.clear();
+  title_version_.clear();
+  game_info_database_.reset();
+  paused_ = false;
+
+  if (!relaunching_) {
+    SetLifecycleState(LifecycleState::Bare);
+  }
+
+  XELOGW("Emulator::Shutdown: teardown complete");
+}
+
+void Emulator::ShutdownSubsystems() {
+  XE_SUBSYSTEM_TRACE("Emulator", "ShutdownSubsystems");
+  XELOGW("Emulator::ShutdownSubsystems: tearing down GPU/APU/media");
+  // CRITICAL: detach UI-side consumers (Window swap chain, ImGuiDrawer,
+  // ImmediateDrawer, Profiler IO, ...) from the Presenter BEFORE the
+  // GraphicsSystem is destroyed and takes the Presenter with it. Otherwise
+  // imgui_drawer_->presenter_ becomes a dangling pointer and the very next
+  // ShowLauncher() call faults inside Presenter::AddUIDrawerFromUIThread.
+  // Must happen on the UI thread (Win32 swap chain ownership), so the
+  // callback marshals itself via CallInUIThreadSynchronous.
+  if (presenter_teardown_callback_ && display_window_) {
+    XELOGW("Emulator::ShutdownSubsystems: invoking presenter teardown on UI");
+    const auto teardown = presenter_teardown_callback_;
+    if (!display_window_->app_context().CallInUIThreadSynchronous(teardown)) {
+      XELOGW(
+          "Emulator::ShutdownSubsystems: UI loop unavailable; running "
+          "presenter "
+          "teardown on current thread");
+      teardown();
+    }
+  }
+  // CRITICAL: Stop the AudioMediaPlayer's worker thread BEFORE we destroy
+  // audio_system_ or kernel_state_. The worker is a detached host thread that
+  // captures raw pointers to both; if we let it run past this point it will
+  // dereference freed memory inside Play()/LoadSongToMemory() and crash with
+  // an access violation in KernelState::file_system. Shutdown() joins the
+  // worker before returning.
+  if (audio_media_player_) {
+    XELOGW(
+        "Emulator::ShutdownSubsystems: stopping AudioMediaPlayer worker "
+        "thread");
+    audio_media_player_->Shutdown();
+    audio_media_player_.reset();
+  }
+  if (audio_system_) {
+    audio_system_->Shutdown();
+    audio_system_.reset();
+  }
+  if (graphics_system_) {
+    graphics_system_->Shutdown();
+    graphics_system_.reset();
+  }
+  active_gpu_backend_.clear();
+  active_apu_backend_.clear();
+}
+
+X_STATUS Emulator::SetupSubsystems() {
+  XE_SUBSYSTEM_TRACE("Emulator", "SetupSubsystems");
+  X_STATUS result = X_STATUS_SUCCESS;
+
+  if (audio_system_factory_ && !audio_system_) {
+    XELOGI("{}: Initializing Audio...", __func__);
+    audio_system_ = audio_system_factory_(processor_.get());
+    if (!audio_system_) {
+      XELOGE("{}: Cannot initalize audio_system!", __func__);
+      return X_STATUS_NOT_IMPLEMENTED;
+    }
+  }
+
+  if (graphics_system_factory_ && !graphics_system_) {
+    XELOGI("{}: Initializing Graphics...", __func__);
+    graphics_system_ = graphics_system_factory_();
+    if (!graphics_system_) {
+      XELOGE("{}: Cannot initalize graphics_system!", __func__);
+      return X_STATUS_NOT_IMPLEMENTED;
+    }
+  }
+
+  if (graphics_system_) {
+    XELOGI("{}: Starting graphics_system...", __func__);
+    result = graphics_system_->Setup(
+        processor_.get(), kernel_state_.get(),
+        display_window_ ? &display_window_->app_context() : nullptr,
+        display_window_ != nullptr);
+    if (result) {
+      XELOGE("{}: Failed to setup graphics_system!", __func__);
+      return result;
+    }
+  }
+
+  if (audio_system_) {
+    XELOGI("{}: Starting audio_system...", __func__);
+    result = audio_system_->Setup(kernel_state_.get());
+    if (result) {
+      XELOGE("{}: Failed to setup audio_system!", __func__);
+      return result;
+    }
+    audio_media_player_ = std::make_unique<apu::AudioMediaPlayer>(
+        audio_system_.get(), kernel_state_.get());
+    audio_media_player_->Setup();
+  }
+
+  active_gpu_backend_ = pending_gpu_backend_;
+  active_apu_backend_ = pending_apu_backend_;
+  return result;
+}
+
+void Emulator::SetPendingBackends(std::string gpu, std::string apu) {
+  pending_gpu_backend_ = std::move(gpu);
+  pending_apu_backend_ = std::move(apu);
+}
+
+void Emulator::MountStandardDrives() {
+  if (mount_standard_drives_callback_) {
+    mount_standard_drives_callback_();
+  }
 }
 
 X_STATUS Emulator::Setup(
@@ -198,10 +441,25 @@ X_STATUS Emulator::Setup(
         graphics_system_factory,
     std::function<std::vector<std::unique_ptr<hid::InputDriver>>(ui::Window*)>
         input_driver_factory) {
+  XE_SUBSYSTEM_TRACE("Emulator", "Setup");
   X_STATUS result = X_STATUS_UNSUCCESSFUL;
 
-  display_window_ = display_window;
-  imgui_drawer_ = imgui_drawer;
+  if (display_window) {
+    display_window_ = display_window;
+  }
+  if (imgui_drawer) {
+    imgui_drawer_ = imgui_drawer;
+  }
+  require_cpu_backend_ = require_cpu_backend;
+  if (audio_system_factory) {
+    audio_system_factory_ = audio_system_factory;
+  }
+  if (graphics_system_factory) {
+    graphics_system_factory_ = graphics_system_factory;
+  }
+  if (input_driver_factory) {
+    input_driver_factory_ = input_driver_factory;
+  }
 
   // Initialize clock.
   // 360 uses a 50MHz clock.
@@ -259,45 +517,28 @@ X_STATUS Emulator::Setup(
     return X_STATUS_UNSUCCESSFUL;
   }
 
-  XELOGI("{}: Initializing Audio...", __func__);
-  // Initialize the APU.
-  if (audio_system_factory) {
-    audio_system_ = audio_system_factory(processor_.get());
-    if (!audio_system_) {
-      XELOGE("{}: Cannot initalize audio_system!", __func__);
+  if (!input_system_) {
+    XELOGI("{}: Initializing HID...", __func__);
+    input_system_ = std::make_unique<xe::hid::InputSystem>(display_window_);
+    if (!input_system_) {
+      XELOGE("{}: Cannot initalize input_system!", __func__);
       return X_STATUS_NOT_IMPLEMENTED;
     }
-  }
-
-  XELOGI("{}: Initializing Graphics...", __func__);
-  // Initialize the GPU.
-  graphics_system_ = graphics_system_factory();
-  if (!graphics_system_) {
-    XELOGE("{}: Cannot initalize graphics_system!", __func__);
-    return X_STATUS_NOT_IMPLEMENTED;
-  }
-
-  XELOGI("{}: Initializing HID...", __func__);
-  // Initialize the HID.
-  input_system_ = std::make_unique<xe::hid::InputSystem>(display_window_);
-  if (!input_system_) {
-    XELOGE("{}: Cannot initalize input_system!", __func__);
-    return X_STATUS_NOT_IMPLEMENTED;
-  }
-  if (input_driver_factory) {
-    auto input_drivers = input_driver_factory(display_window_);
-    for (size_t i = 0; i < input_drivers.size(); ++i) {
-      input_system_->AddDriver(std::move(input_drivers[i]));
+    if (input_driver_factory_) {
+      auto input_drivers = input_driver_factory_(display_window_);
+      for (size_t i = 0; i < input_drivers.size(); ++i) {
+        input_system_->AddDriver(std::move(input_drivers[i]));
+      }
+    }
+    result = input_system_->Setup();
+    if (result) {
+      return result;
     }
   }
 
-  result = input_system_->Setup();
-  if (result) {
-    return result;
+  if (imgui_drawer_) {
+    imgui_drawer_->LoadInputSystem(input_system_.get());
   }
-
-  // Add inputSystem to UI
-  imgui_drawer_->LoadInputSystem(input_system_.get());
 
   XELOGI("{}: Initializing VFS...", __func__);
   // Bring up the virtual filesystem used by the kernel.
@@ -318,33 +559,24 @@ X_STATUS Emulator::Setup(
   plugin_loader_ = std::make_unique<xe::patcher::PluginLoader>(
       kernel_state_.get(), storage_root() / "plugins");
 
-  XELOGI("{}: Starting graphics_system...", __func__);
-  // Setup the core components.
-  result = graphics_system_->Setup(
-      processor_.get(), kernel_state_.get(),
-      display_window_ ? &display_window_->app_context() : nullptr,
-      display_window_ != nullptr);
-  if (result) {
-    XELOGE("{}: Failed to setup graphics_system!", __func__);
-    return result;
-  }
-
-  if (audio_system_) {
-    XELOGI("{}: Starting audio_system...", __func__);
-    result = audio_system_->Setup(kernel_state_.get());
-    if (result) {
-      XELOGE("{}: Failed to setup audio_system!", __func__);
-      return result;
-    }
-    audio_media_player_ = std::make_unique<apu::AudioMediaPlayer>(
-        audio_system_.get(), kernel_state_.get());
-    audio_media_player_->Setup();
-  }
-
-  // Initialize emulator fallback exception handling last.
   ExceptionHandler::Install(Emulator::ExceptionCallbackThunk, this);
 
-  return result;
+  // During an in-process relaunch the kernel is up but the GPU/APU subsystems
+  // and the UI presenter have not yet been rebuilt. Firing the Ready event
+  // here would race the lifecycle UI listener (which marshals to the UI
+  // thread and calls ShowLauncher) against the still-running ResetTitle /
+  // RelaunchTitle sequence, and ShowLauncher would walk a freed presenter.
+  // The final SetLifecycleState(Ready) at the tail of ResetTitle /
+  // RelaunchTitle (after SetupSubsystems + presenter_setup_callback_) fires
+  // the user-visible transition once everything is actually ready.
+  if (!relaunching_) {
+    SetLifecycleState(LifecycleState::Ready);
+  } else {
+    XELOGW(
+        "Emulator::Setup: suppressing Ready transition during relaunch; "
+        "ResetTitle/RelaunchTitle will fire it after subsystems are up");
+  }
+  return X_STATUS_SUCCESS;
 }
 
 X_STATUS Emulator::TerminateTitle() {
@@ -352,12 +584,201 @@ X_STATUS Emulator::TerminateTitle() {
     return X_STATUS_UNSUCCESSFUL;
   }
 
+  SetLifecycleState(LifecycleState::Terminating);
   kernel_state_->TerminateTitle();
   title_id_ = std::nullopt;
   title_name_ = "";
   title_version_ = "";
   on_terminate();
+  SetLifecycleState(LifecycleState::Ready);
   return X_STATUS_SUCCESS;
+}
+
+void Emulator::TerminateTitleXThreads_(const char* phase_label) {
+  auto threads =
+      kernel_state()->object_table()->GetObjectsByType<kernel::XThread>(
+          kernel::XObject::Type::Thread);
+  const auto self_host_id = xe::threading::current_thread_system_id();
+
+  size_t title_count = 0;
+  size_t host_skipped = 0;
+  for (auto thread : threads) {
+    // Skip subsystem worker XHostThreads (GPU Commands, GPU Frame limiter,
+    // Audio Worker, etc.). Those will be drained by ShutdownSubsystems().
+    if (dynamic_cast<kernel::XHostThread*>(thread.get())) {
+      ++host_skipped;
+      continue;
+    }
+    // Never TerminateThread() the calling lifecycle worker itself.
+    if (thread->thread() && thread->thread()->system_id() == self_host_id) {
+      continue;
+    }
+    const std::string host_name =
+        thread->thread() ? thread->thread()->name() : std::string("<no host>");
+    XELOGW("{}: terminating title thread '{}' (handle={:08X}, tid={})",
+           phase_label, host_name, thread->handle(), thread->thread_id());
+    thread->Terminate(0);
+    ++title_count;
+  }
+  XELOGW("{}: terminated {} title threads, skipped {} XHostThreads (deferred)",
+         phase_label, title_count, host_skipped);
+}
+
+void Emulator::TerminateRemainingHostXThreads_(const char* phase_label) {
+  auto threads =
+      kernel_state()->object_table()->GetObjectsByType<kernel::XThread>(
+          kernel::XObject::Type::Thread);
+  if (threads.empty()) {
+    XELOGW("{}: no XHostThreads left after ShutdownSubsystems (expected)",
+           phase_label);
+    return;
+  }
+  XELOGW("{}: {} XThreads still present after ShutdownSubsystems; sweeping",
+         phase_label, threads.size());
+  const auto self_host_id = xe::threading::current_thread_system_id();
+  for (auto thread : threads) {
+    if (thread->thread() && thread->thread()->system_id() == self_host_id) {
+      continue;
+    }
+    const std::string host_name =
+        thread->thread() ? thread->thread()->name() : std::string("<no host>");
+    XELOGW("{}: terminating leftover thread '{}' (handle={:08X}, tid={})",
+           phase_label, host_name, thread->handle(), thread->thread_id());
+    thread->Terminate(0);
+  }
+}
+
+void Emulator::RelaunchTitle(const std::string& host_path,
+                             const std::string& launch_module,
+                             uint32_t launch_flags,
+                             std::vector<uint8_t> launch_data) {
+  XE_SUBSYSTEM_TRACE("Emulator", "RelaunchTitle");
+  XELOGW("RelaunchTitle: starting in-process relaunch, target={}", host_path);
+
+  SetLifecycleState(LifecycleState::Relaunching);
+  relaunching_ = true;
+  relaunch_complete_event_->Reset();
+
+  XELOGW("RelaunchTitle: shutting down dispatch thread");
+  kernel_state_->ShutdownDispatchThread();
+
+  // Shutdown ordering (learned the hard way — see commit history):
+  //
+  //   1. Force-terminate guest title XThreads first. While the title's main
+  //      / worker threads are alive they keep writing into the GPU primary
+  //      ring buffer and the audio mixing queue. If we drain the GPU/APU
+  //      workers while the guest is still producing commands, the GPU worker
+  //      sees torn or partially-written packets and trips assert_always() in
+  //      ExecuteIndirectBuffer (Project Gotham Racing 3 reproes this 100%).
+  //
+  //   2. THEN drain subsystem workers gracefully via ShutdownSubsystems().
+  //      Those workers are XHostThreads also registered in the kernel object
+  //      table, but ShutdownSubsystems() signals worker_running_=false and
+  //      joins on each worker's host thread; that is far safer than calling
+  //      TerminateThread() on them (which would leak global_critical_region_
+  //      and deadlock subsequent XThread::Terminate calls in OnThreadExit).
+  //
+  //   3. Finally, sweep any XHostThreads still lingering in the object
+  //      table. Anything still standing here is an unexpected case and is
+  //      hard-terminated for safety; ShutdownSubsystems should have cleared
+  //      them all in step 2.
+  TerminateTitleXThreads_("RelaunchTitle");
+
+  XELOGW("RelaunchTitle: draining subsystem workers (audio/gpu)");
+  ShutdownSubsystems();
+
+  TerminateRemainingHostXThreads_("RelaunchTitle");
+
+  XELOGW("RelaunchTitle: tearing down emulator state");
+  Shutdown();
+  XELOGW("RelaunchTitle: re-running Setup()");
+  Setup(nullptr, nullptr, require_cpu_backend_, nullptr, nullptr, nullptr);
+  XELOGW("RelaunchTitle: re-mounting standard drives");
+  MountStandardDrives();
+  XELOGW("RelaunchTitle: rebuilding subsystems");
+  if (XFAILED(SetupSubsystems())) {
+    XELOGE("RelaunchTitle: SetupSubsystems failed; staying in Ready");
+    relaunching_ = false;
+    relaunch_complete_event_->Set();
+    SetLifecycleState(LifecycleState::Ready);
+    return;
+  }
+  if (presenter_setup_callback_ && display_window_) {
+    XELOGW("RelaunchTitle: re-binding presenter on UI thread");
+    display_window_->app_context().CallInUIThreadSynchronous(
+        presenter_setup_callback_);
+  }
+
+  auto xam_new =
+      kernel_state_->GetKernelModule<kernel::xam::XamModule>("xam.xex");
+  if (xam_new) {
+    auto& ld = xam_new->loader_data();
+    ld.host_path =
+        host_path.empty() ? xe::path_to_utf8(command_line_) : host_path;
+    ld.launch_flags = launch_flags;
+    ld.launch_data = std::move(launch_data);
+    ld.launch_data_present = !ld.launch_data.empty();
+  }
+
+  cvars::launch_module = launch_module;
+
+  auto launch_target =
+      host_path.empty() ? last_launch_path_ : xe::to_path(host_path);
+  if (!launch_target.empty()) {
+    last_launch_path_ = launch_target;
+    SetLifecycleState(LifecycleState::Launching);
+    XELOGW("RelaunchTitle: launching {}", launch_target.string());
+    LaunchPath(launch_target);
+  }
+
+  relaunching_ = false;
+  relaunch_complete_event_->Set();
+  XELOGW("RelaunchTitle: complete");
+}
+
+void Emulator::ResetTitle() {
+  XE_SUBSYSTEM_TRACE("Emulator", "ResetTitle");
+  XELOGW("ResetTitle: stopping title and resetting kernel");
+  SetLifecycleState(LifecycleState::Relaunching);
+  relaunching_ = true;
+  relaunch_complete_event_->Reset();
+
+  XELOGW("ResetTitle: shutting down dispatch thread");
+  kernel_state_->ShutdownDispatchThread();
+
+  // See RelaunchTitle for the rationale of this ordering: title threads
+  // first, then graceful subsystem drain, then a final XHostThread sweep.
+  TerminateTitleXThreads_("ResetTitle");
+
+  XELOGW("ResetTitle: draining subsystem workers (audio/gpu)");
+  ShutdownSubsystems();
+
+  TerminateRemainingHostXThreads_("ResetTitle");
+
+  XELOGW("ResetTitle: tearing down emulator state");
+  Shutdown();
+  XELOGW("ResetTitle: re-running Setup()");
+  Setup(nullptr, nullptr, require_cpu_backend_, nullptr, nullptr, nullptr);
+  XELOGW("ResetTitle: re-mounting standard drives");
+  MountStandardDrives();
+  XELOGW("ResetTitle: rebuilding subsystems");
+  if (XFAILED(SetupSubsystems())) {
+    XELOGE("ResetTitle: SetupSubsystems failed; staying in Ready");
+    relaunching_ = false;
+    relaunch_complete_event_->Set();
+    SetLifecycleState(LifecycleState::Ready);
+    return;
+  }
+  if (presenter_setup_callback_ && display_window_) {
+    XELOGW("ResetTitle: re-binding presenter on UI thread");
+    display_window_->app_context().CallInUIThreadSynchronous(
+        presenter_setup_callback_);
+  }
+
+  relaunching_ = false;
+  relaunch_complete_event_->Set();
+  SetLifecycleState(LifecycleState::Ready);
+  XELOGW("ResetTitle: complete");
 }
 
 X_STATUS Emulator::RecreateGraphicsSystem() {
@@ -552,6 +973,10 @@ Emulator::FileSignatureType Emulator::GetFileSignature(
 }
 
 X_STATUS Emulator::LaunchPath(const std::filesystem::path& path) {
+  last_launch_path_ = std::filesystem::absolute(path);
+  XELOGW("Emulator::LaunchPath: {}", last_launch_path_.string());
+  SetLifecycleState(LifecycleState::Launching);
+
   X_STATUS mount_result = X_STATUS_SUCCESS;
 
   switch (GetFileSignature(path)) {
@@ -1365,21 +1790,39 @@ bool Emulator::ExceptionCallback(Exception* ex) {
   return false;
 }
 
+void Emulator::RequestShutdown() {
+  shutdown_requested_.store(true, std::memory_order_release);
+  restore_fence_.Signal();
+  if (relaunch_complete_event_) {
+    relaunch_complete_event_->Set();
+  }
+}
+
 void Emulator::WaitUntilExit() {
-  while (true) {
+  const auto poll_interval = std::chrono::milliseconds(100);
+  while (!shutdown_requested_.load(std::memory_order_acquire)) {
     if (main_thread_) {
-      xe::threading::Wait(main_thread_->thread(), false);
+      xe::threading::Wait(main_thread_->thread(), false, poll_interval);
+    }
+
+    if (shutdown_requested_.load(std::memory_order_acquire)) {
+      break;
     }
 
     if (restoring_) {
       restore_fence_.Wait();
-    } else {
-      // Not restoring and the thread exited. We're finished.
-      break;
+      continue;
     }
+    if (relaunching_) {
+      xe::threading::Wait(relaunch_complete_event_.get(), false, poll_interval);
+      continue;
+    }
+    break;
   }
 
-  on_exit();
+  if (!shutdown_requested_.load(std::memory_order_acquire)) {
+    on_exit();
+  }
 }
 
 void Emulator::AddGameConfigLoadCallback(GameConfigLoadCallback* callback) {
@@ -1465,6 +1908,10 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
   // load callbacks which expect to be called from the UI thread.
   // If not on UI thread, dispatch to it synchronously.
   if (!display_window_->app_context().IsInUIThread()) {
+    XELOGW(
+        "Emulator::CompleteLaunch: not on UI thread, marshaling synchronously "
+        "(path={}, module={})",
+        path.string(), module_path);
     X_STATUS result = X_STATUS_UNSUCCESSFUL;
     display_window_->app_context().CallInUIThreadSynchronous(
         [this, &path, &module_path, &result]() {
@@ -1472,6 +1919,8 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
         });
     return result;
   }
+  XELOGW("Emulator::CompleteLaunch: ENTER (path={}, module={})", path.string(),
+         module_path);
 
   // Setup NullDevices for raw HDD partition accesses
   // Cache/STFC code baked into games tries reading/writing to these
@@ -1501,7 +1950,7 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
   // Allow xam to request module loads.
   auto xam = kernel_state()->GetKernelModule<kernel::xam::XamModule>("xam.xex");
 
-  XELOGI("Loading module {}", module_path);
+  XELOGW("CompleteLaunch[stage=LoadUserModule] {}", module_path);
   auto module = kernel_state_->LoadUserModule(module_path);
   if (!module) {
     XELOGE("Failed to load user module {}", path);
@@ -1514,12 +1963,14 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
     return X_STATUS_NOT_SUPPORTED;
   }
 
+  XELOGW("CompleteLaunch[stage=ApplyTitleUpdate]");
   X_RESULT result = kernel_state_->ApplyTitleUpdate(module);
   if (XFAILED(result)) {
     XELOGE("Failed to apply title update! Cannot run module {}", path);
     return result;
   }
 
+  XELOGW("CompleteLaunch[stage=FinishLoadingUserModule]");
   result = kernel_state_->FinishLoadingUserModule(module);
   if (XFAILED(result)) {
     XELOGE("Failed to initialize user module {}", path);
@@ -1550,11 +2001,16 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
   // Try and load the resource database (xex only).
   if (module->title_id()) {
     auto title_id = fmt::format("{:08X}", module->title_id());
+    XELOGW("CompleteLaunch[stage=LoadGameConfig] title_id={}", title_id);
 
     // Load the per-game configuration file and make sure updates are handled
     // by the callbacks.
     config::LoadGameConfig(title_id);
     assert_true(game_config_load_callback_loop_next_index_ == SIZE_MAX);
+    XELOGW(
+        "CompleteLaunch[stage=GameConfigCallbacks] running {} per-game-config "
+        "callbacks",
+        game_config_load_callbacks_.size());
     game_config_load_callback_loop_next_index_ = 0;
     while (game_config_load_callback_loop_next_index_ <
            game_config_load_callbacks_.size()) {
@@ -1563,19 +2019,23 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
     }
     game_config_load_callback_loop_next_index_ = SIZE_MAX;
 
+    XELOGW("CompleteLaunch[stage=ResolveModuleXDBF]");
     const auto db = kernel_state_->module_xdbf(module);
 
+    XELOGW("CompleteLaunch[stage=InitGameInfoDatabase]");
     game_info_database_ =
         std::make_unique<kernel::util::GameInfoDatabase>(db.get());
+    XELOGW("CompleteLaunch[stage=LoadSpaInfo]");
     kernel_state_->xam_state()->LoadSpaInfo(db.get());
 
+    XELOGW("CompleteLaunch[stage=AddTitleToPlayedList]");
     kernel_state_->xam_state()->user_tracker()->AddTitleToPlayedList();
 
     if (game_info_database_->IsValid()) {
       title_name_ = game_info_database_->GetTitleName(static_cast<XLanguage>(
           kernel_state_->xconfig()->ReadSetting<uint32_t>(
               kernel::XCONFIG_USER_CATEGORY, kernel::XCONFIG_USER_LANGUAGE)));
-      XELOGI("Title name: {}", title_name_);
+      XELOGW("CompleteLaunch[stage=TitleResolved] title_name={}", title_name_);
 
       // Show achievments data
       tabulate::Table table;
@@ -1715,17 +2175,22 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
   // skipped until pipelines are ready, so this is safe. By the time actual
   // gameplay starts, most cached pipelines should be compiled.
   if (graphics_system_) {
+    XELOGW("CompleteLaunch[stage=InitializeShaderStorage] title_id={:08X}",
+           title_id_.value());
     on_shader_storage_initialization(true);
     graphics_system_->InitializeShaderStorage(
         cache_root_, title_id_.value(), false,
         [this]() { on_shader_storage_initialization(false); });
   }
 
+  XELOGW("CompleteLaunch[stage=LaunchModule]");
   auto main_thread = kernel_state_->LaunchModule(module);
   if (!main_thread) {
+    XELOGE("CompleteLaunch[stage=LaunchModule] failed");
     return X_STATUS_UNSUCCESSFUL;
   }
   main_thread_ = main_thread;
+  XELOGW("CompleteLaunch[stage=OnLaunchCallbacks]");
   on_launch(title_id_.value(), title_name_);
 
   // Plugins must be loaded after calling LaunchModule() and
@@ -1742,8 +2207,11 @@ X_STATUS Emulator::CompleteLaunch(const std::filesystem::path& path,
   // Resume the main thread now.
   // If the debugger has requested a suspend this will just decrement the
   // suspend count without resuming it until the debugger wants.
+  XELOGW("CompleteLaunch[stage=ResumeMainThread]");
   main_thread_->Resume();
 
+  SetLifecycleState(LifecycleState::Running);
+  XELOGW("Emulator::CompleteLaunch: EXIT (success)");
   return X_STATUS_SUCCESS;
 }
 

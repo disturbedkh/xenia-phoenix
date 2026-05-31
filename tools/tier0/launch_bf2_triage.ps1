@@ -23,8 +23,9 @@ $crashLog = Join-Path $TelemetryDir "${tid}_crash.log"
 $gpuTrace = Join-Path $TelemetryDir "${tid}_gpu_trace"
 
 if (-not $XeniaExe) {
-    $debugExe = "build\bin\Windows\Debug\xenia_canary.exe"
-    $releaseExe = "build\bin\Windows\Release\xenia_canary.exe"
+    . (Join-Path $PSScriptRoot "xenia_paths.ps1")
+    $debugExe = Join-Path (Get-XeniaBinDir -Config Debug) "xenia_canary.exe"
+    $releaseExe = Join-Path (Get-XeniaBinDir -Config Release) "xenia_canary.exe"
     switch ($Configuration) {
         "Debug" { $XeniaExe = $debugExe }
         "Release" { $XeniaExe = $releaseExe }

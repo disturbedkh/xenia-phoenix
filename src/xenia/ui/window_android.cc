@@ -55,7 +55,8 @@ void AndroidWindow::OnActivitySurfaceLayoutChange() {
   OnDesiredLogicalSizeUpdate(SizeToLogical(physical_width),
                              SizeToLogical(physical_height));
   WindowDestructionReceiver destruction_receiver(this);
-  OnActualSizeUpdate(physical_width, physical_height, destruction_receiver);
+  OnActualSizeUpdate(physical_width, physical_height,
+                     WindowResizeAction::kManual, destruction_receiver);
   if (destruction_receiver.IsWindowDestroyedOrClosed()) {
     return;
   }

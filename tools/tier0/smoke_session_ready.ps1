@@ -7,8 +7,10 @@ $ErrorActionPreference = "Stop"
 $repo = $PSScriptRoot | Split-Path | Split-Path
 Set-Location $repo
 
-$exe = Join-Path $repo "build\bin\Windows\$Config\xenia_canary.exe"
-$fuzz = Join-Path $repo "build\bin\Windows\$Config\vmx128-fuzz.exe"
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$binDir = Get-XeniaBinDir -Config $Config
+$exe = Join-Path $binDir "xenia_canary.exe"
+$fuzz = Join-Path $binDir "vmx128-fuzz.exe"
 
 Write-Host "=== Smoke session pre-flight ===" -ForegroundColor Cyan
 Write-Host "Repo: $repo"
@@ -48,6 +50,7 @@ if ($env:PHOENIX_DEBUG_PORT) {
 
 $scripts = @(
     "tools/tier0/run_smoke_capture.ps1",
+    "tools/tier0/run_smoke_roster.ps1",
     "tools/tier0/list_smoke_patches.py",
     "tools/tier0/aggregate_stub_hits.py"
 )
@@ -55,6 +58,16 @@ foreach ($s in $scripts) {
     if (-not (Test-Path $s)) { Write-Host "[MISSING] $s" -ForegroundColor Red; $ok = $false }
 }
 if ($ok) { Write-Host "[OK] capture scripts" -ForegroundColor Green }
+
+$exampleToml = Join-Path $repo "..\metacache\dev\smoke_roster_local.example.toml"
+$localToml = Join-Path $repo "telemetry\smoke_roster_local.toml"
+if (Test-Path $localToml) {
+    Write-Host "[OK] telemetry/smoke_roster_local.toml" -ForegroundColor Green
+} else {
+    Write-Host "[PENDING] Copy smoke roster config:" -ForegroundColor Yellow
+    Write-Host "  Copy-Item '$exampleToml' '$localToml'"
+    Write-Host "  Then edit game_path per [[title]] block."
+}
 
 Write-Host ""
 Write-Host "Recommended title IDs (if you own them):" -ForegroundColor Cyan
@@ -70,7 +83,7 @@ Write-Host @"
   .\tools\tier0\run_smoke_capture.ps1 `
     -TitleId <ID> `
     -GamePath "<path\to\default.xex>" `
-    -XeniaExe build\bin\Windows\$Config\xenia_canary.exe `
+    -XeniaExe (Join-Path (Get-XeniaBinDir -Config $Config) "xenia_canary.exe") `
     -DurationSec 300
 "@
 

@@ -54,6 +54,14 @@ def guess_category(text: str) -> str:
             "fov",
             "language",
             "qol",
+            "resolution",
+            "720",
+            "1080",
+            "motion blur",
+            "aspect ratio",
+            "21:9",
+            "ultrawide",
+            "anisotropic",
         )
     ):
         return "B"

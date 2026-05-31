@@ -18,10 +18,10 @@ export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DXENIA_BUILD_TESTS=ON -DXENIA_BUILD_MISC=ON
-cmake --build build --target xenia_canary xenia-cpu-tests --parallel
+cmake --build Build/Windows/x64/vs --target xenia_canary xenia-cpu-tests --parallel
 ```
 
-Output: `build/bin/macOS/Release/xenia_canary`
+Output: `Build/macOS/ARM64/Release/xenia_canary`
 
 ## Verify
 

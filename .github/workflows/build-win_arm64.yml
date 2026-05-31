@@ -74,7 +74,7 @@ jobs:
 
       - name: Verify ARM64 binary
         run: |
-          $exe = "build-arm64\bin\Windows\Release\xenia_canary.exe"
+          $exe = "Build/Windows/ARM64/Release/xenia_canary.exe"
           if (-not (Test-Path $exe)) { Write-Error "Missing $exe"; exit 1 }
           if ((Get-Item $exe).Length -le 100000) { Write-Error "Executable too small."; exit 1 }
 
@@ -82,9 +82,9 @@ jobs:
         shell: pwsh
         run: |
           if ('${{ inputs.run_cpu_tests }}' -eq 'true') {
-            ./tools/tier0/arm64-verify.ps1 -BuildDir build-arm64 -Config Release
+            ./tools/tier0/arm64-verify.ps1 -Config Release
           } else {
-            ./tools/tier0/arm64-verify.ps1 -BuildDir build-arm64 -Config Release -SkipCpuTests
+            ./tools/tier0/arm64-verify.ps1 -Config Release -SkipCpuTests
           }
 
       - name: Upload ARM64 artifact
@@ -92,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: xenia_canary_windows_arm64
-          path: build-arm64/bin/Windows/Release/xenia_canary.exe
+          path: Build/Windows/ARM64/Release/xenia_canary.exe
           if-no-files-found: error
           retention-days: 7
 
@@ -102,6 +102,6 @@ jobs:
         with:
           name: arm64-build-failure-logs
           path: |
-            build-arm64/**/*.log
+            Build/Windows/ARM64/**/*.log
           if-no-files-found: ignore
           retention-days: 3

@@ -19,6 +19,7 @@
 #include "xenia/base/profiling.h"
 #include "xenia/base/ring_buffer.h"
 #include "xenia/base/string_buffer.h"
+#include "xenia/base/subsystem_tracer.h"
 #include "xenia/base/threading.h"
 #include "xenia/cpu/thread_state.h"
 #include "xenia/kernel/kernel_state.h"
@@ -50,9 +51,9 @@ AudioSystem::AudioSystem(cpu::Processor* processor)
       processor_(processor),
       worker_running_(false) {
   std::memset(clients_, 0, sizeof(clients_));
-  queued_frames_ = std::min(
-      static_cast<uint32_t>(kMaximumQueuedFrames),
-      std::max(cvars::apu_max_queued_frames, static_cast<uint32_t>(4)));
+  queued_frames_ = std::clamp(cvars::apu_max_queued_frames,
+                              static_cast<uint32_t>(kMinimumQueuedFrames),
+                              static_cast<uint32_t>(kMaximumQueuedFrames));
 
   for (size_t i = 0; i < kMaximumClientCount; ++i) {
     client_semaphores_[i] = xe::threading::Semaphore::Create(0, queued_frames_);
@@ -66,15 +67,18 @@ AudioSystem::AudioSystem(cpu::Processor* processor)
 
   resume_event_ = xe::threading::Event::CreateAutoResetEvent(false);
   assert_not_null(resume_event_);
+  XE_SUBSYSTEM_TRACE("APU::AudioSystem", "ctor");
 }
 
 AudioSystem::~AudioSystem() {
+  XE_SUBSYSTEM_TRACE("APU::AudioSystem", "dtor");
   if (xma_decoder_) {
     xma_decoder_->Shutdown();
   }
 }
 
 X_STATUS AudioSystem::Setup(kernel::KernelState* kernel_state) {
+  XE_SUBSYSTEM_TRACE("APU::AudioSystem", "Setup");
   X_STATUS result = xma_decoder_->Setup(kernel_state);
   if (result) {
     return result;
@@ -172,10 +176,13 @@ int AudioSystem::FindFreeClient() {
 void AudioSystem::Initialize() {}
 
 void AudioSystem::Shutdown() {
+  XE_SUBSYSTEM_TRACE("APU::AudioSystem", "Shutdown");
   worker_running_ = false;
   shutdown_event_->Set();
   if (worker_thread_) {
-    worker_thread_->Wait(0, 0, 0, nullptr);
+    if (worker_thread_->thread()) {
+      xe::threading::Wait(worker_thread_->thread(), false);
+    }
     worker_thread_.reset();
   }
 

@@ -1313,6 +1313,11 @@ void* X64HelperEmitter::EmitScalarVRsqrteHelper() {
 void* X64HelperEmitter::EmitScalarVRsqrteInvokeHelper(void* scalar_helper) {
   _code_offsets code_offsets = {};
   // float (*)(void* guest_ctx, float in) — RCX = guest_ctx, XMM1 = in (Win64).
+  // RSI is the guest-context register the scalar helper reads from, but it is
+  // non-volatile in the host ABI and this thunk is invoked directly from C++.
+  // Preserve it for the caller (the push also realigns rsp to 16 for the inner
+  // call, which the 0x20 shadow alloc alone would leave misaligned).
+  push(rsi);
   mov(rsi, rcx);
   vmovss(xmm0, xmm1);
   mov(eax, DEFAULT_VMX_MXCSR);
@@ -1324,6 +1329,7 @@ void* X64HelperEmitter::EmitScalarVRsqrteInvokeHelper(void* scalar_helper) {
   sub(rsp, 0x20);
   call(rax);
   add(rsp, 0x20);
+  pop(rsi);
   ret();
   code_offsets.prolog_stack_alloc = getSize();
   code_offsets.body = getSize();
@@ -1403,6 +1409,10 @@ void* X64HelperEmitter::EmitVectorVRsqrteHelper(void* scalar_helper) {
 void* X64HelperEmitter::EmitVectorVRsqrteInvokeHelper(void* vector_helper) {
   _code_offsets code_offsets = {};
   // void(vec128_t* io, void* guest_ctx) — RCX = io, RDX = guest_ctx (RSI).
+  // RSI is non-volatile in the host ABI but used as the guest-context register;
+  // preserve it for the C++ caller (the push also realigns rsp to 16 for the
+  // inner call).
+  push(rsi);
   mov(rsi, rdx);
   mov(eax, DEFAULT_VMX_MXCSR);
   sub(rsp, 8);
@@ -1416,6 +1426,7 @@ void* X64HelperEmitter::EmitVectorVRsqrteInvokeHelper(void* vector_helper) {
   call(rax);
   add(rsp, 0x20);
   vmovaps(ptr[rcx], xmm0);
+  pop(rsi);
   ret();
 
   code_offsets.prolog_stack_alloc = getSize();

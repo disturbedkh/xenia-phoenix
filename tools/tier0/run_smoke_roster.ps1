@@ -23,7 +23,8 @@ function Get-TomlValue([string]$block, [string]$key) {
 }
 
 $text = Get-Content -Raw $ConfigPath
-$exe = "build/bin/Windows/Release/xenia_canary.exe"
+. (Join-Path $PSScriptRoot "xenia_paths.ps1")
+$exe = Join-Path (Get-XeniaBinDir -Config Release) "xenia_canary.exe"
 $duration = 300
 $hid = ""
 if ($text -match '(?s)\[xenia\](.*?)(?=\[\[title\]|$)') {

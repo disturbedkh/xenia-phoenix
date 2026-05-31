@@ -91,9 +91,14 @@ node_modules/.bin/
 # coverage/etc
 /scratch/
 
+/Build/
+
+# Legacy build dirs (transitional — remove after migration)
 /build/
 /build-arm64/
 /build-x64/
+/build-windows/
+/build-android-arm64/
 
 # ==============================================================================
 # Local-only paths
@@ -119,10 +124,9 @@ node_modules/.bin/
 /devkit
 recent.toml
 
-/build-windows/
-/build-android-arm64/
-
 # Retail GPU captures — install via tools/tier0/bf2_native_engineering.ps1 -InstallCorpus
 tests/gpu_traces/454107DB_*.xtr
 telemetry/**/*.xtr
+telemetry/smoke_roster_local.toml
+telemetry/*.jsonl
 

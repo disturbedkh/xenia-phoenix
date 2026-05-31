@@ -118,6 +118,7 @@ static void set_name(HANDLE thread, const std::string_view name) {
 }
 
 void set_name(const std::string_view name) {
+  set_current_thread_name_storage(name);
   set_name(GetCurrentThread(), name);
 }
 

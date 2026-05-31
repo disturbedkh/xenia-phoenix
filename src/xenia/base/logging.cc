@@ -10,6 +10,8 @@
 #include "xenia/base/logging.h"
 
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 
@@ -22,6 +24,7 @@
 #include "xenia/base/console.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/debugging.h"
+#include "xenia/base/diagnostics.h"
 #include "xenia/base/filesystem.h"
 #include "xenia/base/literals.h"
 #include "xenia/base/math.h"
@@ -36,8 +39,11 @@
 #if XE_PLATFORM_ANDROID
 #include <android/log.h>
 #elif XE_PLATFORM_WIN32
-// For MessageBox:
+// For MessageBox and crash sidecars (platform_win.h must precede Psapi.h):
+// clang-format off
 #include "xenia/base/platform_win.h"
+#include <Psapi.h>
+// clang-format on
 #endif  // XE_PLATFORM
 
 #include "third_party/fmt/include/fmt/format.h"
@@ -78,15 +84,126 @@ class Logger;
 
 Logger* logger_ = nullptr;
 
+std::string app_name_;
+std::filesystem::path active_log_file_path_;
+std::filesystem::path log_dir_;
+std::string session_timestamp_;
+bool file_log_sink_attached_ = false;
+
+class BufferedLogSink final : public LogSink {
+ public:
+  void Write(const char* buf, size_t size) override {
+    buffer_.append(buf, size);
+  }
+  void Flush() override {}
+
+  const std::string& buffer() const { return buffer_; }
+  void Clear() { buffer_.clear(); }
+
+ private:
+  std::string buffer_;
+};
+
+BufferedLogSink* pending_file_buffer_sink_ = nullptr;
+
 struct LogLine {
   size_t buffer_length;
   uint32_t thread_id;
-  uint16_t _pad_0;  // (2b) padding
+  uint32_t ts_ms_since_start;
+  char thread_name[16];
   bool terminate;
   char prefix_char;
 };
 
 thread_local char thread_log_buffer_[64_KiB];
+
+std::chrono::steady_clock::time_point log_steady_start_;
+
+static constexpr size_t kRecentLogLineCapacity = 256;
+static constexpr size_t kRecentLogLineMaxBytes = 512;
+static std::array<std::array<char, kRecentLogLineMaxBytes>,
+                  kRecentLogLineCapacity>
+    recent_log_lines_{};
+static std::atomic<size_t> recent_log_line_write_index_{0};
+static std::atomic<bool> flush_requested_{false};
+
+static uint32_t LogMsSinceStart() {
+  const auto now = std::chrono::steady_clock::now();
+  return static_cast<uint32_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(now -
+                                                            log_steady_start_)
+          .count());
+}
+
+static void FormatLogLinePrefix(const LogLine& line, char* out,
+                                size_t out_size) {
+  const uint32_t ms = line.ts_ms_since_start;
+  const uint32_t sec_total = ms / 1000;
+  const uint32_t min = (sec_total / 60) % 100;
+  const uint32_t sec = sec_total % 60;
+  const uint32_t frac_ms = ms % 1000;
+
+  char name_col[16] = "              ";
+  if (line.thread_name[0]) {
+    const size_t name_len = strnlen(line.thread_name, sizeof(line.thread_name));
+    const size_t copy_len = std::min(name_len, size_t(14));
+    std::memcpy(name_col, line.thread_name, copy_len);
+  }
+
+  fmt::format_to_n(out, out_size, "{}> {:08X} [+{:02}:{:02}.{:03}] [{}] ",
+                   line.prefix_char, line.thread_id, min, sec, frac_ms,
+                   name_col);
+}
+
+static void RecordRecentFormattedLine(const char* prefix, size_t prefix_len,
+                                      const char* body, size_t body_len) {
+  const size_t slot =
+      recent_log_line_write_index_.fetch_add(1, std::memory_order_relaxed) %
+      kRecentLogLineCapacity;
+  auto& line_buf = recent_log_lines_[slot];
+  size_t written = 0;
+  const size_t max_write = kRecentLogLineMaxBytes - 1;
+  if (prefix_len) {
+    const size_t n = std::min(prefix_len, max_write);
+    std::memcpy(line_buf.data(), prefix, n);
+    written = n;
+  }
+  if (body_len && written < max_write) {
+    const size_t n = std::min(body_len, max_write - written);
+    std::memcpy(line_buf.data() + written, body, n);
+    written += n;
+  }
+  if (written < max_write) {
+    line_buf[written++] = '\n';
+  }
+  line_buf[written] = '\0';
+}
+
+static void AppendRecentLogTail(std::string& out, size_t max_lines) {
+  if (!max_lines) {
+    return;
+  }
+  fmt::format_to(std::back_inserter(out),
+                 "\n--- recent log tail ({} lines) ---\n", max_lines);
+
+  const size_t write_idx =
+      recent_log_line_write_index_.load(std::memory_order_acquire);
+  const size_t available = std::min(write_idx, kRecentLogLineCapacity);
+  const size_t start = write_idx >= available ? write_idx - available : 0;
+
+  size_t emitted = 0;
+  for (size_t i = start; i < write_idx && emitted < max_lines; ++i) {
+    const size_t slot = i % kRecentLogLineCapacity;
+    const char* line = recent_log_lines_[slot].data();
+    if (line[0]) {
+      out.append(line);
+      if (out.empty() || out.back() != '\n') {
+        out.push_back('\n');
+      }
+      ++emitted;
+    }
+  }
+}
 
 FileLogSink::~FileLogSink() {
   if (file_) {
@@ -246,6 +363,14 @@ class Logger {
     sinks_.push_back(std::move(sink));
   }
 
+  void RemoveLogSink(const LogSink* sink) {
+    sinks_.erase(std::remove_if(sinks_.begin(), sinks_.end(),
+                                [sink](const std::unique_ptr<LogSink>& entry) {
+                                  return entry.get() == sink;
+                                }),
+                 sinks_.end());
+  }
+
   void FlushAllSinks() {
     for (const auto& sink : sinks_) {
       sink->Flush();
@@ -324,25 +449,12 @@ class Logger {
           read_count += needed_count;
           i += needed_count;
 
+          char prefix_buf[96] = {};
+          size_t prefix_len = 0;
           if (line.prefix_char) {
-            char prefix[] = {
-                line.prefix_char,
-                '>',
-                ' ',
-                '?',  // Thread ID gets placed here (8 chars).
-                '?',
-                '?',
-                '?',
-                '?',
-                '?',
-                '?',
-                '?',
-                ' ',
-                0,
-            };
-            fmt::format_to_n(prefix + 3, sizeof(prefix) - 3, "{:08X}",
-                             line.thread_id);
-            Write(prefix, sizeof(prefix) - 1);
+            FormatLogLinePrefix(line, prefix_buf, sizeof(prefix_buf));
+            prefix_len = strlen(prefix_buf);
+            Write(prefix_buf, prefix_len);
           }
 
           if (line.buffer_length) {
@@ -365,6 +477,12 @@ class Logger {
               constexpr char suffix[1] = {'\n'};
               Write(suffix, 1);
             }
+
+            RecordRecentFormattedLine(
+                prefix_buf, prefix_len,
+                reinterpret_cast<const char*>(line_range.first),
+                line_range.first_length +
+                    (line_range.second_length ? line_range.second_length : 0));
 
             rb.EndRead(std::move(line_range));
           } else {
@@ -393,13 +511,18 @@ class Logger {
 
         desired_count = 1;
 
-        if (cvars::flush_log) {
+        if (cvars::flush_log ||
+            flush_requested_.exchange(false, std::memory_order_acq_rel)) {
           FlushAllSinks();
         }
 
         idle_loops = 0;
       } else {
-        if (idle_loops >= 1000) {
+        if (flush_requested_.load(std::memory_order_acquire)) {
+          FlushAllSinks();
+          flush_requested_.store(false, std::memory_order_release);
+          idle_loops = 0;
+        } else if (idle_loops >= 1000) {
           // Introduce a waiting period.
           xe::threading::Sleep(std::chrono::milliseconds(50));
         } else {
@@ -425,6 +548,14 @@ class Logger {
     LogLine line = {};
     line.buffer_length = buffer_length;
     line.thread_id = thread_id;
+    line.ts_ms_since_start = LogMsSinceStart();
+    const auto thread_name = xe::threading::current_thread_name();
+    if (!thread_name.empty()) {
+      const size_t name_len =
+          std::min(thread_name.size(), sizeof(line.thread_name) - 1);
+      std::memcpy(line.thread_name, thread_name.data(), name_len);
+      line.thread_name[name_len] = '\0';
+    }
     line.prefix_char = prefix_char;
     line.terminate = terminate;
 
@@ -438,6 +569,10 @@ class Logger {
 };
 
 void InitializeLogging(const std::string_view app_name) {
+  log_steady_start_ = std::chrono::steady_clock::now();
+  InitializeDiagnostics();
+
+  app_name_ = std::string(app_name);
   auto mem = memory::AlignedAlloc<Logger>(0x10);
   logger_ = new (mem) Logger(app_name);
 
@@ -448,17 +583,10 @@ void InitializeLogging(const std::string_view app_name) {
     logger_->AddLogSink(std::make_unique<AndroidLogSink>(app_name));
   }
 #else
-  FILE* log_file = nullptr;
-  if (cvars::log_file.empty()) {
-    // Default to app name.
-    auto file_name = fmt::format("{}.log", app_name);
-    auto file_path = xe::filesystem::GetExecutableFolder() / file_name;
-    log_file = xe::filesystem::OpenFile(file_path, "wt");
-  } else {
-    xe::filesystem::CreateParentFolder(cvars::log_file);
-    log_file = xe::filesystem::OpenFile(cvars::log_file, "wt");
-  }
-  logger_->AddLogSink(std::make_unique<FileLogSink>(log_file, true));
+  // Buffer early log lines until AttachFileLogSink knows storage_root/log/.
+  auto buffer_sink = std::make_unique<BufferedLogSink>();
+  pending_file_buffer_sink_ = buffer_sink.get();
+  logger_->AddLogSink(std::move(buffer_sink));
 
   if (cvars::log_to_stdout) {
     logger_->AddLogSink(std::make_unique<FileLogSink>(stdout, false));
@@ -467,7 +595,177 @@ void InitializeLogging(const std::string_view app_name) {
   if (cvars::log_to_debugprint) {
     logger_->AddLogSink(std::make_unique<DebugPrintLogSink>());
   }
+
+  // Explicit log_file cvar: attach immediately (legacy behaviour).
+  if (!cvars::log_file.empty()) {
+    xe::filesystem::CreateParentFolder(cvars::log_file);
+    FILE* log_file = xe::filesystem::OpenFile(cvars::log_file, "wt");
+    if (log_file) {
+      active_log_file_path_ = cvars::log_file;
+      log_dir_ = cvars::log_file.parent_path();
+      if (pending_file_buffer_sink_) {
+        std::string early = pending_file_buffer_sink_->buffer();
+        if (!early.empty()) {
+          fwrite(early.data(), 1, early.size(), log_file);
+        }
+        logger_->RemoveLogSink(pending_file_buffer_sink_);
+        pending_file_buffer_sink_ = nullptr;
+      }
+      logger_->AddLogSink(std::make_unique<FileLogSink>(log_file, true));
+      file_log_sink_attached_ = true;
+    }
+  }
 #endif  // XE_PLATFORM_ANDROID
+}
+
+void AttachFileLogSink(const std::filesystem::path& log_dir,
+                       const std::string_view app_name) {
+#if XE_PLATFORM_ANDROID
+  (void)log_dir;
+  (void)app_name;
+  return;
+#else
+  if (file_log_sink_attached_ || !logger_) {
+    return;
+  }
+
+  app_name_ = std::string(app_name);
+  log_dir_ = log_dir;
+
+  std::filesystem::path resolved_log_dir = log_dir;
+  auto ec = xe::filesystem::CreateFolder(resolved_log_dir);
+  if (ec) {
+    XELOGW(
+        "AttachFileLogSink: failed to create {} ({}), falling back to exe dir",
+        resolved_log_dir, ec.message());
+    resolved_log_dir = xe::filesystem::GetExecutableFolder() / "log";
+    xe::filesystem::CreateFolder(resolved_log_dir);
+  }
+  log_dir_ = resolved_log_dir;
+
+  session_timestamp_ =
+      fmt::format("{:%Y%m%d-%H%M%S}", std::chrono::system_clock::now());
+
+  std::filesystem::path log_file_path =
+      log_dir_ / fmt::format("{}_{}.log", app_name_, session_timestamp_);
+
+  FILE* log_file = xe::filesystem::OpenFile(log_file_path, "wt");
+  if (!log_file) {
+    XELOGW("AttachFileLogSink: failed to open {}", log_file_path);
+    return;
+  }
+
+  active_log_file_path_ = log_file_path;
+
+  if (pending_file_buffer_sink_) {
+    const std::string& early = pending_file_buffer_sink_->buffer();
+    if (!early.empty()) {
+      fwrite(early.data(), 1, early.size(), log_file);
+    }
+    logger_->RemoveLogSink(pending_file_buffer_sink_);
+    pending_file_buffer_sink_ = nullptr;
+  }
+
+  logger_->AddLogSink(std::make_unique<FileLogSink>(log_file, true));
+  file_log_sink_attached_ = true;
+
+  // Pointer file for the current session log.
+  std::filesystem::path latest_pointer = log_dir_ / "xenia_latest.log";
+  if (FILE* pointer_file = xe::filesystem::OpenFile(latest_pointer, "wt")) {
+    fmt::print(pointer_file, "{}\n", active_log_file_path_.string());
+    fclose(pointer_file);
+  }
+
+  XELOGI("Log file: {}", active_log_file_path_);
+#endif  // XE_PLATFORM_ANDROID
+}
+
+std::filesystem::path GetActiveLogFilePath() { return active_log_file_path_; }
+
+std::filesystem::path GetLogDirectory() {
+  if (!log_dir_.empty()) {
+    return log_dir_;
+  }
+  if (!active_log_file_path_.empty()) {
+    return active_log_file_path_.parent_path();
+  }
+  return {};
+}
+
+#if XE_PLATFORM_WIN32
+static void AppendWin32ExceptionContext(std::string& out,
+                                        const _EXCEPTION_POINTERS* info) {
+  if (!info || !info->ExceptionRecord) {
+    return;
+  }
+
+  const auto* record = info->ExceptionRecord;
+  const auto* context = info->ContextRecord;
+  fmt::format_to(std::back_inserter(out),
+                 "\n--- exception context ---\nExceptionCode: 0x{:08X}\n",
+                 record->ExceptionCode);
+  if (record->ExceptionAddress) {
+    fmt::format_to(std::back_inserter(out), "ExceptionAddress: {:p}\n",
+                   record->ExceptionAddress);
+  }
+
+  if (context) {
+#if XE_ARCH_AMD64
+    fmt::format_to(std::back_inserter(out),
+                   "RIP: 0x{:016X}\nRSP: 0x{:016X}\nRBP: 0x{:016X}\n",
+                   context->Rip, context->Rsp, context->Rbp);
+#elif XE_ARCH_ARM64
+    fmt::format_to(std::back_inserter(out),
+                   "PC: 0x{:016X}\nSP: 0x{:016X}\nFP: 0x{:016X}\n", context->Pc,
+                   context->Sp, context->Fp);
+#endif
+  }
+
+  HMODULE modules[256];
+  DWORD needed = 0;
+  if (EnumProcessModules(GetCurrentProcess(), modules,
+                         static_cast<DWORD>(sizeof(modules)), &needed)) {
+    out.append("\n--- loaded modules ---\n");
+    const unsigned module_count =
+        std::min<unsigned>(needed / sizeof(HMODULE), xe::countof(modules));
+    for (unsigned i = 0; i < module_count; ++i) {
+      char module_name[MAX_PATH + 1] = {};
+      if (GetModuleFileNameA(modules[i], module_name, sizeof(module_name))) {
+        out.append(module_name);
+        out.push_back('\n');
+      }
+    }
+  }
+}
+#endif  // XE_PLATFORM_WIN32
+
+void logging::WriteCrashSidecar(const char* category,
+                                const std::string_view body,
+                                const void* exception_pointers) {
+  if (log_dir_.empty() || session_timestamp_.empty()) {
+    return;
+  }
+
+  std::filesystem::path sidecar_path =
+      log_dir_ /
+      fmt::format("{}_{}_{}.txt", app_name_, session_timestamp_, category);
+
+  std::string sidecar_body(body);
+#if XE_PLATFORM_WIN32
+  AppendWin32ExceptionContext(
+      sidecar_body,
+      static_cast<const _EXCEPTION_POINTERS*>(exception_pointers));
+#endif
+
+  if (diagnostics().capture_log_tail_on_crash.load(std::memory_order_relaxed)) {
+    AppendRecentLogTail(sidecar_body, diagnostics().crash_log_tail_lines.load(
+                                          std::memory_order_relaxed));
+  }
+
+  if (FILE* sidecar_file = xe::filesystem::OpenFile(sidecar_path, "wt")) {
+    fwrite(sidecar_body.data(), 1, sidecar_body.size(), sidecar_file);
+    fclose(sidecar_file);
+  }
 }
 
 void ShutdownLogging() {
@@ -517,6 +815,12 @@ void logging::internal::AppendLogLine(LogLevel log_level,
   }
   logger_->AppendLine(xe::threading::current_thread_id(), prefix_char,
                       thread_log_buffer_, written);
+
+  if (static_cast<int32_t>(log_level) <=
+          static_cast<int32_t>(LogLevel::Warning) &&
+      diagnostics().force_flush_on_error.load(std::memory_order_relaxed)) {
+    flush_requested_.store(true, std::memory_order_release);
+  }
 }
 
 void logging::AppendLogLine(LogLevel log_level, const char prefix_char,
@@ -530,6 +834,8 @@ void logging::AppendLogLine(LogLevel log_level, const char prefix_char,
 
 void FatalError(const std::string_view str) {
   logging::AppendLogLine(LogLevel::Error, 'x', str);
+  logging::WriteCrashSidecar("fatal", str);
+  FlushLog();
 
   if (!xe::has_console_attached()) {
     ShowSimpleMessageBox(SimpleMessageBoxType::Error, str);

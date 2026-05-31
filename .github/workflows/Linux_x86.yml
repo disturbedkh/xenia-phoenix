@@ -125,7 +125,7 @@ jobs:
           # Checked builds use LeakSanitizer; --help still reports GTK/SDL init leaks.
           LSAN_OPTIONS: detect_leaks=0
         run: |
-          binary="build/bin/Linux/${{ inputs.config }}/xenia_canary"
+          binary="Build/Linux/x64/${{ inputs.config }}/xenia_canary"
           if [ ! -f "$binary" ]; then
             echo "::error::Binary not found at $binary"
             exit 1
@@ -141,7 +141,7 @@ jobs:
         if: inputs.config == 'Release'
         id: prepare_artifacts
         run: |
-          binary=build/bin/Linux/${{ inputs.config }}/xenia_canary
+          binary=Build/Linux/x64/${{ inputs.config }}/xenia_canary
           if [ $(stat -c%s $binary) -le 100000 ]; then
             echo "::error::Binary is too small."
             exit 1
@@ -171,7 +171,7 @@ jobs:
           cp assets/icon/1024.png $APPDIR/usr/share/icons/hicolor/1024x1024/apps/xenia_canary.png
 
           # Copy any extra runtime data directories alongside the binary
-          find build/bin/Linux/${{ inputs.config }} -maxdepth 1 -type d ! -name ${{ inputs.config }} -exec cp -r {} $APPDIR/usr/bin/ \;
+          find Build/Linux/x64/${{ inputs.config }} -maxdepth 1 -type d ! -name ${{ inputs.config }} -exec cp -r {} $APPDIR/usr/bin/ \;
 
           # Build AppImage with linuxdeploy (requires absolute paths)
           linuxdeploy --appdir $APPDIR \

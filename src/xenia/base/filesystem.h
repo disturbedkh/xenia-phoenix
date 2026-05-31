@@ -40,6 +40,13 @@ std::filesystem::path GetExecutableFolder();
 // Get user folder.
 std::filesystem::path GetUserFolder();
 
+// Resolve the persistent storage root (config, logs, cache siblings).
+// override_path: value of --storage_root, or empty for default.
+// portable: value of --portable; when false, use Documents/Xenia unless
+// portable.txt exists next to the executable.
+std::filesystem::path ResolveStorageRoot(
+    const std::filesystem::path& override_path, bool portable);
+
 // Creates the parent folder of the specified path if needed.
 // This can be used to ensure the destination path for a new file exists before
 // attempting to create it.
@@ -51,6 +58,15 @@ std::error_code CreateFolder(const std::filesystem::path& path);
 
 // Creates an empty file at the given path, overwriting if it exists.
 bool CreateEmptyFile(const std::filesystem::path& path);
+
+// Reads the entire file at the given path as a byte buffer.
+// Returns an empty vector on open/read failure or for empty files.
+std::vector<uint8_t> ReadAllBytes(const std::filesystem::path& path);
+
+// Reads the entire file at the given path as a text string (binary mode; the
+// caller gets any \r bytes verbatim). Returns an empty string on open failure
+// or for empty files.
+std::string ReadAllText(const std::filesystem::path& path);
 
 // Opens the file at the given path with the specified mode.
 // This behaves like fopen and the returned handle can be used with stdio.
@@ -133,6 +149,9 @@ std::vector<FileInfo> ListFiles(const std::filesystem::path& path);
 std::vector<FileInfo> ListDirectories(const std::filesystem::path& path);
 std::vector<FileInfo> FilterByName(const std::vector<FileInfo>& files,
                                    const std::regex pattern);
+std::vector<FileInfo> FindFileWithName(const std::filesystem::path& path,
+                                       std::string_view name,
+                                       bool recursive = false);
 
 bool SetAttributes(const std::filesystem::path& path, uint64_t attributes);
 

@@ -147,6 +147,10 @@ bool XmaContextNew::Work() {
     Consume(&output_rb, &data);
     data.output_buffer_write_offset =
         output_rb.write_offset() / kOutputBytesPerBlock;
+
+    if (output_rb.empty()) {
+      data.output_buffer_valid = false;
+    }
     StoreContextMerged(data, initial_data, context_ptr);
     return true;
   }
@@ -228,10 +232,9 @@ bool XmaContextNew::Work() {
   }
 
   // Signal the game that the output buffer is full
-  if (remaining_subframe_blocks_in_output_buffer_ == 0) {
+  if (remaining_subframe_blocks_in_output_buffer_ == 0 && output_rb.empty()) {
     XELOGAPU("XmaContext {}: Output ring buffer is full, invalidating output",
              id());
-    data.output_buffer_write_offset = data.output_buffer_read_offset;
     data.output_buffer_valid = 0;
   }
 

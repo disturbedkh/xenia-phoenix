@@ -562,7 +562,7 @@ uint32_t xeXGetGameRegion() {
 }
 
 dword_result_t XGetGameRegion_entry() { return xeXGetGameRegion(); }
-DECLARE_XAM_EXPORT1(XGetGameRegion, kNone, kStub);
+DECLARE_XAM_EXPORT1(XGetGameRegion, kNone, kImplemented);
 
 XLanguage xeGetLanguage(bool extended_languages_support) {
   auto desired_language =

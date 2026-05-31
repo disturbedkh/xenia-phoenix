@@ -102,7 +102,7 @@ jobs:
         env:
           GDK_BACKEND: x11
         run: |
-          binary="build/bin/Linux/${{ inputs.config }}/xenia_canary"
+          binary="Build/Linux/ARM64/${{ inputs.config }}/xenia_canary"
           if [ ! -f "$binary" ]; then
             echo "::error::Binary not found at $binary"
             exit 1
@@ -126,6 +126,6 @@ jobs:
           name: linux-arm64-build-log-${{ inputs.config }}
           path: |
             linux_build_*.log
-            build/**/*.log
+            Build/**/*.log
           if-no-files-found: ignore
           retention-days: 7

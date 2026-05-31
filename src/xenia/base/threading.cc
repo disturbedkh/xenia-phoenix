@@ -9,8 +9,25 @@
 
 #include "xenia/base/threading.h"
 
+#include <cstring>
+
 namespace xe {
 namespace threading {
+
+thread_local char current_thread_name_[16] = {};
+
+void set_current_thread_name_storage(std::string_view name) {
+  const size_t n = std::min(name.size(), sizeof(current_thread_name_) - 1);
+  if (n) {
+    std::memcpy(current_thread_name_, name.data(), n);
+  }
+  current_thread_name_[n] = '\0';
+}
+
+std::string_view current_thread_name() {
+  return current_thread_name_[0] ? std::string_view(current_thread_name_)
+                                 : std::string_view{};
+}
 
 uint32_t logical_processor_count() {
   static uint32_t value = 0;

@@ -24,6 +24,8 @@ jobs:
           sudo apt-add-repository "deb http://apt.llvm.org/${UBUNTU_BASE}/ llvm-toolchain-${UBUNTU_BASE}-$LLVM_VERSION main"
           sudo apt-get -y update
           sudo apt-get -y install clang-format-$LLVM_VERSION
+      - name: Check build paths
+        run: python3 tools/build/check_build_paths.py
       - name: Lint
         run: ./xenia-build.py lint --all
 

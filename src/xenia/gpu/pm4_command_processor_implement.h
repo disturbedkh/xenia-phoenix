@@ -26,9 +26,18 @@ void COMMAND_PROCESSOR::ExecuteIndirectBuffer(uint32_t ptr,
       if (COMMAND_PROCESSOR::ExecutePacket()) {
         continue;
       } else {
-        // Return up a level if we encounter a bad packet.
-        XELOGE("**** INDIRECT RINGBUFFER: Failed to execute packet.");
-        assert_always();
+        // Return up a level if we encounter a bad packet. Only assert when
+        // the worker is still in steady-state execution; bad packets observed
+        // mid-shutdown (e.g. Emulator::ResetTitle tearing down the kernel
+        // while the title hasn't fully stopped yet) are expected — log and
+        // break out gracefully so the worker can exit cleanly.
+        XELOGE(
+            "**** INDIRECT RINGBUFFER: Failed to execute packet (ptr={:08X}, "
+            "count={}, worker_running={}).",
+            ptr, count, worker_running_.load(std::memory_order_relaxed));
+        if (worker_running_.load(std::memory_order_relaxed)) {
+          assert_always();
+        }
         break;
       }
     } while (reader_.read_count());

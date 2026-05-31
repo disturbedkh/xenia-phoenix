@@ -486,6 +486,14 @@ enum ACCELERATOR_CONTROL_OPTIONS : uint8_t {
   ACCELERATOR_CONTROL_BUTTON
 };
 
+enum GAMERCARD_ZONE_OPTIONS : uint32_t {
+  GAMERCARD_ZONE_XBOX_1,
+  GAMERCARD_ZONE_RR,
+  GAMERCARD_ZONE_PRO,
+  GAMERCARD_ZONE_FAMILY,
+  GAMERCARD_ZONE_UNDERGROUND
+};
+
 struct GamerPictureKey {
   char title_id[8];
   char big_tile_id[8];
@@ -524,6 +532,10 @@ class UserSetting : public UserData {
                     uint32_t& extended_data_address);
   std::vector<uint8_t> Serialize() const;
 
+  std::optional<std::string> SerializeToBase64() const;
+
+  static std::optional<UserSetting> DeserializeBase64(const std::string base64);
+
   uint32_t get_setting_id() const { return static_cast<uint32_t>(setting_id_); }
   X_USER_PROFILE_SETTING_SOURCE get_setting_source() const {
     return setting_source_;
@@ -533,6 +545,10 @@ class UserSetting : public UserData {
     return std::find(known_settings.cbegin(), known_settings.cend(),
                      static_cast<UserSettingId>(setting_id)) !=
            known_settings.cend();
+  }
+
+  static bool is_title_specific(uint32_t setting_id) {
+    return (setting_id & 0x3F00) == 0x3F00;
   }
 
  private:
@@ -550,10 +566,6 @@ class UserSetting : public UserData {
       return true;
     }
     return false;
-  }
-
-  static bool is_title_specific(uint32_t setting_id) {
-    return (setting_id & 0x3F00) == 0x3F00;
   }
 
   bool is_title_specific() const {

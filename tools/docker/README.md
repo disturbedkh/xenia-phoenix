@@ -8,7 +8,7 @@
 ## Windows (canonical)
 
 ```powershell
-cd G:\Xenia-Xenia Canary\Xenia-Phoenix\xenia-phoenix-src
+cd G:\The Xenia Project\Xenia-Phoenix\xenia-phoenix-src
 .\tools\docker\run-linux-build.ps1
 .\tools\docker\run-linux-build.ps1 -Config debug
 .\tools\docker\run-linux-build.ps1 -Config all    # release + debug + checked
@@ -33,7 +33,7 @@ docker run --rm -v "G:\...\xenia-phoenix-src:/src:rw" -w /src ubuntu:24.04 `
   bash -lc "sed -i 's/\r$//' tools/docker/linux-build.sh && bash tools/docker/linux-build.sh release"
 ```
 
-Paths with spaces must be quoted. WSL fallback: `/mnt/g/Xenia-Xenia Canary/Xenia-Phoenix/xenia-phoenix-src`.
+Paths with spaces must be quoted. WSL fallback: `/mnt/g/The Xenia Project/Xenia-Phoenix/xenia-phoenix-src`.
 
 ## Verify only (after build)
 
@@ -48,7 +48,7 @@ bash tools/docker/linux-verify.sh release smoke-only
 docker run --rm -v "...:/src:rw" -w /src ubuntu:24.04 bash -c '
   apt-get update -qq && apt-get install -y -qq xvfb libsdl2-2.0-0 libgtk-3-0 libvulkan1 mesa-vulkan-drivers libasound2t64 libfontconfig1 libfuse2 &&
   export GDK_BACKEND=x11 &&
-  xvfb-run -a ./build/bin/Linux/Release/xenia_canary --help
+  xvfb-run -a ./Build/Linux/x64/Release/xenia_canary --help
 '
 ```
 

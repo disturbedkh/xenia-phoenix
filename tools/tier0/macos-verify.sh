@@ -2,8 +2,8 @@
 # Post-build verification for macOS Apple Silicon builds.
 set -euo pipefail
 
-BUILD_DIR="${1:-build}"
-BIN="${BUILD_DIR}/bin/macOS/Release"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+BIN="$(python3 "${ROOT}/tools/build/xenia_paths.py" bin --config Release --os macOS --target-arch arm64)"
 EXE="${BIN}/xenia_canary"
 CPU_TESTS="${BIN}/xenia-cpu-tests"
 

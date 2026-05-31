@@ -10,8 +10,12 @@
 #include "xenia/kernel/xam/user_profile.h"
 
 #include "third_party/fmt/include/fmt/format.h"
-#include "xenia/kernel/kernel_state.h"
+#include "xenia/emulator.h"
+#include "xenia/kernel/netplay/xlive_api.h"
+#include "xenia/kernel/util/presence_string_builder.h"
 #include "xenia/kernel/util/shim_utils.h"
+#include "xenia/kernel/util/xlast.h"
+#include "xenia/kernel/xam/friends_util.h"
 #include "xenia/kernel/xam/xdbf/gpd_info.h"
 
 namespace xe {
@@ -28,6 +32,17 @@ UserProfile::UserProfile(const uint64_t xuid,
 
   LoadProfileIcon(XTileType::kGamerTile);
   LoadProfileIcon(XTileType::kGamerTileSmall);
+
+  LoadProfileIcon(XTileType::kAvatarGamerTile);
+  LoadProfileIcon(XTileType::kAvatarGamerTileSmall);
+
+  friends_ = std::vector<X_ONLINE_FRIEND>();
+  subscriptions_ = std::map<uint64_t, X_ONLINE_PRESENCE>();
+  self_invite = {};
+
+  for (const auto& friend_xuid : ParseFriendsXUIDs()) {
+    AddFriendFromXUID(friend_xuid);
+  }
 }
 
 GpdInfo* UserProfile::GetGpd(const uint32_t title_id) {
@@ -179,6 +194,410 @@ bool UserProfile::WriteGpd(const uint32_t title_id) {
                   &written_bytes);
   file->Destroy();
   return true;
+}
+
+X_ONLINE_FRIEND UserProfile::GenerateDummyFriend() {
+  std::random_device rnd;
+  std::mt19937_64 gen(rnd());
+  std::uniform_int_distribution<int> dist(0x00, 0xFF);
+
+  X_ONLINE_FRIEND dummy_friend = {};
+
+  // Friend is playing same title
+  dummy_friend.title_id = kernel_state()->title_id();
+
+  const uint32_t player_state = X_ONLINE_FRIENDSTATE_FLAG_ONLINE |
+                                X_ONLINE_FRIENDSTATE_FLAG_JOINABLE |
+                                X_ONLINE_FRIENDSTATE_FLAG_PLAYING;
+
+  const uint32_t user_state = X_ONLINE_FRIENDSTATE_ENUM_ONLINE;
+
+  dummy_friend.xuid =
+      kernel_state()->xam_state()->profile_manager()->GenerateXuidOnline();
+  dummy_friend.session_id = XNKID();
+  dummy_friend.state = player_state | user_state;
+
+  xe::be<uint64_t> session_id = 0xAE00FFFFFFFFFFFF;
+  memcpy(dummy_friend.session_id.ab, &session_id, sizeof(XNKID));
+
+  // uint64_t xnkidInvite = 0xAE00FFFFFFFFFFFF;
+  // memcpy(dummy_friend.xnkidInvite.ab, &xnkidInvite, sizeof(XNKID));
+
+  std::string gamertag = fmt::format("Player {}", dist(gen));
+  std::u16string rich_presence = u"Playing on Xenia";
+
+  xe::string_util::copy_truncating(dummy_friend.Gamertag, gamertag.c_str(),
+                                   sizeof(dummy_friend.Gamertag));
+
+  char16_t* rich_presence_ptr =
+      reinterpret_cast<char16_t*>(dummy_friend.wszRichPresence);
+  xe::string_util::copy_and_swap_truncating(
+      rich_presence_ptr, rich_presence, sizeof(dummy_friend.wszRichPresence));
+
+  dummy_friend.cchRichPresence =
+      static_cast<uint32_t>(rich_presence.size() * sizeof(char16_t));
+
+  return dummy_friend;
+}
+
+void UserProfile::AddDummyFriends(const uint32_t friends_count) {
+  if (friends_.size() >= X_ONLINE_MAX_FRIENDS) {
+    return;
+  }
+
+  for (uint32_t i = 0; i < friends_count; i++) {
+    X_ONLINE_FRIEND peer = GenerateDummyFriend();
+
+    AddFriend(&peer);
+  }
+}
+
+bool UserProfile::GetFriendPresenceFromXUID(const uint64_t xuid,
+                                            X_ONLINE_PRESENCE* presence) {
+  if (presence == nullptr) {
+    return false;
+  }
+
+  X_ONLINE_FRIEND peer = {};
+
+  const bool is_friend = GetFriendFromXUID(xuid, &peer);
+
+  if (!is_friend) {
+    return false;
+  }
+
+  presence->title_id = peer.title_id;
+  presence->state = peer.state;
+  presence->xuid = peer.xuid;
+  presence->session_id = peer.session_id;
+  presence->cchRichPresence = peer.cchRichPresence;
+
+  memcpy(presence->wszRichPresence, peer.wszRichPresence,
+         presence->cchRichPresence);
+
+  return true;
+}
+
+bool UserProfile::SetFriend(const X_ONLINE_FRIEND& update_peer) {
+  auto it = std::find_if(
+      friends_.begin(), friends_.end(), [&update_peer](X_ONLINE_FRIEND& peer) {
+        if (peer.xuid == update_peer.xuid) {
+          memcpy(&peer, &update_peer, sizeof(X_ONLINE_FRIEND));
+          return true;
+        }
+
+        return false;
+      });
+
+  if (it != friends_.end()) {
+    return false;
+  }
+
+  return true;
+}
+
+bool UserProfile::AddFriendFromXUID(const uint64_t xuid) {
+  X_ONLINE_FRIEND peer = X_ONLINE_FRIEND();
+  peer.xuid = xuid;
+
+  return AddFriend(&peer);
+}
+
+bool UserProfile::AddFriend(X_ONLINE_FRIEND* peer) {
+  if (friends_.size() >= X_ONLINE_MAX_FRIENDS) {
+    return false;
+  }
+
+  if (GetOnlineXUID() == peer->xuid) {
+    return false;
+  }
+
+  if (peer == nullptr) {
+    return false;
+  }
+
+  if (IsFriend(peer->xuid)) {
+    return true;
+  }
+
+  std::string default_gamertag = fmt::format("{:016X}", peer->xuid.get());
+
+  XELOGI("{}: Added gamertag: {}", __func__, default_gamertag);
+
+  xe::string_util::copy_truncating(peer->Gamertag, default_gamertag.c_str(),
+                                   sizeof(peer->Gamertag));
+
+  friends_.push_back(*peer);
+
+  return true;
+}
+
+bool UserProfile::RemoveFriend(const X_ONLINE_FRIEND& peer) {
+  return RemoveFriend(peer.xuid);
+}
+
+bool UserProfile::RemoveFriend(const uint64_t xuid) {
+  bool removed = false;
+
+  auto it = std::remove_if(
+      friends_.begin(), friends_.end(),
+      [&xuid](const X_ONLINE_FRIEND& peer) { return peer.xuid == xuid; });
+
+  if (it != friends_.end()) {
+    const size_t friends_size = friends_.size();
+
+    friends_.erase(it, friends_.end());
+    removed = friends_.size() != friends_size;
+  }
+
+  return removed;
+}
+
+void UserProfile::RemoveAllFriends() {
+  for (const auto& friend_ : GetFriends()) {
+    RemoveFriend(friend_.xuid);
+    RemoveFriendFromConfig(friend_.xuid);
+  }
+}
+
+bool UserProfile::GetFriendFromIndex(const uint32_t index,
+                                     X_ONLINE_FRIEND* peer) {
+  if (index >= X_ONLINE_MAX_FRIENDS || index >= friends_.size()) {
+    return false;
+  }
+
+  if (peer == nullptr) {
+    return false;
+  }
+
+  memcpy(peer, &friends_[index], sizeof(X_ONLINE_FRIEND));
+
+  return true;
+}
+
+bool UserProfile::GetFriendFromXUID(const uint64_t xuid,
+                                    X_ONLINE_FRIEND* peer) {
+  if (peer == nullptr) {
+    return false;
+  }
+
+  return IsFriend(xuid, peer);
+}
+
+bool UserProfile::IsFriend(const uint64_t xuid, X_ONLINE_FRIEND* peer) {
+  auto it = std::find_if(
+      friends_.begin(), friends_.end(),
+      [&xuid](const X_ONLINE_FRIEND& peer) { return peer.xuid == xuid; });
+
+  if (it == friends_.end()) {
+    return false;
+  }
+
+  if (peer != nullptr) {
+    memcpy(peer, &*it, sizeof(X_ONLINE_FRIEND));
+  }
+
+  return true;
+}
+
+const std::set<uint64_t> UserProfile::GetFriendsXUIDs() const {
+  std::set<uint64_t> xuids;
+
+  for (const auto& peer : friends_) {
+    xuids.insert(peer.xuid);
+  }
+
+  return xuids;
+}
+
+const uint32_t UserProfile::GetFriendsCount() const {
+  return static_cast<uint32_t>(friends_.size());
+}
+
+bool UserProfile::SetSubscriptionFromXUID(const uint64_t xuid,
+                                          X_ONLINE_PRESENCE* peer) {
+  if (peer == nullptr) {
+    return false;
+  }
+
+  memcpy(&subscriptions_[xuid], &peer, sizeof(X_ONLINE_PRESENCE));
+
+  return true;
+}
+
+bool UserProfile::GetSubscriptionFromXUID(const uint64_t xuid,
+                                          X_ONLINE_PRESENCE* peer) {
+  if (!IsSubscribed(xuid)) {
+    return false;
+  }
+
+  if (peer == nullptr) {
+    return false;
+  }
+
+  memcpy(peer, &subscriptions_[xuid], sizeof(X_ONLINE_PRESENCE));
+
+  return true;
+}
+
+bool UserProfile::SubscribeFromXUID(const uint64_t xuid) {
+  if (subscriptions_.size() >= X_ONLINE_PEER_SUBSCRIPTIONS) {
+    return false;
+  }
+
+  subscriptions_[xuid] = {};
+
+  return true;
+}
+
+bool UserProfile::UnsubscribeFromXUID(const uint64_t xuid) {
+  if (!IsSubscribed(xuid)) {
+    return true;
+  }
+
+  if (subscriptions_.erase(xuid)) {
+    return true;
+  }
+
+  return false;
+}
+
+bool UserProfile::IsSubscribed(const uint64_t xuid) {
+  return subscriptions_.count(xuid) != 0;
+}
+
+void UserProfile::SetSelfInvite(X_INVITE_INFO invite_info) {
+  self_invite = invite_info;
+}
+
+const std::set<uint64_t> UserProfile::GetSubscribedXUIDs() const {
+  std::set<uint64_t> subscribed_xuids;
+
+  for (const auto& [key, _] : subscriptions_) {
+    subscribed_xuids.insert(key);
+  }
+
+  return subscribed_xuids;
+}
+
+bool UserProfile::MutePlayer(uint64_t xuid) {
+  const bool muted = IsPlayerMuted(xuid);
+
+  if (!muted) {
+    muted_players_.push_back(xuid);
+  }
+
+  return !muted;
+}
+
+bool UserProfile::UnmutePlayer(uint64_t xuid) {
+  const bool unmuted = std::erase_if(
+      muted_players_,
+      [xuid](const uint64_t muted_xuid) { return muted_xuid == xuid; });
+
+  return unmuted;
+}
+
+bool UserProfile::IsPlayerMuted(uint64_t xuid) const {
+  const auto it = std::find_if(
+      muted_players_.cbegin(), muted_players_.cend(),
+      [xuid](const uint64_t muted_xuid) { return muted_xuid == xuid; });
+
+  return it != muted_players_.end();
+}
+
+std::u16string UserProfile::GetPresenceString() const {
+  return online_presence_desc_;
+}
+
+bool UserProfile::IsPresenceStringUpdateAvailable() {
+  const std::u16string current_presence = GetPresenceString();
+  std::u16string updated_presence = u"";
+
+  if (!BuildPresenceString(false, &updated_presence)) {
+    return false;
+  }
+
+  return current_presence != updated_presence;
+}
+
+std::optional<object_ref<XSession>> UserProfile::FindValidInviteSession() {
+  object_ref<XSession> valid_session = nullptr;
+
+  for (const auto& session : GetOwnedSessions()) {
+    if (session->IsHost() && session->IsCreated() &&
+        session->IsXboxLiveSession() && session->IsInvitesEnabled() &&
+        session->GetMembersCount()) {
+      if (session->IsJoinInProgressEnabled()) {
+        valid_session = session;
+      } else if (!session->IsSessionStarted() || session->IsSessionEnded()) {
+        valid_session = session;
+      }
+
+      // Prioritize session with most slots.
+      if (valid_session) {
+        if (session->GetTotalMaxSlots() > valid_session->GetTotalMaxSlots()) {
+          valid_session = session;
+        }
+      }
+    }
+  }
+
+  if (!valid_session) {
+    return std::nullopt;
+  }
+
+  return valid_session;
+}
+
+void UserProfile::SetDiscordInviteSessionDetails(
+    const XSESSION_LOCAL_DETAILS& session_details) {
+  discord_invite_session_details_ = session_details;
+}
+
+XSESSION_LOCAL_DETAILS UserProfile::GetDiscordInviteSessionDetails() const {
+  return discord_invite_session_details_;
+}
+
+bool UserProfile::BuildPresenceString(bool update,
+                                      std::u16string* presence_string) {
+  bool completed = false;
+
+  const xam::Property* presence_prop =
+      kernel_state()->xam_state()->user_tracker()->GetProperty(
+          xuid_, XCONTEXT_PRESENCE);
+
+  if (!presence_prop) {
+    return completed;
+  }
+
+  const auto gdb = kernel_state()->emulator()->game_info_database();
+
+  if (!gdb->HasXLast()) {
+    return completed;
+  }
+
+  const auto xlast = gdb->GetXLast();
+
+  const std::u16string raw_presence =
+      xlast->GetPresenceRawString(presence_prop);
+
+  const auto presence_string_formatter =
+      util::AttributeStringFormatter(raw_presence, xlast, xuid_);
+
+  completed = presence_string_formatter.IsComplete();
+
+  const auto presence_parsed = presence_string_formatter.GetPresenceString();
+
+  if (completed && update) {
+    online_presence_desc_ = presence_parsed;
+  }
+
+  if (completed && presence_string) {
+    *presence_string = presence_parsed;
+  }
+
+  return completed;
 }
 
 }  // namespace xam

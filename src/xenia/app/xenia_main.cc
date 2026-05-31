@@ -16,8 +16,14 @@
 
 #if !XE_PLATFORM_ANDROID
 #include "xenia/app/discord/discord_presence.h"
+#include "xenia/debug/phoenix_probe.h"
+#include "xenia/debug/ui/debug_window.h"
+#include "xenia/kernel/netplay/netplay_probe_util.h"
+#include "xenia/kernel/xam/user_profile.h"
+#include "xenia/ui/imgui_host_notification.h"
 #endif  // !XE_PLATFORM_ANDROID
 #include "xenia/app/emulator_window.h"
+#include "xenia/app/title_launch_dispatcher.h"
 #include "xenia/base/assert.h"
 #include "xenia/base/cvar.h"
 #include "xenia/base/debugging.h"
@@ -27,10 +33,6 @@
 #include "xenia/base/profiling.h"
 #include "xenia/base/threading.h"
 #include "xenia/config.h"
-#if !XE_PLATFORM_ANDROID
-#include "xenia/debug/phoenix_probe.h"
-#include "xenia/debug/ui/debug_window.h"
-#endif  // !XE_PLATFORM_ANDROID
 #include "xenia/emulator.h"
 #include "xenia/kernel/xam/xam_module.h"
 #include "xenia/ui/file_picker.h"
@@ -104,12 +106,7 @@ DEFINE_string(hid, "xinput", "Input system. Use: " HID_OPTIONS, "HID");
 DEFINE_string(hid, "any", "Input system. Use: " HID_OPTIONS, "HID");
 #endif
 
-DEFINE_path(
-    storage_root, "",
-    "Root path for persistent internal data storage (config, etc.), or empty "
-    "to use the path preferred for the OS, such as the documents folder, or "
-    "the emulator executable directory if portable.txt is present in it.",
-    "Storage");
+DECLARE_path(storage_root);
 DEFINE_path(
     content_root, "",
     "Root path for guest content storage (saves, etc.), or empty to use the "
@@ -137,19 +134,20 @@ DECLARE_bool(force_mount_devkit);
 DEFINE_transient_path(target, "",
                       "Specifies the target .xex or .iso to execute.",
                       "General");
-#ifndef XE_PLATFORM_WIN32
-DEFINE_transient_bool(portable, false,
-                      "Specifies if Xenia should run in portable mode.",
-                      "General");
-#else
-DEFINE_transient_bool(portable, true,
-                      "Specifies if Xenia should run in portable mode.",
-                      "General");
-#endif
+DECLARE_bool(portable);
 
 DECLARE_bool(debug);
 
-DEFINE_bool(discord, true, "Enable Discord rich presence", "General");
+DECLARE_bool(discord);
+
+DECLARE_int32(discord_presence_user_index);
+
+DEFINE_bool(
+    return_to_ui, false,
+    "When set (e.g. by a respawned child process), keep the launcher UI alive "
+    "after the launched title exits instead of treating the session as "
+    "one-shot.",
+    "General");
 
 DECLARE_int32(window_size_x);
 DECLARE_int32(window_size_y);
@@ -517,24 +515,8 @@ bool EmulatorApp::OnInitialize() {
 #endif  // !XE_PLATFORM_ANDROID
 
   // Figure out where internal files and content should go.
-  std::filesystem::path storage_root = cvars::storage_root;
-  if (storage_root.empty()) {
-    storage_root = xe::filesystem::GetExecutableFolder();
-    if (!cvars::portable &&
-        !std::filesystem::exists(storage_root / "portable.txt")) {
-      storage_root = xe::filesystem::GetUserFolder();
-#if XE_PLATFORM_ANDROID
-      std::filesystem::path android_files =
-          xe::filesystem::GetAndroidApplicationFilesDirectory();
-      if (!android_files.empty()) {
-        storage_root = android_files;
-      }
-#else
-      storage_root = storage_root / "Xenia";
-#endif
-    }
-  }
-  storage_root = std::filesystem::absolute(storage_root);
+  std::filesystem::path storage_root =
+      xe::filesystem::ResolveStorageRoot(cvars::storage_root, cvars::portable);
   XELOGI("Storage root: {}", storage_root);
 
   obs::Init();
@@ -614,6 +596,7 @@ void EmulatorApp::OnDestroy() {
   ShutdownEmulatorThreadFromUIThread();
 
 #if !XE_PLATFORM_ANDROID
+  debug::PhoenixProbeClearNetplayJsonProviders();
   if (cvars::discord) {
     discord::DiscordPresence::Shutdown();
   }
@@ -626,12 +609,13 @@ void EmulatorApp::OnDestroy() {
   config::SaveConfig();
   obs::Shutdown();
 
-  // TODO(DrChat): Remove this code and do a proper exit.
-  XELOGI("Cheap-skate exit!");
+  if (emulator_) {
+    emulator_->SetLifecycleState(LifecycleState::Exiting);
+    emulator_->Shutdown();
+    emulator_.reset();
+  }
 
   xe::FlushLog();
-
-  std::quick_exit(EXIT_SUCCESS);
 }
 
 void EmulatorApp::EmulatorThread() {
@@ -651,97 +635,81 @@ void EmulatorApp::EmulatorThread() {
     return;
   }
 
-  app_context().CallInUIThread(
-      [this]() { emulator_window_->SetupGraphicsSystemPresenterPainting(); });
+  emulator_->SetPendingBackends(cvars::gpu, cvars::apu);
+  result = emulator_->SetupSubsystems();
+  if (XFAILED(result)) {
+    XELOGE("Failed to setup subsystems: {:08X}", result);
+    app_context().RequestDeferredQuit();
+    return;
+  }
 
-  const auto fs = emulator_->file_system();
-
-  if (cvars::mount_scratch) {
-    auto scratch_device = std::make_unique<xe::vfs::HostPathDevice>(
-        "\\SCRATCH", emulator_->storage_root() / "scratch", false);
-    if (!scratch_device->Initialize()) {
-      XELOGE("Unable to scan scratch path");
-    } else {
-      if (!fs->RegisterDevice(std::move(scratch_device))) {
-        XELOGE("Unable to register scratch path");
-      } else {
+  emulator_->set_mount_standard_drives_callback([this]() {
+    const auto fs = emulator_->file_system();
+    if (!fs) {
+      return;
+    }
+    if (cvars::mount_scratch) {
+      auto scratch_device = std::make_unique<xe::vfs::HostPathDevice>(
+          "\\SCRATCH", emulator_->storage_root() / "scratch", false);
+      if (scratch_device->Initialize() &&
+          fs->RegisterDevice(std::move(scratch_device))) {
         fs->RegisterSymbolicLink("scratch:", "\\SCRATCH");
       }
     }
-  }
-
-  if (cvars::mount_cache) {
-    auto cache0_device = std::make_unique<xe::vfs::HostPathDevice>(
-        "\\CACHE0", emulator_->storage_root() / "cache0", false);
-    if (!cache0_device->Initialize()) {
-      XELOGE("Unable to scan cache0 path");
-    } else {
-      if (!fs->RegisterDevice(std::move(cache0_device))) {
-        XELOGE("Unable to register cache0 path");
-      } else {
+    if (cvars::mount_cache) {
+      auto cache0_device = std::make_unique<xe::vfs::HostPathDevice>(
+          "\\CACHE0", emulator_->storage_root() / "cache0", false);
+      if (cache0_device->Initialize() &&
+          fs->RegisterDevice(std::move(cache0_device))) {
         fs->RegisterSymbolicLink("cache0:", "\\CACHE0");
       }
-    }
-
-    auto cache1_device = std::make_unique<xe::vfs::HostPathDevice>(
-        "\\CACHE1", emulator_->storage_root() / "cache1", false);
-    if (!cache1_device->Initialize()) {
-      XELOGE("Unable to scan cache1 path");
-    } else {
-      if (!fs->RegisterDevice(std::move(cache1_device))) {
-        XELOGE("Unable to register cache1 path");
-      } else {
+      auto cache1_device = std::make_unique<xe::vfs::HostPathDevice>(
+          "\\CACHE1", emulator_->storage_root() / "cache1", false);
+      if (cache1_device->Initialize() &&
+          fs->RegisterDevice(std::move(cache1_device))) {
         fs->RegisterSymbolicLink("cache1:", "\\CACHE1");
       }
-    }
-
-    // Some (older?) games try accessing cache:\ too
-    // NOTE: this must be registered _after_ the cache0/cache1 devices, due to
-    // substring/start_with logic inside VirtualFileSystem::ResolvePath, else
-    // accesses to those devices will go here instead
-    auto cache_device = std::make_unique<xe::vfs::HostPathDevice>(
-        "\\CACHE", emulator_->storage_root() / "cache", false);
-    if (!cache_device->Initialize()) {
-      XELOGE("Unable to scan cache path");
-    } else {
-      if (!fs->RegisterDevice(std::move(cache_device))) {
-        XELOGE("Unable to register cache path");
-      } else {
+      auto cache_device = std::make_unique<xe::vfs::HostPathDevice>(
+          "\\CACHE", emulator_->storage_root() / "cache", false);
+      if (cache_device->Initialize() &&
+          fs->RegisterDevice(std::move(cache_device))) {
         fs->RegisterSymbolicLink("cache:", "\\CACHE");
       }
     }
-  }
-
-  if (cvars::force_mount_devkit) {
-    auto devkit_device =
-        std::make_unique<xe::vfs::HostPathDevice>("\\DEVKIT", "devkit", false);
-
-    if (!devkit_device->Initialize()) {
-      XELOGE("Unable to scan devkit path");
+    if (cvars::mount_memory_unit) {
+      auto mu_device =
+          std::make_unique<xe::vfs::HostPathDevice>("\\MU", "MU", false);
+      if (mu_device->Initialize() && fs->RegisterDevice(std::move(mu_device))) {
+        fs->RegisterSymbolicLink("MU:", "\\MU");
+      }
     }
-
-    if (!fs->RegisterDevice(std::move(devkit_device))) {
-      XELOGE("Unable to register devkit path");
+    if (cvars::force_mount_devkit) {
+      auto devkit_device = std::make_unique<xe::vfs::HostPathDevice>(
+          "\\DEVKIT", "devkit", false);
+      if (devkit_device->Initialize() &&
+          fs->RegisterDevice(std::move(devkit_device))) {
+        fs->RegisterSymbolicLink("DEVKIT:", "\\DEVKIT");
+        fs->RegisterSymbolicLink("e:", "\\DEVKIT");
+      }
     }
+  });
+  emulator_->MountStandardDrives();
 
-    fs->RegisterSymbolicLink("DEVKIT:", "\\DEVKIT");
-    fs->RegisterSymbolicLink("e:", "\\DEVKIT");
-  }
+  app_context().CallInUIThread(
+      [this]() { emulator_window_->SetupGraphicsSystemPresenterPainting(); });
 
-  if (cvars::mount_memory_unit) {
-    auto mu_device =
-        std::make_unique<xe::vfs::HostPathDevice>("\\MU", "MU", false);
-
-    if (!mu_device->Initialize()) {
-      XELOGE("Unable to scan MU path");
-    }
-
-    if (!fs->RegisterDevice(std::move(mu_device))) {
-      XELOGE("Unable to register MU path");
-    }
-
-    fs->RegisterSymbolicLink("MU:", "\\MU");
-  }
+  emulator_->set_on_launch_new_title(
+      [this](const std::string& host_path, const std::string& launch_module,
+             uint32_t launch_flags, const std::string& /*launch_data_hex*/) {
+        app::LaunchRequest req;
+        req.path = xe::to_path(host_path);
+        req.launch_module = launch_module;
+        req.launch_flags = launch_flags;
+        req.source = app::LaunchRequestSource::kKernelXam;
+        app_context().CallInUIThread([this, req = std::move(req)]() mutable {
+          emulator_window_->DispatchLaunch(std::move(req));
+        });
+      });
 
 #if !XE_PLATFORM_ANDROID
   if (cvars::debug) {
@@ -765,12 +733,69 @@ void EmulatorApp::EmulatorThread() {
 #if !XE_PLATFORM_ANDROID
     if (cvars::discord) {
       discord::DiscordPresence::PlayingTitle(
-          game_title.empty() ? "Unknown Title" : std::string(game_title));
+          game_title.empty() ? "Unknown Title" : std::string(game_title),
+          "In Game");
     }
 #endif  // !XE_PLATFORM_ANDROID
     app_context().CallInUIThread([this]() { emulator_window_->UpdateTitle(); });
     emulator_thread_event_->Set();
   });
+
+#if !XE_PLATFORM_ANDROID
+  emulator_->on_presence_change.AddListener([&](const auto& game_title,
+                                                const auto& presence_string) {
+    if (!cvars::discord) {
+      return;
+    }
+    const std::string title =
+        game_title.empty() ? "Unknown Title" : std::string(game_title);
+    discord::DiscordPresence::PlayingTitle(title, xe::to_utf8(presence_string));
+  });
+
+  emulator_->on_session_change.AddListener(
+      [this](const xe::kernel::XSESSION_INFO* session_info, uint32_t party_size,
+             uint32_t party_max, uint64_t host_xuid) {
+        if (!cvars::discord) {
+          return;
+        }
+        discord::DiscordPresence::UpdateSession(emulator_->title_id(),
+                                                session_info, party_size,
+                                                party_max, host_xuid);
+      });
+
+  discord::DiscordPresence::SetJoinRequestHandler(
+      [this](xe::kernel::X_INVITE_INFO invite) {
+        const auto show_notification = [this](const std::string& title) {
+          app_context().CallInUIThread([this, title]() {
+            new xe::ui::HostNotificationWindow(emulator_->imgui_drawer(),
+                                               "Join Failed!", title, 0);
+          });
+        };
+
+        if (invite.title_id != emulator_->title_id()) {
+          show_notification("User is playing a different game.");
+          return;
+        }
+
+        const uint32_t user_index = cvars::discord_presence_user_index;
+        kernel::xam::UserProfile* profile =
+            emulator_->kernel_state()->xam_state()->GetUserProfile(user_index);
+
+        if (!profile) {
+          show_notification("User not logged in.");
+          return;
+        }
+
+        invite.xuid_invitee = profile->GetOnlineXUID();
+        profile->SetSelfInvite(invite);
+        emulator_->kernel_state()->BroadcastNotification(
+            kXNotificationLiveInviteAccepted, user_index);
+      });
+
+  debug::PhoenixProbeSetNetplayJsonProviders(
+      [this]() { return kernel::BuildNetplayStatusJson(emulator_.get()); },
+      [this]() { return kernel::BuildNetplaySessionsJson(emulator_.get()); });
+#endif  // !XE_PLATFORM_ANDROID
 
   emulator_->on_shader_storage_initialization.AddListener(
       [this](bool initializing) {
@@ -838,22 +863,47 @@ void EmulatorApp::EmulatorThread() {
 }
 
 void EmulatorApp::ShutdownEmulatorThreadFromUIThread() {
-  // TODO(Triang3l): Proper shutdown of the emulator (relying on std::quick_exit
-  // for now) - currently WaitUntilExit loops forever otherwise (plus possibly
-  // lots of other things not shutting down correctly now). Some parts of the
-  // code call the regular std::exit, which seems to be calling destructors (at
-  // least on Linux), so the entire join is currently commented out.
-#if 0
-  // Same thread as the one created it, to make sure there's zero possibility of
-  // a race with the creation of the emulator thread.
   assert_true(app_context().IsInUIThread());
-  emulator_thread_quit_requested_.store(true, std::memory_order_relaxed);
   if (!emulator_thread_.joinable()) {
     return;
   }
+
+  if (emulator_) {
+    emulator_->RequestShutdown();
+  }
+  emulator_thread_quit_requested_.store(true, std::memory_order_relaxed);
   emulator_thread_event_->Set();
-  emulator_thread_.join();
-#endif
+
+  std::atomic<bool> join_complete{false};
+  std::thread join_helper([this, &join_complete]() {
+    emulator_thread_.join();
+    join_complete.store(true, std::memory_order_release);
+  });
+
+  constexpr auto kJoinTimeout = std::chrono::seconds(3);
+  const auto deadline = std::chrono::steady_clock::now() + kJoinTimeout;
+  while (!join_complete.load(std::memory_order_acquire) &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  if (!join_complete.load(std::memory_order_acquire)) {
+    XELOGE(
+        "Emulator thread did not exit within {}s; detaching (shutdown may be "
+        "incomplete)",
+        kJoinTimeout.count());
+    if (emulator_thread_.joinable()) {
+      emulator_thread_.detach();
+    }
+    if (join_helper.joinable()) {
+      join_helper.detach();
+    }
+    return;
+  }
+
+  if (join_helper.joinable()) {
+    join_helper.join();
+  }
 }
 
 }  // namespace app

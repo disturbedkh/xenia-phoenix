@@ -26,7 +26,7 @@ Tracked fixes for Phase 3 **Build 3.x** (green `libxenia-app.so` arm64 Release).
 docker run --rm -v "$PWD:/src" -w /src ubuntu:24.04 bash /src/tools/docker/android-ndk-build.sh
 ```
 
-Success: `build-android-arm64/bin/Android/libxenia-app.so`
+Success: `Build/Android/Release/libxenia-app.so`
 
 ## Policy
 

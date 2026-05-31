@@ -1,13 +1,14 @@
 # Post-build verification for Windows ARM64 (WoA) builds.
 param(
-    [string]$BuildDir = "build-arm64",
     [string]$Config = "Release",
     [switch]$SkipCpuTests,
     [switch]$ForceRunSmoke
 )
 
 $ErrorActionPreference = "Stop"
-$bin = Join-Path $BuildDir "bin\Windows\$Config"
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
+$pathsPy = Join-Path $repoRoot "tools/build/xenia_paths.py"
+$bin = & python $pathsPy bin --config $Config --target-arch arm64
 $exe = Join-Path $bin "xenia_canary.exe"
 $cpuTests = Join-Path $bin "xenia-cpu-tests.exe"
 

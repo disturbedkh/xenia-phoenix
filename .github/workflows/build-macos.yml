@@ -21,36 +21,29 @@ jobs:
 
       - name: Install Vulkan SDK
         run: |
-          if [ ! -d "$HOME/vulkan-sdk" ]; then
-            curl -sSLo /tmp/vulkan-sdk.dmg https://sdk.lunarg.com/sdk/download/latest/mac/vulkan-sdk.dmg
-            hdiutil attach /tmp/vulkan-sdk.dmg
-            cp -R /Volumes/VulkanSDK/*/InstallVulkan.app /tmp/InstallVulkan.app
-            hdiutil detach /Volumes/VulkanSDK/* || true
-            /tmp/InstallVulkan.app/Contents/MacOS/InstallVulkan \
-              --accept-licenses --default-answer --confirm-command install \
-              --root "$HOME/vulkan-sdk"
-          fi
-          VULKAN_SDK="$(find "$HOME/vulkan-sdk" -maxdepth 2 -name macOS -type d | head -n1)"
-          if [ -z "$VULKAN_SDK" ]; then
-            VULKAN_SDK="$(find "$HOME/vulkan-sdk" -maxdepth 3 -type d -name include | head -n1 | xargs dirname)"
-          fi
+          brew install molten-vk vulkan-headers glslang spirv-tools sdl2 pkg-config
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          SPIRV_OPT="$(command -v spirv-opt)"
+          VULKAN_SDK="$(dirname "$(dirname "$SPIRV_OPT")")"
           echo "VULKAN_SDK=$VULKAN_SDK" >> "$GITHUB_ENV"
-          echo "PATH=$VULKAN_SDK/bin:$PATH" >> "$GITHUB_ENV"
-          echo "DYLD_LIBRARY_PATH=$VULKAN_SDK/lib:$DYLD_LIBRARY_PATH" >> "$GITHUB_ENV"
-          echo "VK_ICD_FILENAMES=$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json" >> "$GITHUB_ENV"
+          ICD="$(find "$(brew --prefix molten-vk)" -name MoltenVK_icd.json | head -n1)"
+          if [ -n "$ICD" ]; then
+            echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+          fi
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix molten-vk)/lib:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
 
       - name: Download submodules
         run: git submodule update --init --depth=1
 
       - name: Configure
         run: |
-          cmake -S . -B build -G Ninja \
+          cmake -S . -B Build/macOS/ARM64 -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DXENIA_BUILD_TESTS=ON \
             -DXENIA_BUILD_MISC=ON
 
       - name: Build
-        run: cmake --build build --target xenia_canary xenia-cpu-tests --parallel
+        run: cmake --build Build/macOS/ARM64 --target xenia_canary xenia-cpu-tests --parallel
 
       - name: Verify
         run: ./tools/tier0/macos-verify.sh
@@ -59,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: xenia_canary_macos_arm64
-          path: build/bin/macOS/Release/xenia_canary
+          path: Build/macOS/ARM64/Release/xenia_canary
           if-no-files-found: error

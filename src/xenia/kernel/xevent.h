@@ -39,6 +39,10 @@ class XEvent : public XObject {
   void Query(uint32_t* out_type, uint32_t* out_state);
   void Clear();
 
+  uint64_t native_handle() const {
+    return reinterpret_cast<uint64_t>(event_->native_handle());
+  }
+
   bool Save(ByteStream* stream) override;
   static object_ref<XEvent> Restore(KernelState* kernel_state,
                                     ByteStream* stream);

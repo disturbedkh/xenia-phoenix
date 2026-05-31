@@ -93,7 +93,7 @@ run_post_build_verify() {
   cd /src
   install_runtime_deps
 
-  local binary="/src/build/bin/Linux/${CONFIG_TITLE}/xenia_canary"
+  local binary="$(python3 /src/tools/build/xenia_paths.py bin --config "${CONFIG_TITLE}" --os Linux)/xenia_canary"
   smoke_binary "$binary"
   smoke_launcher
 
@@ -112,7 +112,7 @@ case "$MODE" in
   smoke-only)
     cd /src
     install_runtime_deps
-    smoke_binary "/src/build/bin/Linux/${CONFIG_TITLE}/xenia_canary"
+    smoke_binary "$(python3 /src/tools/build/xenia_paths.py bin --config "${CONFIG_TITLE}" --os Linux)/xenia_canary"
     smoke_launcher
     ;;
   cpu-tests-only)

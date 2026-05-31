@@ -10,6 +10,10 @@
 #ifndef XENIA_KERNEL_XAM_XAM_UI_H_
 #define XENIA_KERNEL_XAM_XAM_UI_H_
 
+#include "xenia/kernel/netplay/json/friend_presence_object_json.h"
+#include "xenia/kernel/netplay/json/session_object_json.h"
+#include "xenia/kernel/netplay/netplay_manager_util.h"
+#include "xenia/kernel/upnp.h"
 #include "xenia/kernel/util/shim_utils.h"
 #include "xenia/ui/imgui_dialog.h"
 #include "xenia/ui/imgui_drawer.h"
@@ -119,6 +123,38 @@ bool xeDrawProfileContent(xe::ui::ImGuiDrawer* imgui_drawer,
                           std::function<bool()> context_menu,
                           std::function<void()> on_profile_change,
                           uint64_t* selected_xuid);
+
+bool xeDrawFriendsContent(
+    xe::ui::ImGuiDrawer* imgui_drawer, UserProfile* profile,
+    ui::FriendsContentArgs& args,
+    std::vector<FriendPresenceObjectJSON>* presences,
+    std::map<uint64_t, std::shared_ptr<xe::ui::ImmediateTexture>>&
+        immediate_gamerpics);
+
+bool xeDrawFriendContent(xe::ui::ImGuiDrawer* imgui_drawer,
+                         UserProfile* profile,
+                         std::shared_ptr<xe::ui::ImmediateTexture> icon_texture,
+                         FriendPresenceObjectJSON& presence,
+                         uint64_t* selected_xuid_, uint64_t* removed_xuid_);
+
+bool xeDrawAddFriend(xe::ui::ImGuiDrawer* imgui_drawer, UserProfile* profile,
+                     ui::AddFriendArgs& args);
+
+bool xeDrawSessionsContent(
+    xe::ui::ImGuiDrawer* imgui_drawer, UserProfile* profile,
+    ui::SessionsContentArgs& sessions_args,
+    std::vector<std::unique_ptr<SessionObjectJSON>>* sessions);
+
+bool xeDrawSessionContent(xe::ui::ImGuiDrawer* imgui_drawer,
+                          UserProfile* profile,
+                          std::unique_ptr<SessionObjectJSON>& session);
+
+bool xeDrawMyDeletedProfiles(xe::ui::ImGuiDrawer* imgui_drawer,
+                             ui::MyDeletedProfilesArgs& args,
+                             std::map<uint64_t, std::string>* deleted_profiles);
+
+void xeDrawUPnPAndPorts(xe::ui::ImGuiDrawer* imgui_drawer,
+                        ui::UPnPAndPortsArgs& args, UPnP* upnp);
 
 }  // namespace xam
 }  // namespace kernel

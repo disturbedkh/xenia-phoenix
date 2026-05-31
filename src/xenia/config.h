@@ -30,9 +30,11 @@ class Emulator;
 
 namespace config {
 extern std::filesystem::path config_folder;
+extern std::filesystem::path config_path;
 extern std::string game_config_suffix;
 
 void SetupConfig(const std::filesystem::path& config_folder);
+void ReadGameConfigFile(const std::string_view title_id);
 void LoadGameConfig(const std::string_view title_id);
 toml::table LoadGameConfig(uint32_t title_id);
 std::filesystem::path GetGameConfigPath(const std::string& title_id);
